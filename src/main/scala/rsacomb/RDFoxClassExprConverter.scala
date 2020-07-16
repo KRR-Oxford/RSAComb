@@ -5,8 +5,8 @@ import java.util.stream.{Stream,Collectors}
 
 import org.semanticweb.owlapi.model.{OWLClassExpression, OWLClass, OWLObjectSomeValuesFrom, OWLObjectIntersectionOf, OWLObjectOneOf, OWLObjectMaxCardinality}
 import org.semanticweb.owlapi.model.OWLClassExpressionVisitorEx
-import tech.oxfordsemantic.jrdfox.logic.{AtomicFormula, Bind,BuiltinFunctionCall}
-import tech.oxfordsemantic.jrdfox.logic.{Atom, Predicate, Term, Variable, Literal, Individual}
+import tech.oxfordsemantic.jrdfox.logic.{BindAtom, BuiltinFunctionCall, TupleTableName}
+import tech.oxfordsemantic.jrdfox.logic.{Atom, Term, Variable, Literal, Datatype}
 
 import rsacomb.SkolemStrategy
 import rsacomb.RDFoxRuleShards
@@ -39,7 +39,7 @@ class RDFoxClassExprConverter(term : Term, skolem : SkolemStrategy)
   override
   def visit(expr : OWLClass) : RDFoxRuleShards = {
     val name = expr.getIRI.getIRIString
-    val atom = List(Atom.create(Predicate.create(name), term))
+    val atom = List(Atom.create(TupleTableName.create(name), term))
     RDFoxRuleShards(atom,List())
   }
 
@@ -64,7 +64,7 @@ class RDFoxClassExprConverter(term : Term, skolem : SkolemStrategy)
                   .head // restricts to proper "nominals"
                   .asOWLNamedIndividual.getIRI.getIRIString
     val atom = List(Atom.create(
-      Predicate.create("owl:sameAs"), term, Individual.create(ind)
+      TupleTableName.create("owl:sameAs"), term, Literal.create(ind, Datatype.IRI_REFERENCE)
     ))
     RDFoxRuleShards(atom,List())
   }
@@ -77,12 +77,12 @@ class RDFoxClassExprConverter(term : Term, skolem : SkolemStrategy)
     val y = Variable.create("y")
 	val (fun,term1) = skolem match {
       case SkolemStrategy.None => (List(),y)
-      case SkolemStrategy.Constant(c) => (List(), Individual.create(c))
+      case SkolemStrategy.Constant(c) => (List(), Literal.create(c, Datatype.IRI_REFERENCE))
       case SkolemStrategy.Standard(f) => 
         // At the time of writing the RDFox library does not have a
         // particular class for the "SKOLEM" operator and it is instead
         // a simple builtin function with a special name.
-        (List(Bind.create(BuiltinFunctionCall.create("SKOLEM",term),y)),y)
+        (List(BindAtom.create(BuiltinFunctionCall.create("SKOLEM",term),y)),y)
 	}
     val classVisitor = new RDFoxClassExprConverter(term1,skolem)
     val classResult = expr.getFiller.accept(classVisitor)
@@ -108,7 +108,7 @@ class RDFoxClassExprConverter(term : Term, skolem : SkolemStrategy)
           .map(expr.getProperty.accept(_))
           .flatten
     RDFoxRuleShards(
-      List(Atom.create(Predicate.create("owl:sameAs"),vars(0),vars(1))),
+      List(Atom.create(TupleTableName.create("owl:sameAs"),vars(0),vars(1))),
       classResult.res ++ propertyResult
     )
   }

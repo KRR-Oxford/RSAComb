@@ -15,8 +15,9 @@ import org.semanticweb.owlapi.model.parameters.Imports
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.client.{ConnectionFactory, ServerConnection, DataStoreConnection}
 import tech.oxfordsemantic.jrdfox.client.UpdateType
-import tech.oxfordsemantic.jrdfox.logic.{Rule, Atom, Literal, Predicate, Term, Variable}
-import tech.oxfordsemantic.jrdfox.logic.{Bind, BuiltinFunctionCall}
+import tech.oxfordsemantic.jrdfox.logic.{Rule, Atom, Literal, Term, Variable}
+import tech.oxfordsemantic.jrdfox.logic.{BuiltinFunctionCall, TupleTableName}
+import tech.oxfordsemantic.jrdfox.logic.{LogicFormat}
 
 import scala.collection.JavaConverters._
 
@@ -46,6 +47,9 @@ object RSA {
      * 2) call RDFox on the onto and compute materialization
      * 3) build graph from E(x,y) facts
      * 4) check if the graph is tree-like
+     *    ideally this annotates the graph with info about the reasons
+     *    why the ontology might not be RSA. This could help a second
+     *    step of approximation of an Horn-ALCHOIQ to RSA
      */
 
     /* Ontology axiom convertion into LP rules */

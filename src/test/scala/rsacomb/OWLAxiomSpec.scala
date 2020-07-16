@@ -8,8 +8,8 @@ import uk.ac.manchester.cs.owl.owlapi.{OWLClassImpl, OWLObjectSomeValuesFromImpl
 import uk.ac.manchester.cs.owl.owlapi.{OWLObjectPropertyImpl}
 import org.semanticweb.owlapi.model.{OWLAxiom,IRI}
 
-import tech.oxfordsemantic.jrdfox.logic.{Rule,Bind,BuiltinFunctionCall}
-import tech.oxfordsemantic.jrdfox.logic.{Atom, Predicate, Term, Variable, Individual}
+import tech.oxfordsemantic.jrdfox.logic.{Rule,BindAtom,BuiltinFunctionCall}
+import tech.oxfordsemantic.jrdfox.logic.{Atom, TupleTableName, Term, Variable, Literal, Datatype}
 
 object OWLAxiomSpec {
 
@@ -28,14 +28,14 @@ object OWLAxiomSpec {
   val term_x = Variable.create("x")
   val term_y = Variable.create("y")
   val term_z = Variable.create("z")
-  val term_c1 = Individual.create("internal:c_1")
-  val term_c2 = Individual.create("internal:c_2")
-  val term_alice = Individual.create("univ:alice")
+  val term_c1 = Literal.create("internal:c_1", Datatype.IRI_REFERENCE)
+  val term_c2 = Literal.create("internal:c_2", Datatype.IRI_REFERENCE)
+  val term_alice = Literal.create("univ:alice", Datatype.IRI_REFERENCE)
 
   // RDFox Predicates
-  val pred_sameAs = Predicate.create("owl:sameAs")
-  val pred_Professor = Predicate.create(iri_Professor.getIRIString)
-  val pred_hasSupervisor = Predicate.create(iri_hasSupervisor.getIRIString)
+  val pred_sameAs = TupleTableName.create("owl:sameAs")
+  val pred_Professor = TupleTableName.create(iri_Professor.getIRIString)
+  val pred_hasSupervisor = TupleTableName.create(iri_hasSupervisor.getIRIString)
 
   // OWL Classes
   // Name Class corresponding to
@@ -164,15 +164,15 @@ class OWLAxiomSpec
   it should "contain a conjuction of atoms (Student[?x],Worker[?x]) in the body of the rule" in {
     val result = convertAxiom(axiom_OWLSubClassOf1,term_x)
     val body = List(
-      Atom.create(Predicate.create(iri_Student.getIRIString),term_x),
-      Atom.create(Predicate.create(iri_Worker.getIRIString),term_x)
+      Atom.create(TupleTableName.create(iri_Student.getIRIString),term_x),
+      Atom.create(TupleTableName.create(iri_Worker.getIRIString),term_x)
     )
     result.loneElement.getBody should contain theSameElementsAs body
   }
 
   it should "contain a single atom (PartTimeStudent[?x]) in the head of the rule" in {
     val result = convertAxiom(axiom_OWLSubClassOf1,term_x)
-    val head = Atom.create(Predicate.create(iri_PartTimeStudent.getIRIString),term_x)
+    val head = Atom.create(TupleTableName.create(iri_PartTimeStudent.getIRIString),term_x)
     result.loneElement.getHead.loneElement should be (head)
   }
 
@@ -188,17 +188,17 @@ class OWLAxiomSpec
   it should "contain a single atom (Student[?x]) in the body of the rule" in {
     val skolem = SkolemStrategy.Constant(axiom_OWLSubClassOf2.toString)
     val result = convertAxiom(axiom_OWLSubClassOf2,term_x,skolem)
-    val body = Atom.create(Predicate.create(iri_Student.getIRIString),term_x)
+    val body = Atom.create(TupleTableName.create(iri_Student.getIRIString),term_x)
     result.loneElement.getBody.loneElement should equal (body)
   }
 
   it should "contain a conjuction of atoms (hasSupervisor[?x,?c],Professor[?c]) in the head of the rule" in {
     val skolem = SkolemStrategy.Constant(axiom_OWLSubClassOf2.toString)
     val result = convertAxiom(axiom_OWLSubClassOf2,term_x,skolem)
-    val term_c = Individual.create(skolem.const)
+    val term_c = Literal.create(skolem.const, Datatype.IRI_REFERENCE)
     val head = List(
-      Atom.create(Predicate.create(iri_hasSupervisor.getIRIString),term_x,term_c),
-      Atom.create(Predicate.create(iri_Professor.getIRIString),term_c)
+      Atom.create(TupleTableName.create(iri_hasSupervisor.getIRIString),term_x,term_c),
+      Atom.create(TupleTableName.create(iri_Professor.getIRIString),term_c)
     )
     result.loneElement.getHead should contain theSameElementsAs (head)
   }
@@ -215,14 +215,14 @@ class OWLAxiomSpec
   it should "contain an atom (Student[?x]) in the body of the rule" in {
     val skolem = SkolemStrategy.Standard(axiom_OWLSubClassOf2.toString)
     val result = convertAxiom(axiom_OWLSubClassOf2, term_x, skolem)
-    val body = Atom.create(Predicate.create(iri_Student.getIRIString),term_x)
+    val body = Atom.create(TupleTableName.create(iri_Student.getIRIString),term_x)
     result.loneElement.getBody should contain (body)
   }
 
   it should "contain a built-in function call (BIND(?y,SKOLEM(?f,?x))) in the body of the rule" in {
     val skolem = SkolemStrategy.Standard(axiom_OWLSubClassOf2.toString)
     val result = convertAxiom(axiom_OWLSubClassOf2, term_x, skolem)
-    val call = Bind.create(BuiltinFunctionCall.create("SKOLEM",term_x),term_y)
+    val call = BindAtom.create(BuiltinFunctionCall.create("SKOLEM",term_x),term_y)
     result.loneElement.getBody should contain (call)
   }
 
@@ -230,8 +230,8 @@ class OWLAxiomSpec
     val skolem = SkolemStrategy.Standard(axiom_OWLSubClassOf2.toString)
     val result = convertAxiom(axiom_OWLSubClassOf2, term_x, skolem)
     val head = List(
-      Atom.create(Predicate.create(iri_hasSupervisor.getIRIString),term_x,term_y),
-      Atom.create(Predicate.create(iri_Professor.getIRIString),term_y)
+      Atom.create(TupleTableName.create(iri_hasSupervisor.getIRIString),term_x,term_y),
+      Atom.create(TupleTableName.create(iri_Professor.getIRIString),term_y)
     )
     result.loneElement.getHead should contain theSameElementsAs head
   }
@@ -245,15 +245,15 @@ class OWLAxiomSpec
   it should "contain a conjunction of atoms (hasSupervisor[?x,?y],Professor[?y]) in the body of the rule" in {
     val result = convertAxiom(axiom_OWLSubClassOf3,term_x)
     val body = List(
-      Atom.create(Predicate.create(iri_hasSupervisor.getIRIString),term_x,term_y),
-      Atom.create(Predicate.create(iri_Professor.getIRIString),term_y)
+      Atom.create(TupleTableName.create(iri_hasSupervisor.getIRIString),term_x,term_y),
+      Atom.create(TupleTableName.create(iri_Professor.getIRIString),term_y)
     )
     result.loneElement.getBody should contain theSameElementsAs body
   }
 
   it should "contain a single atom (Student[?x]) in the head of the rule" in {
     val result = convertAxiom(axiom_OWLSubClassOf3, term_x)
-    val head = Atom.create(Predicate.create(iri_Student.getIRIString),term_x)
+    val head = Atom.create(TupleTableName.create(iri_Student.getIRIString),term_x)
     result.loneElement.getHead.loneElement should be (head)
   }
 
@@ -265,13 +265,13 @@ class OWLAxiomSpec
 
   it should "contain a single atoms (Student[?x]) in the body of the rule" in {
     val result = convertAxiom(axiom_OWLSubClassOf4,term_x)
-    val body = Atom.create(Predicate.create(iri_Student.getIRIString),term_x)
+    val body = Atom.create(TupleTableName.create(iri_Student.getIRIString),term_x)
     result.loneElement.getBody.loneElement should be (body)
   }
 
   it should "contain a single atom (sameAs[?x,alice])) in the head of the rule" in {
     val result = convertAxiom(axiom_OWLSubClassOf4, term_x)
-    val head = Atom.create(Predicate.create(iri_sameAs.getIRIString),term_x,term_alice)
+    val head = Atom.create(TupleTableName.create(iri_sameAs.getIRIString),term_x,term_alice)
     result.loneElement.getHead.loneElement should be (head)
   }
 
@@ -284,18 +284,18 @@ class OWLAxiomSpec
   it should "contain a conjunction of atoms (...) in the body of the rule" in {
     val result = convertAxiom(axiom_OWLSubClassOf5,term_x)
     val body = List(
-      Atom.create(Predicate.create(iri_Student.getIRIString),term_x),
-      Atom.create(Predicate.create(iri_hasSupervisor.getIRIString),term_x,term_y),
-      Atom.create(Predicate.create(iri_Professor.getIRIString),term_y),
-      Atom.create(Predicate.create(iri_hasSupervisor.getIRIString),term_x,term_z),
-      Atom.create(Predicate.create(iri_Professor.getIRIString),term_z)
+      Atom.create(TupleTableName.create(iri_Student.getIRIString),term_x),
+      Atom.create(TupleTableName.create(iri_hasSupervisor.getIRIString),term_x,term_y),
+      Atom.create(TupleTableName.create(iri_Professor.getIRIString),term_y),
+      Atom.create(TupleTableName.create(iri_hasSupervisor.getIRIString),term_x,term_z),
+      Atom.create(TupleTableName.create(iri_Professor.getIRIString),term_z)
     )
     result.loneElement.getBody should contain theSameElementsAs body
   }
 
   it should "contain a single atom (sameAs[?x,?z])) in the head of the rule" in {
     val result = convertAxiom(axiom_OWLSubClassOf5, term_x)
-    val head = Atom.create(Predicate.create(iri_sameAs.getIRIString),term_y,term_z)
+    val head = Atom.create(TupleTableName.create(iri_sameAs.getIRIString),term_y,term_z)
     result.loneElement.getHead.loneElement should be (head)
   }
 

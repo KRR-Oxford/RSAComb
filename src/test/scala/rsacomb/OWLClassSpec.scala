@@ -6,8 +6,8 @@ import uk.ac.manchester.cs.owl.owlapi.{OWLClassImpl, OWLObjectSomeValuesFromImpl
 import uk.ac.manchester.cs.owl.owlapi.{OWLObjectPropertyImpl}
 import org.semanticweb.owlapi.model.IRI
 
-import tech.oxfordsemantic.jrdfox.logic.{Bind,BuiltinFunctionCall}
-import tech.oxfordsemantic.jrdfox.logic.{Atom, Predicate, Term, Variable, Individual}
+import tech.oxfordsemantic.jrdfox.logic.{BindAtom,BuiltinFunctionCall}
+import tech.oxfordsemantic.jrdfox.logic.{Atom, TupleTableName, Term, Variable, Literal, Datatype}
 
 import rsacomb.RDFoxRuleShards
 
@@ -25,14 +25,14 @@ object OWLClassSpec {
   // RDFox Terms
   val term_x = Variable.create("x")
   val term_y = Variable.create("y")
-  val term_c1 = Individual.create("internal:c_1")
-  val term_c2 = Individual.create("internal:c_2")
-  val term_alice = Individual.create("univ:alice")
+  val term_c1 = Literal.create("internal:c_1", Datatype.IRI_REFERENCE)
+  val term_c2 = Literal.create("internal:c_2", Datatype.IRI_REFERENCE)
+  val term_alice = Literal.create("univ:alice", Datatype.IRI_REFERENCE)
 
   // RDFox Predicates
-  val pred_sameAs = Predicate.create("owl:sameAs")
-  val pred_Professor = Predicate.create(iri_Professor.getIRIString)
-  val pred_hasSupervisor = Predicate.create(iri_hasSupervisor.getIRIString)
+  val pred_sameAs = TupleTableName.create("owl:sameAs")
+  val pred_Professor = TupleTableName.create(iri_Professor.getIRIString)
+  val pred_hasSupervisor = TupleTableName.create(iri_hasSupervisor.getIRIString)
 
   // OWL Classes
   // Name Class corresponding to
@@ -135,7 +135,7 @@ class OWLClassSpec
   it should "be converted into a single <owl:sameAs> Atom" in {
     val visitor = RDFoxClassExprConverter(term_x)
     val result = class_OWLObjectOneOf.accept(visitor)
-    result.res.loneElement should (be (a [Atom]) and have ('predicate (pred_sameAs)))
+    result.res.loneElement should (be (a [Atom]) and have ('tupleTableName (pred_sameAs)))
   }
 
   it should "have an empty extension list" in {
@@ -196,8 +196,8 @@ class OWLClassSpec
     val skolem = SkolemStrategy.Standard(class_OWLObjectSomeValuesFrom.toString)
     val visitor = RDFoxClassExprConverter(term_x,skolem)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
-    result.ext.loneElement shouldBe a [Bind]
-    val builtin = result.ext.head.asInstanceOf[Bind].getBuiltinExpression
+    result.ext.loneElement shouldBe a [BindAtom]
+    val builtin = result.ext.head.asInstanceOf[BindAtom].getBuiltinExpression
     builtin should (be (a [BuiltinFunctionCall]) and have ('functionName ("SKOLEM")))
   }
 
@@ -241,7 +241,7 @@ class OWLClassSpec
   it should "have a single <owl:sameAs> Atom in the result list" in {
     val visitor = RDFoxClassExprConverter(term_x)
     val result = class_OWLObjectMaxCardinality.accept(visitor)
-    result.res.loneElement should (be (an [Atom]) and have ('predicate (pred_sameAs)))
+    result.res.loneElement should (be (an [Atom]) and have ('tupleTableName (pred_sameAs)))
   }
 
   it should "have two unary Atoms in its extension list" in {

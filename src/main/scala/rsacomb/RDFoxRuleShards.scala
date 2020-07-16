@@ -1,6 +1,6 @@
 package rsacomb
 
-import tech.oxfordsemantic.jrdfox.logic.{Rule, Atom, Literal}
+import tech.oxfordsemantic.jrdfox.logic.{Atom, BodyFormula}
 
-case class RDFoxRuleShards(res : List[Atom], ext : List[Literal])
+case class RDFoxRuleShards(res : List[Atom], ext : List[BodyFormula])
 

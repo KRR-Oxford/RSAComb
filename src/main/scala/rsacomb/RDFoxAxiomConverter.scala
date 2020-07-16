@@ -3,8 +3,8 @@ package rsacomb
 import org.semanticweb.owlapi.model.{OWLAxiom, OWLSubClassOfAxiom, OWLEquivalentClassesAxiom}
 import org.semanticweb.owlapi.model.OWLAxiomVisitorEx
 
-import tech.oxfordsemantic.jrdfox.logic.Rule
-import tech.oxfordsemantic.jrdfox.logic.{Atom, Term, Literal, Individual}
+import tech.oxfordsemantic.jrdfox.logic.{Rule, BodyFormula}
+import tech.oxfordsemantic.jrdfox.logic.{Atom, Term, Literal}
 
 import scala.collection.JavaConverters._
 
