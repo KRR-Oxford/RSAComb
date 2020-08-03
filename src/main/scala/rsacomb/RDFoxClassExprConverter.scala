@@ -75,15 +75,15 @@ class RDFoxClassExprConverter(term : Term, skolem : SkolemStrategy)
     // TODO: variables needs to be handled at visitor level. Hardcoding
     // the name of the varibles might lead to errors for complex cases.
     val y = Variable.create("y")
-	val (fun,term1) = skolem match {
-      case SkolemStrategy.None => (List(),y)
-      case SkolemStrategy.Constant(c) => (List(), Literal.create(c, Datatype.IRI_REFERENCE))
-      case SkolemStrategy.Standard(f) => 
-        // At the time of writing the RDFox library does not have a
-        // particular class for the "SKOLEM" operator and it is instead
-        // a simple builtin function with a special name.
-        (List(BindAtom.create(BuiltinFunctionCall.create("SKOLEM",term),y)),y)
-	}
+    val (fun,term1) = skolem match {
+        case SkolemStrategy.None => (List(),y)
+        case SkolemStrategy.Constant(c) => (List(), Literal.create(c, Datatype.IRI_REFERENCE))
+        case SkolemStrategy.Standard(f) => 
+          // At the time of writing the RDFox library does not have a
+          // particular class for the "SKOLEM" operator and it is instead
+          // a simple builtin function with a special name.
+          (List(BindAtom.create(BuiltinFunctionCall.create("SKOLEM",term),y)),y)
+    }
     val classVisitor = new RDFoxClassExprConverter(term1,skolem)
     val classResult = expr.getFiller.accept(classVisitor)
     val propertyVisitor = new RDFoxPropertyExprConverter(term, term1, skolem)

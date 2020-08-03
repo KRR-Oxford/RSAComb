@@ -4,12 +4,13 @@ import org.semanticweb.owlapi.model.{OWLAxiom, OWLSubClassOfAxiom, OWLEquivalent
 import org.semanticweb.owlapi.model.OWLAxiomVisitorEx
 
 import tech.oxfordsemantic.jrdfox.logic.{Rule, BodyFormula}
-import tech.oxfordsemantic.jrdfox.logic.{Atom, Term, Literal}
+import tech.oxfordsemantic.jrdfox.logic.{Atom, Term, Variable, Literal}
 
 import scala.collection.JavaConverters._
 
 import rsacomb.SkolemStrategy
 import rsacomb.RDFoxRuleShards
+import org.semanticweb.owlapi.model.OWLSubObjectPropertyOfAxiom
 
 object RDFoxAxiomConverter {
 
@@ -46,11 +47,23 @@ class RDFoxAxiomConverter(term : Term, skolem : SkolemStrategy)
 
   override
   def visit(axiom : OWLEquivalentClassesAxiom) : List[Rule] = {
-	for {
-	  axiom1 <- axiom.asPairwiseAxioms.asScala.toList
-	  axiom2 <- axiom1.asOWLSubClassOfAxioms.asScala.toList
-	  rule   <- axiom2.accept(this)
-	} yield rule
+    for {
+      axiom1 <- axiom.asPairwiseAxioms.asScala.toList
+      axiom2 <- axiom1.asOWLSubClassOfAxioms.asScala.toList
+      rule   <- axiom2.accept(this)
+    } yield rule
+  }
+
+  override
+  def visit(axiom : OWLSubObjectPropertyOfAxiom) : List[Rule] = {
+    // TODO: variables needs to be handled at visitor level. Hardcoding
+    // the name of the varibles might lead to errors for complex cases.
+    val term1 = Variable.create("y")
+    val subVisitor = new RDFoxPropertyExprConverter(term,term1,SkolemStrategy.None)
+    val superVisitor = new RDFoxPropertyExprConverter(term,term1,skolem)
+    val body: List[BodyFormula] = axiom.getSubProperty.accept(subVisitor)
+    val head: List[Atom] = axiom.getSuperProperty.accept(superVisitor)
+    List(Rule.create(head.asJava,body.asJava))
   }
 
   def doDefault(axiom : OWLAxiom) : List[Rule] = List()

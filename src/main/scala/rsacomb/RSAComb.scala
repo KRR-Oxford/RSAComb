@@ -22,6 +22,7 @@ import tech.oxfordsemantic.jrdfox.logic.{LogicFormat}
 import scala.collection.JavaConverters._
 
 import rsacomb.SkolemStrategy
+import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
 
 class RSA(ontology : OWLOntology) {
 
@@ -52,12 +53,29 @@ object RSA {
      *    step of approximation of an Horn-ALCHOIQ to RSA
      */
 
+    val renderer = new DLSyntaxObjectRenderer()
+
+    /* Print TBox axioms */
+    println("TBox/RBox:")
+    for {
+      axiom <- onto.tboxAxioms(Imports.EXCLUDED).collect(Collectors.toList()).asScala
+    } yield println(renderer.render(axiom))
+    for {
+      axiom <- onto.rboxAxioms(Imports.EXCLUDED).collect(Collectors.toList()).asScala
+    } yield println(renderer.render(axiom))
+
     /* Ontology axiom convertion into LP rules */
-	for {
+    println("Logic rules:")
+    for {
       axiom <- onto.tboxAxioms(Imports.EXCLUDED).collect(Collectors.toList()).asScala
       visitor = new RDFoxAxiomConverter(Variable.create("x"), SkolemStrategy.Constant(axiom.toString))
       rule  <- axiom.accept(visitor)
-	} yield println(rule)
+    } yield println(rule)
+    for {
+      axiom <- onto.rboxAxioms(Imports.EXCLUDED).collect(Collectors.toList()).asScala
+      visitor = new RDFoxAxiomConverter(Variable.create("x"), SkolemStrategy.Constant(axiom.toString))
+      rule  <- axiom.accept(visitor)
+    } yield println(rule)
 
     /* Return true for now... */
     true
