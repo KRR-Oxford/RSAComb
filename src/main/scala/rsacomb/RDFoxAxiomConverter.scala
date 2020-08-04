@@ -1,36 +1,39 @@
 package rsacomb
 
-import org.semanticweb.owlapi.model.{OWLAxiom, OWLSubClassOfAxiom, OWLEquivalentClassesAxiom}
+import org.semanticweb.owlapi.model.{OWLAxiom, OWLSubClassOfAxiom, OWLEquivalentClassesAxiom, OWLObjectPropertyExpression}
 import org.semanticweb.owlapi.model.OWLAxiomVisitorEx
 
 import tech.oxfordsemantic.jrdfox.logic.{Rule, BodyFormula}
 import tech.oxfordsemantic.jrdfox.logic.{Atom, Term, Variable, Literal}
+import tech.oxfordsemantic.jrdfox.logic.{TupleTableName}
 
 import scala.collection.JavaConverters._
 
 import rsacomb.SkolemStrategy
 import rsacomb.RDFoxRuleShards
 import org.semanticweb.owlapi.model.OWLSubObjectPropertyOfAxiom
+import org.semanticweb.owlapi.model.OWLObjectProperty
 
 object RDFoxAxiomConverter {
 
-  def apply(term : Term, skolem : SkolemStrategy) : RDFoxAxiomConverter =
-	new RDFoxAxiomConverter(term, skolem)
-
-  def apply(term : Term) : RDFoxAxiomConverter =
-	new RDFoxAxiomConverter(term, SkolemStrategy.None)
+  def apply(
+    term : Term = Variable.create("x"),
+    skolem : SkolemStrategy = SkolemStrategy.None,
+    unsafe : List[OWLObjectPropertyExpression] = List()
+  ) : RDFoxAxiomConverter =
+	  new RDFoxAxiomConverter(term, skolem, unsafe)
 
 } // object RDFoxAxiomConverter
 
-class RDFoxAxiomConverter(term : Term, skolem : SkolemStrategy)
+class RDFoxAxiomConverter(term : Term, skolem : SkolemStrategy, unsafe : List[OWLObjectPropertyExpression])
   extends OWLAxiomVisitorEx[List[Rule]]
 {
 
   override
   def visit(axiom : OWLSubClassOfAxiom) : List[Rule] = {
     // Skolemization is needed only for the head of an axiom
-    val subVisitor = new RDFoxClassExprConverter(term,SkolemStrategy.None)
-    val superVisitor = new RDFoxClassExprConverter(term, skolem)
+    val subVisitor = new RDFoxClassExprConverter(term,SkolemStrategy.None, unsafe)
+    val superVisitor = new RDFoxClassExprConverter(term, skolem, unsafe)
     // Each visitor returns a `RDFoxRuleShards`, a tuple (res,ext):
     // - the `res` List is a list of atoms resulting from the conversion
     //   of the axiom.

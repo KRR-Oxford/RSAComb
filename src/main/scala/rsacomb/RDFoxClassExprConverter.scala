@@ -10,14 +10,17 @@ import tech.oxfordsemantic.jrdfox.logic.{Atom, Term, Variable, Literal, Datatype
 
 import rsacomb.SkolemStrategy
 import rsacomb.RDFoxRuleShards
+import org.semanticweb.owlapi.model.OWLObjectPropertyExpression
+import org.semanticweb.owlapi.model.OWLObjectProperty
 
 object RDFoxClassExprConverter {
 
-  def apply(term : Term, skolem : SkolemStrategy) : RDFoxClassExprConverter =
-	new RDFoxClassExprConverter(term, skolem)
-
-  def apply(term : Term) : RDFoxClassExprConverter =
-	new RDFoxClassExprConverter(term, SkolemStrategy.None)
+  def apply(
+    term : Term = Variable.create("x"),
+    skolem : SkolemStrategy = SkolemStrategy.None,
+    unsafe : List[OWLObjectPropertyExpression] = List()
+  ) : RDFoxClassExprConverter =
+	  new RDFoxClassExprConverter(term, skolem, unsafe)
 
   def merge(rules : List[RDFoxRuleShards]) : RDFoxRuleShards = {
     rules.foldLeft(RDFoxRuleShards(List(),List())) {
@@ -31,7 +34,7 @@ object RDFoxClassExprConverter {
 
 } // object RDFoxClassExprConverter
 
-class RDFoxClassExprConverter(term : Term, skolem : SkolemStrategy)
+class RDFoxClassExprConverter(term : Term, skolem : SkolemStrategy, unsafe : List[OWLObjectPropertyExpression])
   extends OWLClassExpressionVisitorEx[RDFoxRuleShards]
 {
 
@@ -46,7 +49,7 @@ class RDFoxClassExprConverter(term : Term, skolem : SkolemStrategy)
   // OWLObjectIntersectionOf
   override
   def visit(expr : OWLObjectIntersectionOf) : RDFoxRuleShards = {
-    val visitor = new RDFoxClassExprConverter(term,skolem)
+    val visitor = new RDFoxClassExprConverter(term, skolem, unsafe)
     // TODO: maybe using `flatMap` instead of `merge` + `map` works as well
 	RDFoxClassExprConverter.merge (
       expr.asConjunctSet.asScala.toList
@@ -75,22 +78,33 @@ class RDFoxClassExprConverter(term : Term, skolem : SkolemStrategy)
     // TODO: variables needs to be handled at visitor level. Hardcoding
     // the name of the varibles might lead to errors for complex cases.
     val y = Variable.create("y")
-    val (fun,term1) = skolem match {
-        case SkolemStrategy.None => (List(),y)
-        case SkolemStrategy.Constant(c) => (List(), Literal.create(c, Datatype.IRI_REFERENCE))
+    val prop = expr.getProperty()
+    // Computes the result of rule skolemization. Depending on the used 
+    // technique it might involve the introduction of additional atoms,
+    // and/or fresh constants and variables.
+    val (head, body, term1) = skolem match {
+        case SkolemStrategy.None => (List(), List(), y)
+        case SkolemStrategy.Constant(c) => (List(), List(), Literal.create(c, Datatype.IRI_REFERENCE))
+        case SkolemStrategy.ConstantRSA(c) => {
+          val lit = Literal.create(c, Datatype.IRI_REFERENCE)
+          if (unsafe.contains(prop))
+            (List(Atom.create(TupleTableName.create("internal:PE"),term,lit), Atom.create(TupleTableName.create("internal:U"),lit)), List(), lit)
+          else 
+            (List(), List(), lit)
+        }
         case SkolemStrategy.Standard(f) => 
           // At the time of writing the RDFox library does not have a
           // particular class for the "SKOLEM" operator and it is instead
-          // a simple builtin function with a special name.
-          (List(BindAtom.create(BuiltinFunctionCall.create("SKOLEM",term),y)),y)
+          // a simple builtin function with a "special" name.
+          (List(),List(BindAtom.create(BuiltinFunctionCall.create("SKOLEM",term),y)),y)
     }
-    val classVisitor = new RDFoxClassExprConverter(term1,skolem)
+    val classVisitor = new RDFoxClassExprConverter(term1, skolem, unsafe)
     val classResult = expr.getFiller.accept(classVisitor)
     val propertyVisitor = new RDFoxPropertyExprConverter(term, term1, skolem)
     val propertyResult = expr.getProperty.accept(propertyVisitor)
     RDFoxRuleShards(
-      classResult.res ++ propertyResult,
-      fun ++ classResult.ext
+      classResult.res ++ propertyResult ++ head,
+      classResult.ext ++ body
     )
   }
 
@@ -100,7 +114,7 @@ class RDFoxClassExprConverter(term : Term, skolem : SkolemStrategy)
     // TODO: again, no hardcoded variables
     val vars = List(Variable.create("y"),Variable.create("z"))
     val classResult = RDFoxClassExprConverter.merge(
-      vars.map(new RDFoxClassExprConverter(_,skolem))
+      vars.map(new RDFoxClassExprConverter(_,skolem, unsafe))
           .map(expr.getFiller.accept(_))
     )
     val propertyResult = 

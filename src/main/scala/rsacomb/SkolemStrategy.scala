@@ -29,7 +29,7 @@ object SkolemStrategy {
     def genFunctionString(str : String) = "f_" ++ str.hashCode.toString
   }
 
-  /* Functional skolemization
+  /* Constant skolemization
    *
    * From 
    *    A ⊑ ∃R.B
@@ -40,6 +40,22 @@ object SkolemStrategy {
   case class Constant(const : String) extends SkolemStrategy
   object Constant {
     def apply(axiom : String) = new Constant(genConstantString(axiom))
+    def genConstantString(str : String) = "internal:c_" ++ str.hashCode.toString
+  }
+
+  /* (RSA) Constant skolemization
+   * This is a special skolemization option to introduce additional atoms for RSA
+   * checking algorithm.
+   *
+   * From 
+   *    A ⊑ ∃R.B
+   * to
+   *    A(y) -> R(x,c), PE(x,c), B(c)
+   * for c, fresh constant associated with the input axiom and PE an internal predicate.
+   */
+  case class ConstantRSA(const : String) extends SkolemStrategy
+  object ConstantRSA {
+    def apply(axiom : String) = new ConstantRSA(genConstantString(axiom))
     def genConstantString(str : String) = "internal:c_" ++ str.hashCode.toString
   }
 }

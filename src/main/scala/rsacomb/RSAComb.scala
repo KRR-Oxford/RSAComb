@@ -10,7 +10,9 @@ import org.semanticweb.owlapi.model.{OWLAxiom, OWLSubClassOfAxiom, OWLEquivalent
 import org.semanticweb.owlapi.model.OWLClassExpression
 import org.semanticweb.owlapi.model.OWLOntology
 import org.semanticweb.owlapi.model.OWLOntologyManager
+import org.semanticweb.owlapi.model.IRI
 import org.semanticweb.owlapi.model.parameters.Imports
+import uk.ac.manchester.cs.owl.owlapi.OWLObjectPropertyImpl
 
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.client.{ConnectionFactory, ServerConnection, DataStoreConnection}
@@ -55,6 +57,11 @@ object RSA {
 
     val renderer = new DLSyntaxObjectRenderer()
 
+    // Here we need to compute the unsafe roles. This is hardcoded for now.
+    val unsafe = List(
+      new OWLObjectPropertyImpl(IRI.create("http://example.com/rsa_example.owl#S")).getInverseProperty()
+    )
+
     /* Print TBox axioms */
     println("TBox/RBox:")
     for {
@@ -68,12 +75,12 @@ object RSA {
     println("Logic rules:")
     for {
       axiom <- onto.tboxAxioms(Imports.EXCLUDED).collect(Collectors.toList()).asScala
-      visitor = new RDFoxAxiomConverter(Variable.create("x"), SkolemStrategy.Constant(axiom.toString))
+      visitor = new RDFoxAxiomConverter(Variable.create("x"), SkolemStrategy.ConstantRSA(axiom.toString), unsafe)
       rule  <- axiom.accept(visitor)
     } yield println(rule)
     for {
       axiom <- onto.rboxAxioms(Imports.EXCLUDED).collect(Collectors.toList()).asScala
-      visitor = new RDFoxAxiomConverter(Variable.create("x"), SkolemStrategy.Constant(axiom.toString))
+      visitor = new RDFoxAxiomConverter(Variable.create("x"), SkolemStrategy.ConstantRSA(axiom.toString), unsafe)
       rule  <- axiom.accept(visitor)
     } yield println(rule)
 
