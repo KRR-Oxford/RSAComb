@@ -1,76 +1,64 @@
 package rsacomb
 
 /* Java imports */
-// import java.io.File
-// import java.util.stream.{Collectors,Stream}
-
-// import org.semanticweb.owlapi.apibinding.OWLManager
-// import org.semanticweb.owlapi.model.{OWLOntologyManager,OWLOntology}
-// import org.semanticweb.owlapi.model.{OWLAxiom,OWLObjectPropertyExpression}
 import org.semanticweb.owlapi.model.{OWLAxiom,OWLSubClassOfAxiom, OWLEquivalentClassesAxiom}
-import org.semanticweb.owlapi.model.OWLAxiomVisitorEx
-// import org.semanticweb.owlapi.model.parameters.Imports
-// import org.semanticweb.owlapi.reasoner.OWLReasoner
-// import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory
+import org.semanticweb.owlapi.model.{OWLObjectPropertyExpression,OWLClass,OWLClassExpression,OWLObjectSomeValuesFrom,OWLObjectMaxCardinality}
+import org.semanticweb.owlapi.model.ClassExpressionType
+import org.semanticweb.owlapi.model.{OWLAxiomVisitorEx,OWLClassExpressionVisitorEx}
 
-// import tech.oxfordsemantic.jrdfox.logic.Variable
-
-/* Scala imports */
-// import scala.collection.JavaConverters._
-
-/* Local imports */
-// import rsacomb.RSAAxiom 
-
-/* Debug only */
-// import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
-
-// import java.util.HashMap
-// import java.util.stream.{Stream,Collectors}
-
-// import org.semanticweb.owlapi.model.{AxiomType, ClassExpressionType, OWLObjectSomeValuesFrom}
-// import org.semanticweb.owlapi.model.OWLClassExpression
-// import org.semanticweb.owlapi.model.IRI
-// import org.semanticweb.owlapi.reasoner.{OWLReasonerFactory, OWLReasoner}
-// import uk.ac.manchester.cs.owl.owlapi.OWLObjectPropertyImpl
-
-// import tech.oxfordsemantic.jrdfox.Prefixes
-// import tech.oxfordsemantic.jrdfox.client.{ConnectionFactory, ServerConnection, DataStoreConnection}
-// import tech.oxfordsemantic.jrdfox.client.UpdateType
-// import tech.oxfordsemantic.jrdfox.logic.{Rule, Atom, Literal, Term, Variable}
-// import tech.oxfordsemantic.jrdfox.logic.{BuiltinFunctionCall, TupleTableName}
-// import tech.oxfordsemantic.jrdfox.logic.{LogicFormat}
-
-
-// import rsacomb.SkolemStrategy
-//import org.semanticweb.owlapi.model.{OWLAxiom,OWLObjectPropertyExpression}
-
+/* Wrapper trait for the implicit class `RSAAxiom`.
+ */
 trait RSAAxiom {
 
-  sealed trait RSAAxiomType
-  object RSAAxiomType {
-    case object T3 extends RSAAxiomType
-    case object T4 extends RSAAxiomType
-    case object T5 extends RSAAxiomType
+  /* Identifies some of the axiom types in a Horn-ALCHOIQ ontology
+   * in normal form. Refer to the paper for more details on the
+   * chosen names.
+   */
+  private sealed trait RSAAxiomType
+  private object RSAAxiomType {
+    case object T3 extends RSAAxiomType // ∃R.A ⊑ B
+    case object T4 extends RSAAxiomType // A ⊑ ≤1R.B
+    case object T5 extends RSAAxiomType // A ⊑ ∃R.B
   }
 
+  /* Implements additional features on top of `OWLAxiom` from
+   * the OWLAPI.
+   */
   implicit class RSAAxiom(axiom: OWLAxiom) {
 
+    /* Detecting axiom types:
+     *
+     * In order to reason about role unsafety in Horn-ALCHOIQ
+     * ontologies we need to detect and filter axioms by their
+     * "type".
+     * 
+     * This is a simple implementation following the Visitor
+     * pattern imposed by the OWLAPI.
+     */
     private class RSAAxiomTypeDetector(t: RSAAxiomType)
       extends OWLAxiomVisitorEx[Boolean]
     {
-
       override
       def visit(axiom: OWLSubClassOfAxiom): Boolean = {
-        true
+        val sub = axiom.getSubClass().getClassExpressionType()
+        val sup = axiom.getSuperClass().getClassExpressionType()
+        t match {
+          case RSAAxiomType.T3 => // ∃R.A ⊑ B
+            sub == ClassExpressionType.OBJECT_SOME_VALUES_FROM && sup == ClassExpressionType.OWL_CLASS
+          case RSAAxiomType.T4 => // A ⊑ ≤1R.B
+            sub == ClassExpressionType.OWL_CLASS && sup == ClassExpressionType.OBJECT_MAX_CARDINALITY
+          case RSAAxiomType.T5 => // A ⊑ ∃R.B
+            sub == ClassExpressionType.OWL_CLASS && sup == ClassExpressionType.OBJECT_SOME_VALUES_FROM
+        }
       }
 
       override
       def visit(axiom: OWLEquivalentClassesAxiom): Boolean = {
-        true
+        // TODO
+        false
       }
 
       def doDefault(axiom : OWLAxiom): Boolean = false
-
     }
 
     private def isOfType(t: RSAAxiomType): Boolean = {
@@ -78,9 +66,73 @@ trait RSAAxiom {
       axiom.accept(visitor)
     }
 
+    /* Exposed methods */
     def isT3: Boolean = isOfType(RSAAxiomType.T3)
     def isT4: Boolean = isOfType(RSAAxiomType.T4)
     def isT5: Boolean = isOfType(RSAAxiomType.T5)
+    
+    /* Extracting ObjectPropertyExpressions from axioms
+     *
+     * This extracts all ObjectPropertyExpressions from a given
+     * axiom. While the implementation is generic we use it on axioms
+     * of specific types (see above).
+     * 
+     * NOTE: it is not possible to use the `objectPropertyInSignature`
+     * method of `OWLAxiom` because it returns all "role names" involved
+     * in the signature of an axiom. In particular we won't get the inverse
+     * of a role if this appears in the axiom (but we will get the role
+     * itself instead).
+     */
+    private class RSAAxiomRoleExtractor()
+      extends OWLAxiomVisitorEx[List[OWLObjectPropertyExpression]]
+    {
+
+      private class RSAExprRoleExtractor()
+        extends OWLClassExpressionVisitorEx[List[OWLObjectPropertyExpression]]
+      {
+        override
+        def visit(expr: OWLObjectSomeValuesFrom): List[OWLObjectPropertyExpression] =
+          List(expr.getProperty)
+
+        override
+        def visit(expr: OWLObjectMaxCardinality): List[OWLObjectPropertyExpression] =
+          List(expr.getProperty)
+
+        /* NOTE: this instance of `visit` for `OWLClass` shouldn't be necessary. However
+         * if missing, the code throws a `NullPointerException`. It seems like, for some
+         * reason, `OWLClass` is not really a subinterface of `OWLClassExpression`, as 
+         * stated in the JavaDocs.
+         */
+        override
+        def visit(expr: OWLClass): List[OWLObjectPropertyExpression] =
+          List()
+
+        def doDefault(expr: OWLClassExpression): List[OWLObjectPropertyExpression] =
+          List()
+      }
+
+      override
+      def visit(axiom: OWLSubClassOfAxiom): List[OWLObjectPropertyExpression] = {
+        val visitor = new RSAExprRoleExtractor()
+        val sub = axiom.getSubClass.accept(visitor)
+        val sup = axiom.getSuperClass.accept(visitor)
+        sub ++ sup
+      }
+
+      override
+      def visit(axiom: OWLEquivalentClassesAxiom): List[OWLObjectPropertyExpression] = {
+        // TODO
+        List()
+      }
+
+      def doDefault(axiom : OWLAxiom): List[OWLObjectPropertyExpression] = List()
+    }
+
+    /* Exposed methods */
+    def objectPropertyExpressionsInSignature: List[OWLObjectPropertyExpression] = {
+      val visitor = new RSAAxiomRoleExtractor()
+      axiom.accept(visitor)
+    }
   }
 
-}
+} // trait RSAAxiom
