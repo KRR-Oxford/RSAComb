@@ -71,34 +71,49 @@ trait RSAOntology {
 
       /* Checking for (1) unsafety condition:
        * 
-       *    For all roles p1 appearing in an axiom of type T5, p1 is unsafe
-       *    if there exists a role p2 (different from top) appearing in an axiom
-       *    of type T3 and p1 is a subproperty of the inverse of p2.
+       *    For all roles r1 appearing in an axiom of type T5, r1 is unsafe
+       *    if there exists a role r2 (different from top) appearing in an axiom
+       *    of type T3 and r1 is a subproperty of the inverse of r2.
        * 
        * TODO: We are not checking whether the class expression on the right in T3
        * is top. For now we can assume it is always the case.
        */
-      val unsafe = for {
-        ax1 <- tbox
-        if ax1.isT5
-        p1 <- ax1.objectPropertyExpressionsInSignature
-        sup = p1.getInverseProperty +: reasoner.superObjectProperties(p1).map(_.getInverseProperty).collect(Collectors.toList()).asScala
-        ax2 <- tbox
-        if ax2.isT3
-        p2 <- ax2.objectPropertyExpressionsInSignature 
-        if sup.contains(p2)
-      } yield p1
+      val unsafe1 = for {
+        axiom <- tbox
+        if axiom.isT5
+        role1 <- axiom.objectPropertyExpressionsInSignature
+        roleSuper = role1 +: reasoner.superObjectProperties(role1).collect(Collectors.toList()).asScala
+        roleSuperInv = roleSuper.map(_.getInverseProperty)
+        axiom <- tbox
+        if axiom.isT3
+        role2 <- axiom.objectPropertyExpressionsInSignature 
+        if roleSuperInv.contains(role2)
+      } yield role1
 
       /* Checking for (2) unsafety condition:
        *
-       *    TODO
+       *    For all roles p1 appearing in an axiom of type T5, p1 is unsafe if
+       *    there exists a role p2 appearing in an axiom of type T4 and p1 is a
+       *    subproperty of either p2 or the inverse of p2.
+       * 
        */
+      val unsafe2 = for {
+        axiom <- tbox
+        if axiom.isT5
+        role1 <- axiom.objectPropertyExpressionsInSignature
+        roleSuper = role1 +: reasoner.superObjectProperties(role1).collect(Collectors.toList()).asScala
+        roleSuperInv = roleSuper.map(_.getInverseProperty)
+        axiom <- tbox
+        if axiom.isT4
+        role2 <- axiom.objectPropertyExpressionsInSignature 
+        if roleSuper.contains(role2) || roleSuperInv.contains(role2)
+      } yield role1
 
       /* TODO: We should be able to avoid this last conversion to List.
        * Maybe we should just move everything to Sets instead of Lists, since
        * they have a more straightforward conversion from Java collections.
        */
-      unsafe.toList
+      (unsafe1 ++ unsafe2).toList
     }
 
   } // implicit class RSAOntology
