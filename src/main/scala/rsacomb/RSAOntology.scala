@@ -108,9 +108,6 @@ trait RSAOntology {
        *    For all roles r1 appearing in an axiom of type T5, r1 is unsafe
        *    if there exists a role r2 (different from top) appearing in an axiom
        *    of type T3 and r1 is a subproperty of the inverse of r2.
-       * 
-       * TODO: We are not checking whether the class expression on the right in T3
-       * is top. For now we can assume it is always the case.
        */
       val unsafe1 = for {
         axiom <- tbox
@@ -119,7 +116,7 @@ trait RSAOntology {
         roleSuper = role1 +: reasoner.superObjectProperties(role1).collect(Collectors.toList()).asScala
         roleSuperInv = roleSuper.map(_.getInverseProperty)
         axiom <- tbox
-        if axiom.isT3
+        if axiom.isT3 && !axiom.isT3top
         role2 <- axiom.objectPropertyExpressionsInSignature 
         if roleSuperInv.contains(role2)
       } yield role1

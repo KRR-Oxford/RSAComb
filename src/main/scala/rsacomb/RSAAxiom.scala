@@ -16,9 +16,10 @@ trait RSAAxiom {
    */
   private sealed trait RSAAxiomType
   private object RSAAxiomType {
-    case object T3 extends RSAAxiomType // ∃R.A ⊑ B
-    case object T4 extends RSAAxiomType // A ⊑ ≤1R.B
-    case object T5 extends RSAAxiomType // A ⊑ ∃R.B
+    case object T3    extends RSAAxiomType // ∃R.A ⊑ B
+    case object T3top extends RSAAxiomType // ∃R.⊤ ⊑ B
+    case object T4    extends RSAAxiomType // A ⊑ ≤1R.B
+    case object T5    extends RSAAxiomType // A ⊑ ∃R.B
   }
 
   /* Implements additional features on top of `OWLAxiom` from
@@ -43,6 +44,8 @@ trait RSAAxiom {
         val sub = axiom.getSubClass().getClassExpressionType()
         val sup = axiom.getSuperClass().getClassExpressionType()
         t match {
+          case RSAAxiomType.T3top => // ∃R.⊤ ⊑ B
+            axiom.isT5 && axiom.getSubClass().asInstanceOf[OWLObjectSomeValuesFrom].getFiller.isOWLThing
           case RSAAxiomType.T3 => // ∃R.A ⊑ B
             sub == ClassExpressionType.OBJECT_SOME_VALUES_FROM && sup == ClassExpressionType.OWL_CLASS
           case RSAAxiomType.T4 => // A ⊑ ≤1R.B
@@ -67,6 +70,7 @@ trait RSAAxiom {
     }
 
     /* Exposed methods */
+    def isT3top: Boolean = isOfType(RSAAxiomType.T3top)
     def isT3: Boolean = isOfType(RSAAxiomType.T3)
     def isT4: Boolean = isOfType(RSAAxiomType.T4)
     def isT5: Boolean = isOfType(RSAAxiomType.T5)
