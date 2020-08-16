@@ -2,7 +2,7 @@ package rsacomb
 
 /* Java imports */
 import java.util.HashMap
-import java.util.stream.{Collectors,Stream}
+import java.util.stream.{Collectors, Stream}
 
 import org.semanticweb.owlapi.model.OWLOntology
 import org.semanticweb.owlapi.model.OWLObjectPropertyExpression
@@ -12,7 +12,6 @@ import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.logic.Variable
 import tech.oxfordsemantic.jrdfox.client.UpdateType
-
 
 /* Scala imports */
 import scala.collection.JavaConverters._
@@ -42,9 +41,14 @@ trait RSAOntology {
        *    step of approximation of an Horn-ALCHOIQ to RSA
        */
 
-      val tbox = 
-        Stream.concat(ontology.tboxAxioms(Imports.INCLUDED), ontology.rboxAxioms(Imports.INCLUDED))
-              .collect(Collectors.toList()).asScala
+      val tbox =
+        Stream
+          .concat(
+            ontology.tboxAxioms(Imports.INCLUDED),
+            ontology.rboxAxioms(Imports.INCLUDED)
+          )
+          .collect(Collectors.toList())
+          .asScala
       val unsafe = ontology.getUnsafeRoles
 
       /* DEBUG: print rules in DL syntax */
@@ -55,18 +59,29 @@ trait RSAOntology {
       /* Ontology convertion into LP rules */
       val datalog = for {
         axiom <- tbox
-        visitor = new RDFoxAxiomConverter(Variable.create("x"), SkolemStrategy.ConstantRSA(axiom.toString), unsafe)
-        rule  <- axiom.accept(visitor)
+        visitor = new RDFoxAxiomConverter(
+          Variable.create("x"),
+          SkolemStrategy.ConstantRSA(axiom.toString),
+          unsafe
+        )
+        rule <- axiom.accept(visitor)
       } yield rule
 
       val prefixes = new Prefixes()
       prefixes.declarePrefix(":", "http://example.com/rsa_example.owl#")
+      prefixes.declarePrefix(
+        "rdf:",
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+      )
+      prefixes.declarePrefix("rdfs:", "http://www.w3.org/2000/01/rdf-schema#")
+      prefixes.declarePrefix("owl:", "http://www.w3.org/2002/07/owl#")
 
       // Open connection with RDFox
-      val (server,data) = RDFox.openConnection("RSACheck")
+      val (server, data) = RDFoxUtil.openConnection("RSACheck")
       // Add Data (hardcoded for now)
-      data.importData(UpdateType.ADDITION, prefixes,":a a :A .")
-      /* Add Datalog rules
+      data.importData(UpdateType.ADDITION, prefixes, ":a a :A .")
+
+      /* Add rules
        *
        * NOTE:
        * - using the `addRules(...)` method in `DataStoreConnection` is not working as expected, complaining
@@ -76,18 +91,45 @@ trait RSAOntology {
        *   for predicate arguments (e.g., `<predicate>(?X,?Y)`) while the specification for the proprietary RDFox
        *   syntax uses squared brackets (e.g., `<preditate>[?X,?Y]`).
        */
+
+      /* Add built-in rules
+       */
       data.importData(
         UpdateType.ADDITION,
         prefixes,
-        datalog.foldLeft("")((str,rule) => str ++ "\n" ++ rule.toString().replace("(", "[").replace(")","]"))
+        "<internal:E>[?X,?Y] :- <internal:PE>[?X,?Y], <internal:U>[?X], <internal:U>[?Y] ."
+      )
+
+      /* Add ontology rules
+       */
+      data.importData(
+        UpdateType.ADDITION,
+        prefixes,
+        datalog.foldLeft("")((str, rule) =>
+          str ++ "\n" ++ rule.toString().replace("(", "[").replace(")", "]")
+        )
       )
 
       // Retrieve all instances of PE
       println("\nQuery results:")
-      data.evaluateQuery(prefixes,"SELECT ?X ?Y WHERE { ?X <internal:PE> ?Y }", new HashMap[String,String](), System.out, "text/csv");
+      data.evaluateQuery(
+        prefixes,
+        "SELECT ?X ?Y WHERE { ?X <internal:PE> ?Y }",
+        new HashMap[String, String](),
+        System.out,
+        "text/csv"
+      );
+
+      data.evaluateQuery(
+        prefixes,
+        "SELECT ?X ?Y WHERE { ?X <internal:E> ?Y }",
+        new HashMap[String, String](),
+        System.out,
+        "text/csv"
+      );
 
       // Close connection to RDFox
-      RDFox.closeConnection(server,data)
+      RDFoxUtil.closeConnection(server, data)
 
       /* DEBUG */
       true
@@ -98,13 +140,16 @@ trait RSAOntology {
       val factory = new StructuralReasonerFactory()
       val reasoner = factory.createReasoner(ontology)
 
-      val tbox = ontology.tboxAxioms(Imports.INCLUDED).collect(Collectors.toSet()).asScala
+      val tbox = ontology
+        .tboxAxioms(Imports.INCLUDED)
+        .collect(Collectors.toSet())
+        .asScala
 
       /* DEBUG: print rules in DL syntax */
       //val renderer = new DLSyntaxObjectRenderer()
 
       /* Checking for (1) unsafety condition:
-       * 
+       *
        *    For all roles r1 appearing in an axiom of type T5, r1 is unsafe
        *    if there exists a role r2 (different from top) appearing in an axiom
        *    of type T3 and r1 is a subproperty of the inverse of r2.
@@ -113,11 +158,15 @@ trait RSAOntology {
         axiom <- tbox
         if axiom.isT5
         role1 <- axiom.objectPropertyExpressionsInSignature
-        roleSuper = role1 +: reasoner.superObjectProperties(role1).collect(Collectors.toList()).asScala
+        roleSuper =
+          role1 +: reasoner
+            .superObjectProperties(role1)
+            .collect(Collectors.toList())
+            .asScala
         roleSuperInv = roleSuper.map(_.getInverseProperty)
         axiom <- tbox
         if axiom.isT3 && !axiom.isT3top
-        role2 <- axiom.objectPropertyExpressionsInSignature 
+        role2 <- axiom.objectPropertyExpressionsInSignature
         if roleSuperInv.contains(role2)
       } yield role1
 
@@ -126,17 +175,21 @@ trait RSAOntology {
        *    For all roles p1 appearing in an axiom of type T5, p1 is unsafe if
        *    there exists a role p2 appearing in an axiom of type T4 and p1 is a
        *    subproperty of either p2 or the inverse of p2.
-       * 
+       *
        */
       val unsafe2 = for {
         axiom <- tbox
         if axiom.isT5
         role1 <- axiom.objectPropertyExpressionsInSignature
-        roleSuper = role1 +: reasoner.superObjectProperties(role1).collect(Collectors.toList()).asScala
+        roleSuper =
+          role1 +: reasoner
+            .superObjectProperties(role1)
+            .collect(Collectors.toList())
+            .asScala
         roleSuperInv = roleSuper.map(_.getInverseProperty)
         axiom <- tbox
         if axiom.isT4
-        role2 <- axiom.objectPropertyExpressionsInSignature 
+        role2 <- axiom.objectPropertyExpressionsInSignature
         if roleSuper.contains(role2) || roleSuperInv.contains(role2)
       } yield role1
 
