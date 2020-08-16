@@ -112,21 +112,19 @@ trait RSAOntology {
 
       // Retrieve all instances of PE
       println("\nQuery results:")
-      data.evaluateQuery(
+      val cursor = data.createCursor(
         prefixes,
         "SELECT ?X ?Y WHERE { ?X <internal:PE> ?Y }",
-        new HashMap[String, String](),
-        System.out,
-        "text/csv"
+        new HashMap[String, String]()
       );
-
-      data.evaluateQuery(
-        prefixes,
-        "SELECT ?X ?Y WHERE { ?X <internal:E> ?Y }",
-        new HashMap[String, String](),
-        System.out,
-        "text/csv"
-      );
+      var mul = cursor.open()
+      while (mul > 0) {
+        val res0 = cursor.getResource(0)
+        val res1 = cursor.getResource(1)
+        println(s"Answer: $res0 $res1")
+        mul = cursor.advance()
+      }
+      cursor.close();
 
       // Close connection to RDFox
       RDFoxUtil.closeConnection(server, data)
