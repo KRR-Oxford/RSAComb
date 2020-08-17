@@ -2,6 +2,7 @@ package rsacomb
 
 /* Java imports */
 import java.util.HashMap
+import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.client.{
   ConnectionFactory,
   ServerConnection,
@@ -29,6 +30,27 @@ object RDFoxUtil {
     val data = server.newDataStoreConnection(dataStore)
 
     (server, data)
+  }
+
+  def query(
+      data: DataStoreConnection,
+      prefixes: Prefixes,
+      query: String
+  ): Unit = {
+    println(s"\n{ $query }")
+    val cursor = data.createCursor(
+      prefixes,
+      query,
+      new HashMap[String, String]()
+    );
+    var mul = cursor.open()
+    while (mul > 0) {
+      val res0 = cursor.getResource(0)
+      val res1 = cursor.getResource(1)
+      println(s"Answer: $res0 $res1")
+      mul = cursor.advance()
+    }
+    cursor.close();
   }
 
   def closeConnection(

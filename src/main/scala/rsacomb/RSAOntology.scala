@@ -51,10 +51,11 @@ trait RSAOntology {
           .asScala
       val unsafe = ontology.getUnsafeRoles
 
-      /* DEBUG: print rules in DL syntax */
+      /* DEBUG: print rules in DL syntax and unsafe roles */
       val renderer = new DLSyntaxObjectRenderer()
       println("\nDL rules:")
       tbox.foreach(x => println(renderer.render(x)))
+      println(s"Unsafe roles: $unsafe")
 
       /* Ontology convertion into LP rules */
       val datalog = for {
@@ -111,20 +112,17 @@ trait RSAOntology {
       )
 
       // Retrieve all instances of PE
-      println("\nQuery results:")
-      val cursor = data.createCursor(
+      println("\nQueries:")
+      RDFoxUtil.query(
+        data,
         prefixes,
-        "SELECT ?X ?Y WHERE { ?X <internal:PE> ?Y }",
-        new HashMap[String, String]()
-      );
-      var mul = cursor.open()
-      while (mul > 0) {
-        val res0 = cursor.getResource(0)
-        val res1 = cursor.getResource(1)
-        println(s"Answer: $res0 $res1")
-        mul = cursor.advance()
-      }
-      cursor.close();
+        "SELECT ?X ?Y WHERE { ?X <internal:PE> ?Y }"
+      )
+      RDFoxUtil.query(
+        data,
+        prefixes,
+        "SELECT ?X ?Y WHERE { ?X <internal:E> ?Y }"
+      )
 
       // Close connection to RDFox
       RDFoxUtil.closeConnection(server, data)
