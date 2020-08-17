@@ -55,7 +55,8 @@ trait RSAOntology {
       val renderer = new DLSyntaxObjectRenderer()
       println("\nDL rules:")
       tbox.foreach(x => println(renderer.render(x)))
-      println(s"Unsafe roles: $unsafe")
+      println("\nUnsafe roles:")
+      println(unsafe)
 
       /* Ontology convertion into LP rules */
       val datalog = for {

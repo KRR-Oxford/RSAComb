@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rdf:RDF
+  xml:base = "http://example.com/rsa_example.owl#"
+  xmlns:rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" 
+  xmlns:owl="http://www.w3.org/2002/07/owl#"
+>
+
+    <!-- 
+    A ⊑ ∃ R.B
+    ∃ R⁻.X ⊑ Y
+    B ⊑ ∃ S.C
+    ∃ S⁻.X ⊑ Y
+    C ⊑ ∃ T.D
+    ∃ T⁻.X ⊑ Y
+    D ⊑ ∃ P.A
+    ∃ P⁻.X ⊑ Y
+    -->
+
+    <owl:Class rdf:ID="A">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#R"/> 
+                <owl:someValuesFrom>
+                    <owl:Class rdf:about="#B" /> 
+                </owl:someValuesFrom>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Restriction>
+        <owl:onProperty>
+            <owl:ObjectProperty>
+                <owl:inverseOf rdf:resource="#R" />
+            </owl:ObjectProperty>
+        </owl:onProperty>
+        <owl:someValuesFrom>
+            <owl:Class rdf:about="#X" /> 
+        </owl:someValuesFrom>
+        <rdfs:subClassOf rdf:resource="#Y" />
+    </owl:Restriction>
+
+    <owl:Class rdf:ID="B">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#S"/> 
+                <owl:someValuesFrom>
+                    <owl:Class rdf:about="#C" /> 
+                </owl:someValuesFrom>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Restriction>
+        <owl:onProperty>
+            <owl:ObjectProperty>
+                <owl:inverseOf rdf:resource="#S" />
+            </owl:ObjectProperty>
+        </owl:onProperty>
+        <owl:someValuesFrom>
+            <owl:Class rdf:about="#X" /> 
+        </owl:someValuesFrom>
+        <rdfs:subClassOf rdf:resource="#Y" />
+    </owl:Restriction>
+
+    <owl:Class rdf:ID="C">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#T"/> 
+                <owl:someValuesFrom>
+                    <owl:Class rdf:about="#D" /> 
+                </owl:someValuesFrom>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Restriction>
+        <owl:onProperty>
+            <owl:ObjectProperty>
+                <owl:inverseOf rdf:resource="#T" />
+            </owl:ObjectProperty>
+        </owl:onProperty>
+        <owl:someValuesFrom>
+            <owl:Class rdf:about="#X" /> 
+        </owl:someValuesFrom>
+        <rdfs:subClassOf rdf:resource="#Y" />
+    </owl:Restriction>
+
+    <owl:Class rdf:ID="D">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#P"/> 
+                <owl:someValuesFrom>
+                    <owl:Class rdf:about="#A" /> 
+                </owl:someValuesFrom>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Restriction>
+        <owl:onProperty>
+            <owl:ObjectProperty>
+                <owl:inverseOf rdf:resource="#P" />
+            </owl:ObjectProperty>
+        </owl:onProperty>
+        <owl:someValuesFrom>
+            <owl:Class rdf:about="#X" /> 
+        </owl:someValuesFrom>
+        <rdfs:subClassOf rdf:resource="#Y" />
+    </owl:Restriction>
+
+</rdf:RDF>
