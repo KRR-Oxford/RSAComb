@@ -9,16 +9,16 @@ import org.semanticweb.owlapi.model.OWLObjectPropertyExpression
 import org.semanticweb.owlapi.model.parameters.Imports
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory
 
-import tech.oxfordsemantic.jrdfox.logic.Variable
-import tech.oxfordsemantic.jrdfox.client.UpdateType
-import tech.oxfordsemantic.jrdfox.logic.{Rule, Atom, Variable, IRI}
+import tech.oxfordsemantic.jrdfox.client.{UpdateType, DataStoreConnection}
+import tech.oxfordsemantic.jrdfox.logic.{Resource, Rule, Atom, Variable, IRI}
 
 /* Scala imports */
 import scala.collection.JavaConverters._
+import scalax.collection.immutable.Graph
+import scalax.collection.GraphEdge.UnDiEdge
 
 /* Debug only */
 import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
-import java.io.OutputStream
 
 /* Wrapper trait for the implicit class `RSAOntology`.
  */
@@ -29,24 +29,22 @@ trait RSAOntology {
    */
   implicit class RSAOntology(ontology: OWLOntology) extends RSAAxiom {
 
+    /* Steps for RSA check
+     * 1) convert ontology axioms into LP rules
+     * 2) call RDFox on the onto and compute materialization
+     * 3) build graph from E(x,y) facts
+     * 4) check if the graph is tree-like
+     *    ideally this annotates the graph with info about the reasons
+     *    why the ontology might not be RSA. This could help a second
+     *    step of approximation of an Horn-ALCHOIQ to RSA
+     */
     def isRSA: Boolean = {
 
-      /* TODO: Steps for RSA check
-       * 1) convert ontology axioms into LP rules
-       * 2) call RDFox on the onto and compute materialization
-       * 3) build graph from E(x,y) facts
-       * 4) check if the graph is tree-like
-       *    ideally this annotates the graph with info about the reasons
-       *    why the ontology might not be RSA. This could help a second
-       *    step of approximation of an Horn-ALCHOIQ to RSA
-       */
-
-      val tbox =
+      val tbox = ontology.tboxAxioms(Imports.INCLUDED)
+      val rbox = ontology.rboxAxioms(Imports.INCLUDED)
+      val axioms =
         Stream
-          .concat(
-            ontology.tboxAxioms(Imports.INCLUDED),
-            ontology.rboxAxioms(Imports.INCLUDED)
-          )
+          .concat(tbox, rbox)
           .collect(Collectors.toList())
           .asScala
       val unsafe = ontology.getUnsafeRoles
@@ -54,13 +52,13 @@ trait RSAOntology {
       /* DEBUG: print rules in DL syntax and unsafe roles */
       val renderer = new DLSyntaxObjectRenderer()
       println("\nDL rules:")
-      tbox.foreach(x => println(renderer.render(x)))
+      axioms.foreach(x => println(renderer.render(x)))
       println("\nUnsafe roles:")
       println(unsafe)
 
       /* Ontology convertion into LP rules */
       val datalog = for {
-        axiom <- tbox
+        axiom <- axioms
         visitor = new RDFoxAxiomConverter(
           Variable.create("x"),
           SkolemStrategy.ConstantRSA(axiom.toString),
@@ -90,29 +88,20 @@ trait RSAOntology {
        */
       data.addRules(datalog.asJava)
 
-      // Retrieve all instances of PE
-      println("\nQueries:")
-      RDFoxUtil.query(
-        data,
-        RSA.Prefixes,
-        "SELECT ?X ?Y WHERE { ?X internal:PE ?Y }"
-      )
-      RDFoxUtil.query(
-        data,
-        RSA.Prefixes,
-        "SELECT ?X ?Y WHERE { ?X internal:E ?Y }"
-      )
-      RDFoxUtil.query(
-        data,
-        RSA.Prefixes,
-        "SELECT ?X WHERE { ?X rdf:type owl:Thing }"
-      )
+      /* Build graph
+       */
+      val graph = getRSAGraph(data);
+      println(graph)
 
       // Close connection to RDFox
       RDFoxUtil.closeConnection(server, data)
 
-      /* DEBUG */
-      true
+      /* To check if the graph is tree-like we check for acyclicity in a
+       * undirected graph.
+       *
+       * TODO: Implement additional checks (taking into account equality)
+       */
+      graph.isAcyclic
     }
 
     def getUnsafeRoles: List[OWLObjectPropertyExpression] = {
@@ -178,6 +167,21 @@ trait RSAOntology {
        * they have a more straightforward conversion from Java collections.
        */
       (unsafe1 ++ unsafe2).toList
+    }
+
+    def getRSAGraph(
+        data: DataStoreConnection
+    ): Graph[Resource, UnDiEdge] = {
+      val query = "SELECT ?X ?Y WHERE { ?X internal:E ?Y }"
+      val cursor =
+        data.createCursor(RSA.Prefixes, query, new HashMap[String, String]());
+      var mul = cursor.open()
+      var edges: List[UnDiEdge[Resource]] = List()
+      while (mul > 0) {
+        edges = UnDiEdge(cursor.getResource(0), cursor.getResource(1)) :: edges
+        mul = cursor.advance()
+      }
+      Graph(edges: _*)
     }
 
   } // implicit class RSAOntology
