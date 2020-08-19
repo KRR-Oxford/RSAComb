@@ -3,13 +3,17 @@ package rsacomb
 /* Java imports */
 import java.util.HashMap
 import tech.oxfordsemantic.jrdfox.Prefixes
+import tech.oxfordsemantic.jrdfox.logic.IRI
 import tech.oxfordsemantic.jrdfox.client.{
   ConnectionFactory,
   ServerConnection,
   DataStoreConnection
 }
-
 object RDFoxUtil {
+
+  implicit def owlapi2rdfox(iri: org.semanticweb.owlapi.model.IRI): IRI = {
+    IRI.create(iri.getIRIString())
+  }
 
   def openConnection(
       dataStore: String
@@ -25,8 +29,9 @@ object RDFoxUtil {
     /* Create datastore connection
      */
     val parameters = new HashMap[String, String]()
+    parameters.put("owl-in-rdf-support", "relaxed")
     //parameters.put("equality", "noUNA")
-    server.createDataStore(dataStore, "seq", parameters)
+    server.createDataStore(dataStore, "par-complex-nn", parameters)
     val data = server.newDataStoreConnection(dataStore)
 
     (server, data)

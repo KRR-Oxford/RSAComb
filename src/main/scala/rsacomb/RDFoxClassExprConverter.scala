@@ -22,7 +22,8 @@ import tech.oxfordsemantic.jrdfox.logic.{
   Term,
   Variable,
   Literal,
-  Datatype
+  Datatype,
+  IRI
 }
 
 import rsacomb.SkolemStrategy
@@ -56,10 +57,11 @@ class RDFoxClassExprConverter(
     unsafe: List[OWLObjectPropertyExpression]
 ) extends OWLClassExpressionVisitorEx[RDFoxRuleShards] {
 
+  import RDFoxUtil.owlapi2rdfox;
+
   // OWLClass
   override def visit(expr: OWLClass): RDFoxRuleShards = {
-    val name = expr.getIRI.getIRIString
-    val atom = List(Atom.create(TupleTableName.create(name), term))
+    val atom = List(Atom.rdf(term, IRI.RDF_TYPE, expr.getIRI()))
     RDFoxRuleShards(atom, List())
   }
 
@@ -84,9 +86,8 @@ class RDFoxClassExprConverter(
       .head // restricts to proper "nominals"
       .asOWLNamedIndividual
       .getIRI
-      .getIRIString
     val atom = List(
-      Atom.sameAs(term, Literal.create(ind, Datatype.IRI_REFERENCE))
+      Atom.sameAs(term, ind)
     )
     RDFoxRuleShards(atom, List())
   }
@@ -101,25 +102,22 @@ class RDFoxClassExprConverter(
     // technique it might involve the introduction of additional atoms,
     // and/or fresh constants and variables.
     val (head, body, term1) = skolem match {
-      case SkolemStrategy.None => (List(), List(), y)
-      case SkolemStrategy.Constant(c) =>
-        (List(), List(), Literal.create(c, Datatype.IRI_REFERENCE))
+      case SkolemStrategy.None        => (List(), List(), y)
+      case SkolemStrategy.Constant(c) => (List(), List(), c)
       case SkolemStrategy.ConstantRSA(c) => {
-        val lit = Literal.create(c, Datatype.IRI_REFERENCE)
         if (unsafe.contains(prop))
           (
             List(
-              Atom.create(TupleTableName.create("internal:PE"), term, lit),
-              Atom.create(TupleTableName.create("internal:U"), lit)
+              Atom.rdf(term, IRI.create(RSA.PredicatePE), c),
+              Atom.rdf(c, IRI.RDF_TYPE, IRI.create(RSA.PredicateU))
             ),
             List(),
-            lit
+            c
           )
         else
-          (List(), List(), lit)
+          (List(), List(), c)
       }
       case SkolemStrategy.Standard(f) =>
-        // At the time of writing the RDFox library does not have a
         // particular class for the "SKOLEM" operator and it is instead
         // a simple builtin function with a "special" name.
         (
@@ -153,7 +151,7 @@ class RDFoxClassExprConverter(
         .map(expr.getProperty.accept(_))
         .flatten
     RDFoxRuleShards(
-      List(Atom.create(TupleTableName.create("owl:sameAs"), vars(0), vars(1))),
+      List(Atom.sameAs(vars(0), vars(1))),
       classResult.res ++ propertyResult
     )
   }

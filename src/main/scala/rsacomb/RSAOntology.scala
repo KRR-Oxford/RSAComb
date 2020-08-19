@@ -12,6 +12,7 @@ import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.logic.Variable
 import tech.oxfordsemantic.jrdfox.client.UpdateType
+import tech.oxfordsemantic.jrdfox.logic.{Rule, Atom, Variable, IRI}
 
 /* Scala imports */
 import scala.collection.JavaConverters._
@@ -69,8 +70,14 @@ trait RSAOntology {
         rule <- axiom.accept(visitor)
       } yield rule
 
+      /* DEBUG: print datalog rules */
+      println("\nDatalog roles:")
+      datalog.foreach(println)
+
+      // TODO: Define Prefixes in RSA object
       val prefixes = new Prefixes()
-      prefixes.declarePrefix(":", "http://example.com/rsa_example.owl#")
+      prefixes.declarePrefix(":", RSA.PrefixBase)
+      prefixes.declarePrefix("internal:", RSA.PrefixInternal)
       prefixes.declarePrefix(
         "rdf:",
         "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -99,30 +106,29 @@ trait RSAOntology {
       data.importData(
         UpdateType.ADDITION,
         prefixes,
-        "<internal:E>[?X,?Y] :- <internal:PE>[?X,?Y], <internal:U>[?X], <internal:U>[?Y] ."
+        "<http://127.0.0.1/E>[?X,?Y] :- <http://127.0.0.1/PE>[?X,?Y], <http://127.0.0.1/U>[?X], <http://127.0.0.1/U>[?Y] ."
       )
 
       /* Add ontology rules
        */
-      data.importData(
-        UpdateType.ADDITION,
-        prefixes,
-        datalog.foldLeft("")((str, rule) =>
-          str ++ "\n" ++ rule.toString().replace("(", "[").replace(")", "]")
-        )
-      )
+      data.addRules(datalog.asJava)
 
       // Retrieve all instances of PE
       println("\nQueries:")
       RDFoxUtil.query(
         data,
         prefixes,
-        "SELECT ?X ?Y WHERE { ?X <internal:PE> ?Y }"
+        "SELECT ?X ?Y WHERE { ?X internal:PE ?Y }"
       )
       RDFoxUtil.query(
         data,
         prefixes,
-        "SELECT ?X ?Y WHERE { ?X <internal:E> ?Y }"
+        "SELECT ?X ?Y WHERE { ?X internal:E ?Y }"
+      )
+      RDFoxUtil.query(
+        data,
+        prefixes,
+        "SELECT ?X WHERE { ?X rdf:type owl:Thing }"
       )
 
       // Close connection to RDFox
