@@ -9,7 +9,6 @@ import org.semanticweb.owlapi.model.OWLObjectPropertyExpression
 import org.semanticweb.owlapi.model.parameters.Imports
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory
 
-import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.logic.Variable
 import tech.oxfordsemantic.jrdfox.client.UpdateType
 import tech.oxfordsemantic.jrdfox.logic.{Rule, Atom, Variable, IRI}
@@ -74,38 +73,16 @@ trait RSAOntology {
       println("\nDatalog roles:")
       datalog.foreach(println)
 
-      // TODO: Define Prefixes in RSA object
-      val prefixes = new Prefixes()
-      prefixes.declarePrefix(":", RSA.PrefixBase)
-      prefixes.declarePrefix("internal:", RSA.PrefixInternal)
-      prefixes.declarePrefix(
-        "rdf:",
-        "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-      )
-      prefixes.declarePrefix("rdfs:", "http://www.w3.org/2000/01/rdf-schema#")
-      prefixes.declarePrefix("owl:", "http://www.w3.org/2002/07/owl#")
-
       // Open connection with RDFox
       val (server, data) = RDFoxUtil.openConnection("RSACheck")
       // Add Data (hardcoded for now)
-      data.importData(UpdateType.ADDITION, prefixes, ":a a :A .")
-
-      /* Add rules
-       *
-       * NOTE:
-       * - using the `addRules(...)` method in `DataStoreConnection` is not working as expected, complaining
-       *   about missing TupleTable entries;
-       * - weirdly enough, the same error is returned when trying to pass the rules to the `importData` method,
-       *   simply turning them into strings. It seems like the `toString` implementation of `Rule` uses parenthesis
-       *   for predicate arguments (e.g., `<predicate>(?X,?Y)`) while the specification for the proprietary RDFox
-       *   syntax uses squared brackets (e.g., `<preditate>[?X,?Y]`).
-       */
+      data.importData(UpdateType.ADDITION, RSA.Prefixes, ":a a :A .")
 
       /* Add built-in rules
        */
       data.importData(
         UpdateType.ADDITION,
-        prefixes,
+        RSA.Prefixes,
         "<http://127.0.0.1/E>[?X,?Y] :- <http://127.0.0.1/PE>[?X,?Y], <http://127.0.0.1/U>[?X], <http://127.0.0.1/U>[?Y] ."
       )
 
@@ -117,17 +94,17 @@ trait RSAOntology {
       println("\nQueries:")
       RDFoxUtil.query(
         data,
-        prefixes,
+        RSA.Prefixes,
         "SELECT ?X ?Y WHERE { ?X internal:PE ?Y }"
       )
       RDFoxUtil.query(
         data,
-        prefixes,
+        RSA.Prefixes,
         "SELECT ?X ?Y WHERE { ?X internal:E ?Y }"
       )
       RDFoxUtil.query(
         data,
-        prefixes,
+        RSA.Prefixes,
         "SELECT ?X WHERE { ?X rdf:type owl:Thing }"
       )
 

@@ -108,8 +108,8 @@ class RDFoxClassExprConverter(
         if (unsafe.contains(prop))
           (
             List(
-              Atom.rdf(term, IRI.create(RSA.PredicatePE), c),
-              Atom.rdf(c, IRI.RDF_TYPE, IRI.create(RSA.PredicateU))
+              Atom.rdf(term, RSA.internal("PE"), c),
+              Atom.rdf(c, IRI.RDF_TYPE, RSA.internal("U"))
             ),
             List(),
             c
