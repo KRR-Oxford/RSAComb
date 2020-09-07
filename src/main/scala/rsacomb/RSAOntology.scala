@@ -200,11 +200,13 @@ trait RSAOntology {
         // TODO: We need to implement another way to introduce fresh
         // variables.
         val varA = Variable.create("A")
+        val name =
+          Literal.create(atom.getTupleTableName.getIRI, Datatype.XSD_STRING)
         val args = atom
           .getArguments()
           .asScala
           .toSeq
-        //.prepended(atom.getTupleTableName.getIRI)
+          .prepended(name)
         BindAtom.create(
           BuiltinFunctionCall
             .create("SKOLEM", args: _*),
