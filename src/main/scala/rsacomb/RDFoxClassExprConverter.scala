@@ -34,7 +34,7 @@ import org.semanticweb.owlapi.model.OWLObjectProperty
 object RDFoxClassExprConverter {
 
   def apply(
-      term: Term = Variable.create("x"),
+      term: Term,
       skolem: SkolemStrategy = SkolemStrategy.None,
       unsafe: List[OWLObjectPropertyExpression] = List()
   ): RDFoxClassExprConverter =
@@ -95,9 +95,7 @@ class RDFoxClassExprConverter(
 
   // OWLObjectSomeValuesFrom
   override def visit(expr: OWLObjectSomeValuesFrom): RDFoxRuleShards = {
-    // TODO: variables needs to be handled at visitor level. Hardcoding
-    // the name of the varibles might lead to errors for complex cases.
-    val y = Variable.create("y")
+    val y = RSA.getFreshVariable()
     // Here we are assuming a role name
     val prop = expr.getProperty()
     // Computes the result of rule skolemization. Depending on the used
@@ -141,7 +139,7 @@ class RDFoxClassExprConverter(
   // OWLObjectMaxCardinality
   override def visit(expr: OWLObjectMaxCardinality): RDFoxRuleShards = {
     // TODO: again, no hardcoded variables
-    val vars = List(Variable.create("y"), Variable.create("z"))
+    val vars = List(RSA.getFreshVariable(), RSA.getFreshVariable())
     val classResult = RDFoxClassExprConverter.merge(
       vars
         .map(new RDFoxClassExprConverter(_, skolem, unsafe))

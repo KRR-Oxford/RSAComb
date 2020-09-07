@@ -30,6 +30,14 @@ object RSA extends RSAOntology {
   Prefixes.declarePrefix("rdfs:", "http://www.w3.org/2000/01/rdf-schema#")
   Prefixes.declarePrefix("owl:", "http://www.w3.org/2002/07/owl#")
 
+  // Counter used to implement a simple fresh variable generator
+  private var counter = -1;
+
+  def getFreshVariable(): Variable = {
+    counter += 1
+    Variable.create(f"I$counter%03d")
+  }
+
   val varX = Variable.create("X")
   val varY = Variable.create("Y")
   val varZ = Variable.create("Z")

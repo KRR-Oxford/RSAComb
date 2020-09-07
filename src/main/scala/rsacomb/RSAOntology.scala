@@ -61,7 +61,7 @@ trait RSAOntology {
       val datalog = for {
         axiom <- axioms
         visitor = new RDFoxAxiomConverter(
-          Variable.create("x"),
+          RSA.getFreshVariable(),
           SkolemStrategy.ConstantRSA(axiom.toString),
           unsafe
         )
@@ -199,7 +199,7 @@ trait RSAOntology {
       def getBindAtom(atom: Atom): BindAtom = {
         // TODO: We need to implement another way to introduce fresh
         // variables.
-        val varA = Variable.create("A")
+        val newvar = RSA.getFreshVariable()
         val name =
           Literal.create(atom.getTupleTableName.getIRI, Datatype.XSD_STRING)
         val args = atom
@@ -210,7 +210,7 @@ trait RSAOntology {
         BindAtom.create(
           BuiltinFunctionCall
             .create("SKOLEM", args: _*),
-          varA
+          newvar
         )
       }
 
@@ -252,7 +252,7 @@ trait RSAOntology {
                 val b = getBindAtom(a)
                 ReifiedHead(b, reifyAtom(a, b.getBoundVariable))
               } else {
-                val varA = Variable.create("A")
+                val varA = RSA.getFreshVariable()
                 ReifiedBody(reifyAtom(a, varA))
               }
             } else {

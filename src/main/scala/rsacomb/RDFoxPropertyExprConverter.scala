@@ -3,7 +3,7 @@ package rsacomb
 import org.semanticweb.owlapi.model.{OWLPropertyExpression, OWLObjectProperty}
 import org.semanticweb.owlapi.model.OWLPropertyExpressionVisitorEx
 
-import tech.oxfordsemantic.jrdfox.logic.{Atom, Term, IRI, Variable, Literal}
+import tech.oxfordsemantic.jrdfox.logic.{Atom, Term, IRI, Literal}
 
 import rsacomb.SkolemStrategy
 import org.semanticweb.owlapi.model.OWLObjectInverseOf
