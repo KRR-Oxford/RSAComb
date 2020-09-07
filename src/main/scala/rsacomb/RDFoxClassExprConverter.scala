@@ -61,7 +61,8 @@ class RDFoxClassExprConverter(
 
   // OWLClass
   override def visit(expr: OWLClass): RDFoxRuleShards = {
-    val atom = List(Atom.rdf(term, IRI.RDF_TYPE, expr.getIRI()))
+    val iri: IRI = if (expr.isTopEntity()) IRI.THING else expr.getIRI()
+    val atom = List(Atom.rdf(term, IRI.RDF_TYPE, iri))
     RDFoxRuleShards(atom, List())
   }
 
@@ -97,6 +98,7 @@ class RDFoxClassExprConverter(
     // TODO: variables needs to be handled at visitor level. Hardcoding
     // the name of the varibles might lead to errors for complex cases.
     val y = Variable.create("y")
+    // Here we are assuming a role name
     val prop = expr.getProperty()
     // Computes the result of rule skolemization. Depending on the used
     // technique it might involve the introduction of additional atoms,

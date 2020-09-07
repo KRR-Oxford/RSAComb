@@ -15,6 +15,10 @@ object RDFoxUtil {
     IRI.create(iri.getIRIString())
   }
 
+  implicit def owlapi2rdfox(iri: String): IRI = {
+    IRI.create(iri)
+  }
+
   def openConnection(
       dataStore: String
   ): (ServerConnection, DataStoreConnection) = {
@@ -37,7 +41,7 @@ object RDFoxUtil {
     (server, data)
   }
 
-  def query(
+  def submitQuery(
       data: DataStoreConnection,
       prefixes: Prefixes,
       query: String

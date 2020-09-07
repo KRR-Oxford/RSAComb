@@ -48,18 +48,20 @@ object RSAComb {
      */
 
     val ontology = RSA.loadOntology(ontoPath)
-    ontology.isRSA
+    if (ontology.isRSA) {
 
-    /* Build canonical model */
-    //val tboxCanon = rsa.canonicalModel()
+      /* Build canonical model */
+      //val tboxCanon = rsa.canonicalModel()
 
-    /* Load query */
-    //val query = ...
+      /* Load query */
+      val query = RSA.test_query
 
-    /* Compute the filtering program from the given query */
-    //val tboxFilter = rsa.filteringProgram(query)
+      /* Compute the filtering program from the given query */
+      val filter = ontology.getFilteringProgram(query)
 
-    /* ... */
+      /* ... */
+
+    }
 
     /* DEBUG ONLY */
     println("Ok!")

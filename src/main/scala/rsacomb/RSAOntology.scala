@@ -19,6 +19,7 @@ import scalax.collection.GraphEdge.UnDiEdge
 
 /* Debug only */
 import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
+import tech.oxfordsemantic.jrdfox.logic._
 
 /* Wrapper trait for the implicit class `RSAOntology`.
  */
@@ -163,8 +164,9 @@ trait RSAOntology {
       } yield role1
 
       /* TODO: We should be able to avoid this last conversion to List.
-       * Maybe we should just move everything to Sets instead of Lists, since
-       * they have a more straightforward conversion from Java collections.
+       * Maybe we should just move everything to Sets instead of Lists,
+       * since they have a more straightforward conversion from Java
+       * collections.
        */
       (unsafe1 ++ unsafe2).toList
     }
@@ -182,6 +184,165 @@ trait RSAOntology {
         mul = cursor.advance()
       }
       Graph(edges: _*)
+    }
+
+    def getFilteringProgram(query: Query): List[Rule] = {
+
+      // Import implicit conversion to RDFox IRI
+      import RDFoxUtil._
+
+      sealed trait Reified;
+      case class ReifiedHead(bind: BindAtom, atoms: List[Atom]) extends Reified
+      case class ReifiedBody(atoms: List[Atom]) extends Reified
+      case class Unaltered(formula: BodyFormula) extends Reified
+
+      def getBindAtom(atom: Atom): BindAtom = {
+        // TODO: We need to implement another way to introduce fresh
+        // variables.
+        val varA = Variable.create("A")
+        val args = atom
+          .getArguments()
+          .asScala
+          .toSeq
+        //.prepended(atom.getTupleTableName.getIRI)
+        BindAtom.create(
+          BuiltinFunctionCall
+            .create("SKOLEM", args: _*),
+          varA
+        )
+      }
+
+      def reifyAtom(atom: Atom, variable: Variable): List[Atom] = {
+        def iri(i: Int) = atom.getTupleTableName().getIRI() ++ s"_$i"
+        atom
+          .getArguments()
+          .asScala
+          .zipWithIndex
+          .map { case (t, i) => Atom.rdf(variable, iri(i), t) }
+          .toList
+      }
+
+      // Is this the best way to determine if an atom is an RDF triple?
+      // Note that we can't use `getNumberOfArguments()` because is not
+      // "consistent":
+      // - for an atom created with `rdf(<term1>, <term2>, <term3>)`,
+      // `getNumberOfArguments` returns 3
+      // - for an atom created with `Atom.create(<tupletablename>, <term1>,
+      // <term2>, <term3>)`, `getNumberOfArguments()` returns 3
+      //
+      // This is probably because `Atom.rdf(...) is implemented as:
+      // ```scala
+      //  def rdf(term1: Term, term2: Term, term3: Term): Atom =
+      //    Atom.create(TupleTableName.create("internal:triple"), term1, term2, term3)
+      // ```
+      def isRdfTriple(atom: Atom): Boolean =
+        atom.getTupleTableName.getIRI.equals("internal:triple")
+
+      def reify(
+          formula: BodyFormula,
+          head: Boolean
+      ): Reified = {
+        def default[A <: BodyFormula](x: A) = Unaltered(x)
+        formula match {
+          case a: Atom => {
+            if (!isRdfTriple(a)) {
+              if (head) {
+                val b = getBindAtom(a)
+                ReifiedHead(b, reifyAtom(a, b.getBoundVariable))
+              } else {
+                val varA = Variable.create("A")
+                ReifiedBody(reifyAtom(a, varA))
+              }
+            } else {
+              default(a)
+            }
+          }
+          case a => default(a)
+        }
+      }
+
+      def skolemizeRule(rule: Rule): Rule = {
+        // Rule body
+        val body =
+          rule.getBody.asScala.map(reify(_, false)).flatMap {
+            case ReifiedHead(_, _) => List(); /* handle impossible case */
+            case ReifiedBody(x)    => x;
+            case Unaltered(x)      => List(x)
+          }
+        // Rule head
+        val reified = rule.getHead.asScala.map(reify(_, true))
+        val skols = reified.flatMap {
+          case ReifiedHead(x, _) => Some(x);
+          case ReifiedBody(_)    => None; /* handle impossible case */
+          case Unaltered(_)      => None
+        }
+        val head = reified.flatMap {
+          case ReifiedHead(_, x) => x;
+          case ReifiedBody(_)    => List(); /* handle impossible case */
+          case Unaltered(x) =>
+            List(x.asInstanceOf[Atom]) /* Can we do better that a cast? */
+        }
+        Rule.create(head.asJava, (skols ++ body).asJava)
+      }
+
+      def formulaToRuleBody(body: Formula): List[BodyFormula] = {
+        body match {
+          case a: BodyFormula => List(a);
+          case a: Conjunction =>
+            a.getConjuncts().asScala.toList.flatMap(formulaToRuleBody(_));
+          case _ => List() /* We don't handle this for now */
+        }
+      }
+
+      val body = formulaToRuleBody(query.getQueryFormula)
+      val vars: List[Term] = query.getAnswerVariables.asScala.toList
+      def id(t1: Term, t2: Term) =
+        Atom.create(
+          TupleTableName.create("http://127.0.0.1/ID"),
+          vars.appendedAll(List(t1, t2)).asJava
+        )
+      val qm = Atom.create(TupleTableName.create("QM"), vars.asJava)
+
+      /* Filtering program */
+      val rule1 = Rule.create(qm, body.asJava)
+      val rule3a =
+        for ((v, i) <- vars.zipWithIndex)
+          yield Rule.create(
+            id(
+              IRI.create(s"http://127.0.0.1/$i"),
+              IRI.create(s"http://127.0.0.1/$i")
+            ),
+            List(
+              qm,
+              Negation.create(
+                Atom.rdf(v, IRI.RDF_TYPE, IRI.create("http://127.0.0.1/NI"))
+              )
+            ).asJava
+          )
+      val rule3b = Rule.create(
+        id(Variable.create("V"), Variable.create("U")),
+        id(Variable.create("U"), Variable.create("V"))
+      )
+      val rule3c = Rule.create(
+        id(Variable.create("U"), Variable.create("W")),
+        List[BodyFormula](
+          id(Variable.create("U"), Variable.create("V")),
+          id(Variable.create("V"), Variable.create("W"))
+        ).asJava
+      )
+
+      var rules: List[Rule] =
+        List.empty
+          .prepended(rule3c)
+          .prepended(rule3b)
+          .prependedAll(rule3a)
+          .prepended(rule1)
+
+      // DEBUG
+      println("FILTERING PROGRAM:")
+      rules.map(skolemizeRule(_)).foreach(println(_))
+
+      List()
     }
 
   } // implicit class RSAOntology
