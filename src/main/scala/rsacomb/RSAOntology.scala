@@ -240,6 +240,12 @@ trait RSAOntology {
       def isRdfTriple(atom: Atom): Boolean =
         atom.getTupleTableName.getIRI.equals("internal:triple")
 
+      def isClassAssertion(atom: Atom): Boolean =
+        isRdfTriple(atom) && atom.getArgument(1).equals(IRI.RDF_TYPE)
+
+      def isRoleAssertion(atom: Atom): Boolean =
+        isRdfTriple(atom) && !atom.getArgument(1).equals(IRI.RDF_TYPE)
+
       def reify(
           formula: BodyFormula,
           head: Boolean
@@ -297,29 +303,39 @@ trait RSAOntology {
       }
 
       val body = formulaToRuleBody(query.getQueryFormula)
-      val vars: List[Term] = query.getAnswerVariables.asScala.toList
+      val bounded: List[Term] = List()
+      val answer: List[Term] = query.getAnswerVariables.asScala.toList
       def id(t1: Term, t2: Term) =
         Atom.create(
           TupleTableName.create("http://127.0.0.1/ID"),
-          vars.appendedAll(List(t1, t2)).asJava
+          (bounded ++ answer).appendedAll(List(t1, t2)).asJava
         )
-      val qm = Atom.create(TupleTableName.create("QM"), vars.asJava)
+      def tq(suffix: String, t1: Term, t2: Term) =
+        Atom.create(
+          TupleTableName.create(s"http://127.0.0.1/TQ$suffix"),
+          (bounded ++ answer).appendedAll(List(t1, t2)).asJava
+        )
+      def aq(suffix: String, t1: Term, t2: Term) =
+        Atom.create(
+          TupleTableName.create(s"http://127.0.0.1/AQ$suffix"),
+          (bounded ++ answer).appendedAll(List(t1, t2)).asJava
+        )
+      val qm =
+        Atom.create(TupleTableName.create("QM"), (bounded ++ answer).asJava)
 
       /* Filtering program */
       val rule1 = Rule.create(qm, body.asJava)
       val rule3a =
-        for ((v, i) <- vars.zipWithIndex)
+        for ((v, i) <- answer.zipWithIndex)
           yield Rule.create(
             id(
               IRI.create(s"http://127.0.0.1/$i"),
               IRI.create(s"http://127.0.0.1/$i")
             ),
-            List(
-              qm,
-              Negation.create(
-                Atom.rdf(v, IRI.RDF_TYPE, IRI.create("http://127.0.0.1/NI"))
-              )
-            ).asJava
+            qm,
+            Negation.create(
+              Atom.rdf(v, IRI.RDF_TYPE, IRI.create("http://127.0.0.1/NI"))
+            )
           )
       val rule3b = Rule.create(
         id(Variable.create("V"), Variable.create("U")),
@@ -327,14 +343,27 @@ trait RSAOntology {
       )
       val rule3c = Rule.create(
         id(Variable.create("U"), Variable.create("W")),
-        List[BodyFormula](
-          id(Variable.create("U"), Variable.create("V")),
-          id(Variable.create("V"), Variable.create("W"))
-        ).asJava
+        id(Variable.create("U"), Variable.create("V")),
+        id(Variable.create("V"), Variable.create("W"))
       )
+      val rule7a =
+        for (r <- Seq("f", "b"))
+          yield Rule.create(
+            tq(r, Variable.create("U"), Variable.create("V")),
+            aq(r, Variable.create("U"), Variable.create("V"))
+          )
+      val rule7b =
+        for (r <- Seq("f", "b"))
+          yield Rule.create(
+            tq(r, Variable.create("U"), Variable.create("W")),
+            aq(r, Variable.create("U"), Variable.create("V")),
+            tq(r, Variable.create("V"), Variable.create("W"))
+          )
 
       var rules: List[Rule] =
         List.empty
+          .prependedAll(rule7b)
+          .prependedAll(rule7a)
           .prepended(rule3c)
           .prepended(rule3b)
           .prependedAll(rule3a)
