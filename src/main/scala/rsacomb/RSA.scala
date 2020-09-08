@@ -50,9 +50,10 @@ object RSA extends RSAOntology {
   val test_query =
     Query.create(QueryType.SELECT, false, testAnswerVars, testFormula)
 
-  def internal(name: String): IRI =
+  def internal(name: Any): IRI =
     IRI.create(
-      Prefixes.getPrefixIRIsByPrefixName.get("internal:").getIRI + name
+      Prefixes.getPrefixIRIsByPrefixName.get("internal:").getIRI
+        + name.toString
     )
 
   // TODO: move this somewhere else... maybe an OntoUtils class or something.

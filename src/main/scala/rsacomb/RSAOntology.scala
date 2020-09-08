@@ -28,7 +28,9 @@ trait RSAOntology {
   /* Implements additional features to reason about RSA ontologies
    * on top of `OWLOntology` from the OWLAPI.
    */
-  implicit class RSAOntology(ontology: OWLOntology) extends RSAAxiom {
+  implicit class RSAOntology(ontology: OWLOntology)
+      extends RSAAxiom
+      with RDFTriple {
 
     /* Steps for RSA check
      * 1) convert ontology axioms into LP rules
@@ -224,28 +226,6 @@ trait RSAOntology {
           .toList
       }
 
-      // Is this the best way to determine if an atom is an RDF triple?
-      // Note that we can't use `getNumberOfArguments()` because is not
-      // "consistent":
-      // - for an atom created with `rdf(<term1>, <term2>, <term3>)`,
-      // `getNumberOfArguments` returns 3
-      // - for an atom created with `Atom.create(<tupletablename>, <term1>,
-      // <term2>, <term3>)`, `getNumberOfArguments()` returns 3
-      //
-      // This is probably because `Atom.rdf(...) is implemented as:
-      // ```scala
-      //  def rdf(term1: Term, term2: Term, term3: Term): Atom =
-      //    Atom.create(TupleTableName.create("internal:triple"), term1, term2, term3)
-      // ```
-      def isRdfTriple(atom: Atom): Boolean =
-        atom.getTupleTableName.getIRI.equals("internal:triple")
-
-      def isClassAssertion(atom: Atom): Boolean =
-        isRdfTriple(atom) && atom.getArgument(1).equals(IRI.RDF_TYPE)
-
-      def isRoleAssertion(atom: Atom): Boolean =
-        isRdfTriple(atom) && !atom.getArgument(1).equals(IRI.RDF_TYPE)
-
       def reify(
           formula: BodyFormula,
           head: Boolean
@@ -253,7 +233,7 @@ trait RSAOntology {
         def default[A <: BodyFormula](x: A) = Unaltered(x)
         formula match {
           case a: Atom => {
-            if (!isRdfTriple(a)) {
+            if (!a.isRdfTriple) {
               if (head) {
                 val b = getBindAtom(a)
                 ReifiedHead(b, reifyAtom(a, b.getBoundVariable))
@@ -293,83 +273,8 @@ trait RSAOntology {
         Rule.create(head.asJava, (skols ++ body).asJava)
       }
 
-      def formulaToRuleBody(body: Formula): List[BodyFormula] = {
-        body match {
-          case a: BodyFormula => List(a);
-          case a: Conjunction =>
-            a.getConjuncts().asScala.toList.flatMap(formulaToRuleBody(_));
-          case _ => List() /* We don't handle this for now */
-        }
-      }
-
-      val body = formulaToRuleBody(query.getQueryFormula)
-      val bounded: List[Term] = List()
-      val answer: List[Term] = query.getAnswerVariables.asScala.toList
-      def id(t1: Term, t2: Term) =
-        Atom.create(
-          TupleTableName.create("http://127.0.0.1/ID"),
-          (bounded ++ answer).appendedAll(List(t1, t2)).asJava
-        )
-      def tq(suffix: String, t1: Term, t2: Term) =
-        Atom.create(
-          TupleTableName.create(s"http://127.0.0.1/TQ$suffix"),
-          (bounded ++ answer).appendedAll(List(t1, t2)).asJava
-        )
-      def aq(suffix: String, t1: Term, t2: Term) =
-        Atom.create(
-          TupleTableName.create(s"http://127.0.0.1/AQ$suffix"),
-          (bounded ++ answer).appendedAll(List(t1, t2)).asJava
-        )
-      val qm =
-        Atom.create(TupleTableName.create("QM"), (bounded ++ answer).asJava)
-
-      /* Filtering program */
-      val rule1 = Rule.create(qm, body.asJava)
-      val rule3a =
-        for ((v, i) <- answer.zipWithIndex)
-          yield Rule.create(
-            id(
-              IRI.create(s"http://127.0.0.1/$i"),
-              IRI.create(s"http://127.0.0.1/$i")
-            ),
-            qm,
-            Negation.create(
-              Atom.rdf(v, IRI.RDF_TYPE, IRI.create("http://127.0.0.1/NI"))
-            )
-          )
-      val rule3b = Rule.create(
-        id(Variable.create("V"), Variable.create("U")),
-        id(Variable.create("U"), Variable.create("V"))
-      )
-      val rule3c = Rule.create(
-        id(Variable.create("U"), Variable.create("W")),
-        id(Variable.create("U"), Variable.create("V")),
-        id(Variable.create("V"), Variable.create("W"))
-      )
-      val rule7a =
-        for (r <- Seq("f", "b"))
-          yield Rule.create(
-            tq(r, Variable.create("U"), Variable.create("V")),
-            aq(r, Variable.create("U"), Variable.create("V"))
-          )
-      val rule7b =
-        for (r <- Seq("f", "b"))
-          yield Rule.create(
-            tq(r, Variable.create("U"), Variable.create("W")),
-            aq(r, Variable.create("U"), Variable.create("V")),
-            tq(r, Variable.create("V"), Variable.create("W"))
-          )
-
-      var rules: List[Rule] =
-        List.empty
-          .prependedAll(rule7b)
-          .prependedAll(rule7a)
-          .prepended(rule3c)
-          .prepended(rule3b)
-          .prependedAll(rule3a)
-          .prepended(rule1)
-
       // DEBUG
+      val rules = FilteringProgram(query, List()).rules
       println("FILTERING PROGRAM:")
       rules.map(skolemizeRule(_)).foreach(println(_))
 
