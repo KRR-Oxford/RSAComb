@@ -30,6 +30,13 @@ trait RSAOntology {
    */
   implicit class RSAOntology(ontology: OWLOntology) extends RSAAxiom {
 
+    /* TDOO: implement method to retrieve all ontology named individuals
+     */
+    lazy val individuals: List[IRI] = {
+      //ontology.getIndividualsInSignature().asScala.map(_.getIRI).toList
+      List()
+    }
+
     /* Steps for RSA check
      * 1) convert ontology axioms into LP rules
      * 2) call RDFox on the onto and compute materialization
@@ -39,7 +46,7 @@ trait RSAOntology {
      *    why the ontology might not be RSA. This could help a second
      *    step of approximation of an Horn-ALCHOIQ to RSA
      */
-    def isRSA: Boolean = {
+    lazy val isRSA: Boolean = {
 
       val tbox = ontology.tboxAxioms(Imports.INCLUDED)
       val rbox = ontology.rboxAxioms(Imports.INCLUDED)
