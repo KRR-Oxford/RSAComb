@@ -48,7 +48,7 @@ trait RSAOntology {
           .concat(tbox, rbox)
           .collect(Collectors.toList())
           .asScala
-      val unsafe = ontology.getUnsafeRoles
+      val unsafe = this.unsafeRoles
 
       /* DEBUG: print rules in DL syntax and unsafe roles */
       val renderer = new DLSyntaxObjectRenderer()
@@ -91,7 +91,7 @@ trait RSAOntology {
 
       /* Build graph
        */
-      val graph = getRSAGraph(data);
+      val graph = this.rsaGraph(data);
       println(graph)
 
       // Close connection to RDFox
@@ -105,7 +105,7 @@ trait RSAOntology {
       graph.isAcyclic
     }
 
-    def getUnsafeRoles: List[OWLObjectPropertyExpression] = {
+    private def unsafeRoles: List[OWLObjectPropertyExpression] = {
       // The reasoner is used to check unsafety condition for the ontology roles
       val factory = new StructuralReasonerFactory()
       val reasoner = factory.createReasoner(ontology)
@@ -166,7 +166,7 @@ trait RSAOntology {
       (unsafe1 ++ unsafe2).toList
     }
 
-    def getRSAGraph(
+    private def rsaGraph(
         data: DataStoreConnection
     ): Graph[Resource, UnDiEdge] = {
       val query = "SELECT ?X ?Y WHERE { ?X internal:E ?Y }"
