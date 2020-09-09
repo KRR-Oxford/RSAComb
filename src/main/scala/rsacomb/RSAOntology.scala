@@ -28,9 +28,7 @@ trait RSAOntology {
   /* Implements additional features to reason about RSA ontologies
    * on top of `OWLOntology` from the OWLAPI.
    */
-  implicit class RSAOntology(ontology: OWLOntology)
-      extends RSAAxiom
-      with RDFTriple {
+  implicit class RSAOntology(ontology: OWLOntology) extends RSAAxiom {
 
     /* Steps for RSA check
      * 1) convert ontology axioms into LP rules
@@ -165,11 +163,6 @@ trait RSAOntology {
         if roleSuper.contains(role2) || roleSuperInv.contains(role2)
       } yield role1
 
-      /* TODO: We should be able to avoid this last conversion to List.
-       * Maybe we should just move everything to Sets instead of Lists,
-       * since they have a more straightforward conversion from Java
-       * collections.
-       */
       (unsafe1 ++ unsafe2).toList
     }
 
@@ -188,98 +181,8 @@ trait RSAOntology {
       Graph(edges: _*)
     }
 
-    def getFilteringProgram(query: Query): List[Rule] = {
-
-      // Import implicit conversion to RDFox IRI
-      import RDFoxUtil._
-
-      sealed trait Reified;
-      case class ReifiedHead(bind: BindAtom, atoms: List[Atom]) extends Reified
-      case class ReifiedBody(atoms: List[Atom]) extends Reified
-      case class Unaltered(formula: BodyFormula) extends Reified
-
-      def getBindAtom(atom: Atom): BindAtom = {
-        // TODO: We need to implement another way to introduce fresh
-        // variables.
-        val newvar = RSA.getFreshVariable()
-        val name =
-          Literal.create(atom.getTupleTableName.getIRI, Datatype.XSD_STRING)
-        val args = atom
-          .getArguments()
-          .asScala
-          .toSeq
-          .prepended(name)
-        BindAtom.create(
-          BuiltinFunctionCall
-            .create("SKOLEM", args: _*),
-          newvar
-        )
-      }
-
-      def reifyAtom(atom: Atom, variable: Variable): List[Atom] = {
-        def iri(i: Int) = atom.getTupleTableName().getIRI() ++ s"_$i"
-        atom
-          .getArguments()
-          .asScala
-          .zipWithIndex
-          .map { case (t, i) => Atom.rdf(variable, iri(i), t) }
-          .toList
-      }
-
-      def reify(
-          formula: BodyFormula,
-          head: Boolean
-      ): Reified = {
-        def default[A <: BodyFormula](x: A) = Unaltered(x)
-        formula match {
-          case a: Atom => {
-            if (!a.isRdfTriple) {
-              if (head) {
-                val b = getBindAtom(a)
-                ReifiedHead(b, reifyAtom(a, b.getBoundVariable))
-              } else {
-                val varA = RSA.getFreshVariable()
-                ReifiedBody(reifyAtom(a, varA))
-              }
-            } else {
-              default(a)
-            }
-          }
-          case a => default(a)
-        }
-      }
-
-      def skolemizeRule(rule: Rule): Rule = {
-        // Rule body
-        val body =
-          rule.getBody.asScala.map(reify(_, false)).flatMap {
-            case ReifiedHead(_, _) => List(); /* handle impossible case */
-            case ReifiedBody(x)    => x;
-            case Unaltered(x)      => List(x)
-          }
-        // Rule head
-        val reified = rule.getHead.asScala.map(reify(_, true))
-        val skols = reified.flatMap {
-          case ReifiedHead(x, _) => Some(x);
-          case ReifiedBody(_)    => None; /* handle impossible case */
-          case Unaltered(_)      => None
-        }
-        val head = reified.flatMap {
-          case ReifiedHead(_, x) => x;
-          case ReifiedBody(_)    => List(); /* handle impossible case */
-          case Unaltered(x) =>
-            List(x.asInstanceOf[Atom]) /* Can we do better that a cast? */
-        }
-        Rule.create(head.asJava, (skols ++ body).asJava)
-      }
-
-      // DEBUG
-      val rules = FilteringProgram(query, List()).rules
-      println("FILTERING PROGRAM:")
-      rules.map(skolemizeRule(_)).foreach(println(_))
-
-      List()
-    }
+    def filteringProgram(query: Query): List[Rule] =
+      FilteringProgram(query, List()).rules
 
   } // implicit class RSAOntology
 

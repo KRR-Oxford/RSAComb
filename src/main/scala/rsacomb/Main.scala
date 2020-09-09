@@ -57,7 +57,7 @@ object RSAComb {
       val query = RSA.test_query
 
       /* Compute the filtering program from the given query */
-      val filter = ontology.getFilteringProgram(query)
+      val filter = ontology.filteringProgram(query)
 
       /* ... */
 

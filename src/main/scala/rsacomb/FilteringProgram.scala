@@ -5,16 +5,31 @@ import scala.collection.JavaConverters._
 
 class FilteringProgram(query: Query, constants: List[Term]) extends RDFTriple {
 
+  /* Makes mplicit conversion OWLAPI IRI <-> RDFox IRI available */
+  import RDFoxUtil._
+
   private val bounded: List[Term] = this.getBoundedVariables
   private val answer: List[Term] = query.getAnswerVariables.asScala.toList
 
   val facts: List[Atom] = constants.map(named)
-  val rules: List[Rule] = this.generateFilteringProgram()
+  val rules: List[Rule] = this.generateFilteringProgram().map(reifyRule)
 
   private def named(t: Term): Atom =
     Atom.rdf(t, IRI.RDF_TYPE, RSA.internal("NAMED"))
 
   private def getBoundedVariables: List[Variable] = List()
+
+  /* NOTE: we are restricting to queries that contain conjunctions of
+   * atoms for the time being. This might need to be reviewed in the
+   * future.
+   */
+  private def queryToBody(body: Formula): List[Atom] =
+    body match {
+      case a: Atom => List(a);
+      case a: Conjunction =>
+        a.getConjuncts.asScala.toList.flatMap(queryToBody);
+      case _ => List()
+    }
 
   private def generateFilteringProgram(): List[Rule] = {
     // Query formula as a rule body
@@ -275,21 +290,86 @@ class FilteringProgram(query: Query, constants: List[Term]) extends RDFTriple {
       .prepended(r1)
   }
 
-  /* NOTE: we are restricting to queries that contain conjunctions of
-   * atoms for the time being. This might need to be reviewed in the
-   * future.
-   */
-  private def queryToBody(body: Formula): List[Atom] =
-    body match {
-      case a: Atom => List(a);
-      case a: Conjunction =>
-        a.getConjuncts.asScala.toList.flatMap(queryToBody);
-      case _ => List()
+  private sealed trait Reified;
+  private case class ReifiedHead(bind: BindAtom, atoms: List[Atom])
+      extends Reified
+  private case class ReifiedBody(atoms: List[Atom]) extends Reified
+  private case class Unaltered(formula: BodyFormula) extends Reified
+
+  private def getBindAtom(atom: Atom): BindAtom = {
+    val newvar = RSA.getFreshVariable()
+    val name =
+      Literal.create(atom.getTupleTableName.getIRI, Datatype.XSD_STRING)
+    val args = atom
+      .getArguments()
+      .asScala
+      .toSeq
+      .prepended(name) /* Unclear requirement for SKOLEM func calls */
+    BindAtom.create(
+      BuiltinFunctionCall
+        .create("SKOLEM", args: _*),
+      newvar
+    )
+  }
+
+  private def reifyAtom(atom: Atom, variable: Variable): List[Atom] = {
+    def iri(i: Int) = atom.getTupleTableName().getIRI() ++ s"_$i"
+    atom
+      .getArguments()
+      .asScala
+      .zipWithIndex
+      .map { case (t, i) => Atom.rdf(variable, iri(i), t) }
+      .toList
+  }
+
+  private def reifyBodyFormula(
+      formula: BodyFormula,
+      head: Boolean
+  ): Reified = {
+    formula match {
+      case a: Atom => {
+        if (!a.isRdfTriple) {
+          if (head) {
+            val b = getBindAtom(a)
+            ReifiedHead(b, reifyAtom(a, b.getBoundVariable))
+          } else {
+            ReifiedBody(reifyAtom(a, RSA.getFreshVariable))
+          }
+        } else {
+          Unaltered(a)
+        }
+      }
+      case a => Unaltered(a)
     }
+  }
+
+  private def reifyRule(rule: Rule): Rule = {
+    // Rule body
+    val body =
+      rule.getBody.asScala.map(reifyBodyFormula(_, false)).flatMap {
+        case ReifiedHead(_, _) => List(); /* handle impossible case */
+        case ReifiedBody(x)    => x;
+        case Unaltered(x)      => List(x)
+      }
+    // Rule head
+    val reified = rule.getHead.asScala.map(reifyBodyFormula(_, true))
+    val skols = reified.flatMap {
+      case ReifiedHead(x, _) => Some(x);
+      case ReifiedBody(_)    => None; /* handle impossible case */
+      case Unaltered(_)      => None
+    }
+    val head = reified.flatMap {
+      case ReifiedHead(_, x) => x;
+      case ReifiedBody(_)    => List(); /* handle impossible case */
+      case Unaltered(x) =>
+        List(x.asInstanceOf[Atom]) /* Can we do better that a cast? */
+    }
+    Rule.create(head.asJava, (skols ++ body).asJava)
+  }
 
 } // class FilteringProgram
 
 object FilteringProgram {
   def apply(query: Query, constants: List[Term]): FilteringProgram =
     new FilteringProgram(query, constants)
-}
+} // object FilteringProgram
