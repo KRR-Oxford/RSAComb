@@ -6,65 +6,59 @@ import java.io.File
 /* Local imports */
 import rsacomb.RSA._
 
-object RSAComb {
+object RSAComb extends App {
 
   val help: String = """
-    rsacomb - combined approach for CQ answering for RSA ontologies.
+  rsacomb - combined approach for CQ answering for RSA ontologies.
 
-    USAGE
-      rsacomb <path/to/ontology.owl> <path/to/query.sparql>
+  USAGE
+    rsacomb <path/to/ontology.owl> <path/to/query.sparql>
 
-    where
-      the ontology is expected to be an OWL file and the (single)
-      query a SPARQL query file.
+  where
+    the ontology is expected to be an OWL file and the (single)
+    query a SPARQL query file.
+
   """
 
-  def main(args: Array[String]): Unit = {
+  /* Simple arguments handling
+   *
+   * TODO: use something better later on
+   */
 
-    /* Simple arguments handling
-     *
-     * TODO: use something better later on
-     */
+  if (args.length < 2) {
+    println(help)
+    sys.exit;
+  }
 
-    if (args.length < 2) {
-      println(help)
-      return ()
-    }
+  val ontoPath = new File(args(0))
+  val queryPath = new File(args(1))
 
-    val ontoPath = new File(args(0))
-    val queryPath = new File(args(1))
+  if (!ontoPath.isFile || !queryPath.isFile) {
+    println("The provided arguments are not regular files.\n\n")
+    println(help)
+    sys.exit;
+  }
 
-    if (!ontoPath.isFile || !queryPath.isFile) {
-      println("The provided arguments are not regular files.\n\n")
-      println(help)
-      return ()
-    }
+  /* Create RSA object from generic OWLOntology
+   *
+   * TODO: It might be required to check if the ontology in input is
+   * Horn-ALCHOIQ. At the moment we are assuming this is always the
+   * case.
+   */
 
-    /* Create RSA object from generic OWLOntology
-     *
-     * TODO: It might be required to check if the ontology in input is
-     * Horn-ALCHOIQ. At the moment we are assuming this is always the
-     * case.
-     */
+  val ontology = RSA.loadOntology(ontoPath)
+  if (ontology.isRSA) {
 
-    val ontology = RSA.loadOntology(ontoPath)
-    if (ontology.isRSA) {
+    /* Build canonical model */
+    //val tboxCanon = rsa.canonicalModel()
 
-      /* Build canonical model */
-      //val tboxCanon = rsa.canonicalModel()
+    /* Load query */
+    val query = RSA.test_query
 
-      /* Load query */
-      val query = RSA.test_query
+    /* Compute the filtering program from the given query */
+    val filter = ontology.filteringProgram(query)
 
-      /* Compute the filtering program from the given query */
-      val filter = ontology.filteringProgram(query)
-
-      /* ... */
-
-    }
-
-    /* DEBUG ONLY */
-    println("Ok!")
+    /* ... */
   }
 }
 
