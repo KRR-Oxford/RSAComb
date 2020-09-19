@@ -44,3 +44,7 @@ Sessionx.vim
 .netrwhist
 tags
 [._]*.un~
+
+.vscode/settings.json
+.vscode/launch.json
+project/project/metals.sbt
