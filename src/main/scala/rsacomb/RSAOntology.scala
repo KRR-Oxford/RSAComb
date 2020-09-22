@@ -33,8 +33,12 @@ trait RSAOntology {
     /* TDOO: implement method to retrieve all ontology named individuals
      */
     lazy val individuals: List[IRI] = {
-      //ontology.getIndividualsInSignature().asScala.map(_.getIRI).toList
-      List()
+      ontology
+        .getIndividualsInSignature()
+        .asScala
+        .map(_.getIRI)
+        .map(RDFoxUtil.owlapi2rdfox)
+        .toList
     }
 
     /* Steps for RSA check
@@ -197,7 +201,7 @@ trait RSAOntology {
     }
 
     def filteringProgram(query: Query): List[Rule] =
-      FilteringProgram(query, List()).rules
+      FilteringProgram(query, individuals).rules
 
   } // implicit class RSAOntology
 
