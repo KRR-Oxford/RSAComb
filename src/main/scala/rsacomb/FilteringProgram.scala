@@ -8,8 +8,8 @@ class FilteringProgram(query: Query, constants: List[Term]) extends RDFTriple {
   /* Makes mplicit conversion OWLAPI IRI <-> RDFox IRI available */
   import RDFoxUtil._
 
-  private val bounded: List[Term] = this.getBoundedVariables
   private val answer: List[Term] = query.getAnswerVariables.asScala.toList
+  private val bounded: List[Term] = this.getBoundedVariables
 
   val facts: List[Atom] = constants.map(named)
   val rules: List[Rule] = this.generateFilteringProgram().map(reifyRule)
@@ -17,7 +17,25 @@ class FilteringProgram(query: Query, constants: List[Term]) extends RDFTriple {
   private def named(t: Term): Atom =
     Atom.rdf(t, IRI.RDF_TYPE, RSA.internal("NAMED"))
 
-  private def getBoundedVariables: List[Variable] = List()
+  private def getBoundedVariables: List[Term] = {
+    def extract(f: Formula): Set[Term] = {
+      f match {
+        case b: BodyFormula =>
+          b.getArguments()
+            .asScala
+            .filter(_.isInstanceOf[Variable])
+            .filterNot(answer.contains(_))
+            .toSet
+        case c: Conjunction =>
+          c.getConjuncts().asScala.flatMap(extract).toSet
+        case d: Disjunction =>
+          d.getDisjuncts().asScala.flatMap(extract).toSet
+        /* Ignoring Minus, Optional, Query, Values cases for now */
+        case _ => Set()
+      }
+    }
+    extract(query.getQueryFormula()).toList
+  }
 
   /* NOTE: we are restricting to queries that contain conjunctions of
    * atoms for the time being. This might need to be reviewed in the
