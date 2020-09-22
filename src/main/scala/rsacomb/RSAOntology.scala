@@ -92,6 +92,14 @@ trait RSAOntology {
         "<http://127.0.0.1/E>[?X,?Y] :- <http://127.0.0.1/PE>[?X,?Y], <http://127.0.0.1/U>[?X], <http://127.0.0.1/U>[?Y] ."
       )
 
+      /* Add built-in rules
+       */
+      // data.importData(
+      //   UpdateType.ADDITION,
+      //   RSA.Prefixes,
+      //   "[?entity, a, ?superClass] :- [?entity, a, ?class], [?class, rdfs:subClassOf, ?superClass] ."
+      // )
+
       /* Add ontology rules
        */
       data.addRules(datalog.asJava)

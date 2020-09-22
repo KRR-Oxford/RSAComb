@@ -44,9 +44,10 @@ object RDFoxUtil {
   def submitQuery(
       data: DataStoreConnection,
       prefixes: Prefixes,
-      query: String
+      query: String,
+      answers: Int
   ): Unit = {
-    println(s"\n{ $query }")
+    println(s"\nQUERY { $query }")
     val cursor = data.createCursor(
       prefixes,
       query,
@@ -54,12 +55,16 @@ object RDFoxUtil {
     );
     var mul = cursor.open()
     while (mul > 0) {
-      val res0 = cursor.getResource(0)
-      val res1 = cursor.getResource(1)
-      println(s"Answer: $res0 $res1")
+      print("Answer: ")
+      for (i <- 0 until answers) {
+        val res = cursor.getResource(i)
+        print(s"$res ")
+      }
+      println()
       mul = cursor.advance()
     }
     cursor.close();
+    println(s"QUERY END")
   }
 
   def closeConnection(
@@ -70,4 +75,4 @@ object RDFoxUtil {
     data.close();
   }
 
-} // object RDFox
+} // object RDFoxUtil
