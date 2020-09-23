@@ -2,13 +2,16 @@ package rsacomb
 
 /* Java imports */
 import java.util.HashMap
+import java.io.ByteArrayInputStream
 import tech.oxfordsemantic.jrdfox.Prefixes
-import tech.oxfordsemantic.jrdfox.logic.IRI
+import tech.oxfordsemantic.jrdfox.logic.{IRI, Query}
 import tech.oxfordsemantic.jrdfox.client.{
   ConnectionFactory,
   ServerConnection,
   DataStoreConnection
 }
+import tech.oxfordsemantic.jrdfox.formats.SPARQLParser
+
 object RDFoxUtil {
 
   implicit def owlapi2rdfox(iri: org.semanticweb.owlapi.model.IRI): IRI = {
@@ -39,6 +42,14 @@ object RDFoxUtil {
     val data = server.newDataStoreConnection(dataStore)
 
     (server, data)
+  }
+
+  def parseQuery(query: String): Query = {
+    val parser = new SPARQLParser(
+      RSA.Prefixes,
+      new ByteArrayInputStream(query.getBytes())
+    )
+    parser.parseSingleQuery()
   }
 
   def submitQuery(

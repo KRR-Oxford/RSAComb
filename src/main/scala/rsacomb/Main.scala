@@ -53,7 +53,9 @@ object RSAComb extends App {
     //val tboxCanon = rsa.canonicalModel()
 
     /* Load query */
-    val query = RSA.test_query
+    val query = RDFoxUtil.parseQuery(
+      "SELECT ?X WHERE {?X ?Y ?Z}"
+    )
 
     /* Compute the filtering program from the given query */
     val filter = ontology.filteringProgram(query)

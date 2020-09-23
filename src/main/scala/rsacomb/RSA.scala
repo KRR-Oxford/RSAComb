@@ -4,6 +4,7 @@ package rsacomb
 import java.io.File
 import java.util.Map
 
+import tech.oxfordsemantic.jrdfox.formats.SPARQLParser
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.logic.IRI
 import org.semanticweb.owlapi.apibinding.OWLManager
@@ -37,18 +38,6 @@ object RSA extends RSAOntology {
     counter += 1
     Variable.create(f"I$counter%03d")
   }
-
-  val varX = Variable.create("X")
-  val varY = Variable.create("Y")
-  val varZ = Variable.create("Z")
-  val testAnswerVars = List[Variable](varX, varY, varZ).asJava;
-  val testFormula: Formula =
-    Conjunction.create(
-      Atom.rdf(varX, IRI.TOP_OBJECT_PROPERTY, varY),
-      Atom.rdf(varY, IRI.TOP_OBJECT_PROPERTY, varZ)
-    )
-  val test_query =
-    Query.create(QueryType.SELECT, false, testAnswerVars, testFormula)
 
   def internal(name: Any): IRI =
     IRI.create(
