@@ -3,9 +3,10 @@ package rsacomb
 import org.semanticweb.owlapi.model.{
   OWLSubObjectPropertyOfAxiom,
   OWLSubClassOfAxiom,
+  OWLObjectProperty,
   OWLObjectPropertyExpression
 }
-import tech.oxfordsemantic.jrdfox.logic.{Rule, Term}
+import tech.oxfordsemantic.jrdfox.logic.{IRI, Atom, Rule, Term, Variable}
 
 object ProgramGenerator {
 
@@ -18,9 +19,32 @@ object ProgramGenerator {
   def generateRoleRules(
       roles: List[OWLObjectPropertyExpression]
   ): List[Rule] = {
-    // TODO: Generate additional rules for each role
-    val additional = List()
-    additional
+    def additional(pred: String): Seq[Rule] = {
+      val varX = Variable.create("X")
+      val varY = Variable.create("Y")
+      Seq(
+        Rule.create(
+          Atom.rdf(varX, IRI.create(pred), varY),
+          Atom.rdf(varX, IRI.create(pred ++ "_f"), varY)
+        ),
+        Rule.create(
+          Atom.rdf(varX, IRI.create(pred), varY),
+          Atom.rdf(varX, IRI.create(pred ++ "_b"), varY)
+        ),
+        Rule.create(
+          Atom.rdf(varY, IRI.create(pred ++ "_b" ++ "_inv"), varX),
+          Atom.rdf(varX, IRI.create(pred ++ "_f"), varY)
+        ),
+        Rule.create(
+          Atom.rdf(varY, IRI.create(pred ++ "_f" ++ "_inv"), varX),
+          Atom.rdf(varX, IRI.create(pred ++ "_b"), varY)
+        )
+      )
+    }
+    roles
+      .filter(_.isInstanceOf[OWLObjectProperty]) // Can we avoid this?
+      .map(_.asInstanceOf[OWLObjectProperty].getIRI.getIRIString)
+      .flatMap(additional)
   }
 }
 
@@ -37,12 +61,17 @@ class ProgramGenerator(
       val role = axiom.objectPropertyExpressionsInSignature(0)
       if (unsafe.contains(role)) {
         val visitor =
-          new RDFoxAxiomConverter(term, SkolemStrategy.Standard("TODO"), unsafe)
+          new RDFoxAxiomConverter(
+            term,
+            SkolemStrategy.Standard(axiom.toString),
+            unsafe
+          )
         axiom.accept(visitor)
       } else {
         // TODO; Handle forks
       }
     } else {
+      // Fallback to standard OWL to LP translation
       super.visit(axiom)
     }
     List()
