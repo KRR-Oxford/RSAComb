@@ -52,6 +52,23 @@ object RSAComb extends App {
     /* Build canonical model */
     //val tboxCanon = rsa.canonicalModel()
 
+    // DEBUG: print program to generate canonical model
+    {
+      import tech.oxfordsemantic.jrdfox.logic.{Variable}
+      import org.semanticweb.owlapi.model.parameters.Imports
+      import java.util.stream.{Collectors}
+      import scala.collection.JavaConverters._
+
+      val visitor = ProgramGenerator(Variable.create("x"), ontology.unsafeRoles)
+      val axioms =
+        ontology
+          .tboxAxioms(Imports.INCLUDED)
+          .collect(Collectors.toList())
+          .asScala
+      println("Program to generate the canonical model:")
+      axioms.flatMap(_.accept(visitor)).foreach(println)
+    }
+
     /* Load query */
     val query = RDFoxUtil.parseQuery(
       "SELECT ?X WHERE {?X ?Y ?Z}"

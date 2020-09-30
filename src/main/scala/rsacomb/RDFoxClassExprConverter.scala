@@ -35,10 +35,11 @@ object RDFoxClassExprConverter {
 
   def apply(
       term: Term,
+      unsafe: List[OWLObjectPropertyExpression],
       skolem: SkolemStrategy = SkolemStrategy.None,
-      unsafe: List[OWLObjectPropertyExpression] = List()
+      suffix: RSASuffix = RSASuffix.None
   ): RDFoxClassExprConverter =
-    new RDFoxClassExprConverter(term, skolem, unsafe)
+    new RDFoxClassExprConverter(term, unsafe, skolem, suffix)
 
   def merge(rules: List[RDFoxRuleShards]): RDFoxRuleShards = {
     rules.foldLeft(RDFoxRuleShards(List(), List())) { (r1, r2) =>
@@ -53,8 +54,9 @@ object RDFoxClassExprConverter {
 
 class RDFoxClassExprConverter(
     term: Term,
+    unsafe: List[OWLObjectPropertyExpression],
     skolem: SkolemStrategy,
-    unsafe: List[OWLObjectPropertyExpression]
+    suffix: RSASuffix
 ) extends OWLClassExpressionVisitorEx[RDFoxRuleShards] {
 
   import RDFoxUtil.owlapi2rdfox;
@@ -68,7 +70,7 @@ class RDFoxClassExprConverter(
 
   // OWLObjectIntersectionOf
   override def visit(expr: OWLObjectIntersectionOf): RDFoxRuleShards = {
-    val visitor = new RDFoxClassExprConverter(term, skolem, unsafe)
+    val visitor = new RDFoxClassExprConverter(term, unsafe, skolem, suffix)
     // TODO: maybe using `flatMap` instead of `merge` + `map` works as well
     RDFoxClassExprConverter.merge(
       expr.asConjunctSet.asScala.toList
@@ -78,7 +80,7 @@ class RDFoxClassExprConverter(
 
   // OWLObjectOneOf
   override def visit(expr: OWLObjectOneOf): RDFoxRuleShards = {
-    val visitor = RDFoxClassExprConverter(term, skolem)
+    val visitor = RDFoxClassExprConverter(term, unsafe, skolem, suffix)
     // TODO: review nominal handling. Here we are taking "just" one
     val ind = expr.individuals
       .collect(Collectors.toList())
@@ -126,9 +128,10 @@ class RDFoxClassExprConverter(
           y
         )
     }
-    val classVisitor = new RDFoxClassExprConverter(term1, skolem, unsafe)
+    val classVisitor =
+      new RDFoxClassExprConverter(term1, unsafe, skolem, suffix)
     val classResult = expr.getFiller.accept(classVisitor)
-    val propertyVisitor = new RDFoxPropertyExprConverter(term, term1, skolem)
+    val propertyVisitor = new RDFoxPropertyExprConverter(term, term1, suffix)
     val propertyResult = expr.getProperty.accept(propertyVisitor)
     RDFoxRuleShards(
       classResult.res ++ propertyResult ++ head,
@@ -142,12 +145,12 @@ class RDFoxClassExprConverter(
     val vars = List(RSA.getFreshVariable(), RSA.getFreshVariable())
     val classResult = RDFoxClassExprConverter.merge(
       vars
-        .map(new RDFoxClassExprConverter(_, skolem, unsafe))
+        .map(new RDFoxClassExprConverter(_, unsafe, skolem, suffix))
         .map(expr.getFiller.accept(_))
     )
     val propertyResult =
       vars
-        .map(new RDFoxPropertyExprConverter(term, _, skolem))
+        .map(new RDFoxPropertyExprConverter(term, _, suffix))
         .map(expr.getProperty.accept(_))
         .flatten
     RDFoxRuleShards(

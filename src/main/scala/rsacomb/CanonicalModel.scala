@@ -25,19 +25,27 @@ object ProgramGenerator {
       Seq(
         Rule.create(
           Atom.rdf(varX, IRI.create(pred), varY),
-          Atom.rdf(varX, IRI.create(pred ++ "_f"), varY)
+          Atom.rdf(varX, IRI.create(pred ++ RSASuffix.Forward.getSuffix), varY)
         ),
         Rule.create(
           Atom.rdf(varX, IRI.create(pred), varY),
-          Atom.rdf(varX, IRI.create(pred ++ "_b"), varY)
+          Atom.rdf(varX, IRI.create(pred ++ RSASuffix.Backward.getSuffix), varY)
         ),
         Rule.create(
-          Atom.rdf(varY, IRI.create(pred ++ "_b" ++ "_inv"), varX),
-          Atom.rdf(varX, IRI.create(pred ++ "_f"), varY)
+          Atom.rdf(
+            varY,
+            IRI.create(pred ++ RSASuffix.Backward.getSuffix ++ "_inv"),
+            varX
+          ),
+          Atom.rdf(varX, IRI.create(pred ++ RSASuffix.Forward.getSuffix), varY)
         ),
         Rule.create(
-          Atom.rdf(varY, IRI.create(pred ++ "_f" ++ "_inv"), varX),
-          Atom.rdf(varX, IRI.create(pred ++ "_b"), varY)
+          Atom.rdf(
+            varY,
+            IRI.create(pred ++ RSASuffix.Forward.getSuffix ++ "_inv"),
+            varX
+          ),
+          Atom.rdf(varX, IRI.create(pred ++ RSASuffix.Backward.getSuffix), varY)
         )
       )
     }
@@ -51,7 +59,7 @@ object ProgramGenerator {
 class ProgramGenerator(
     term: Term,
     unsafe: List[OWLObjectPropertyExpression]
-) extends RDFoxAxiomConverter(term, SkolemStrategy.None, unsafe)
+) extends RDFoxAxiomConverter(term, unsafe, SkolemStrategy.None, RSASuffix.None)
     with RSAAxiom {
 
   override def visit(axiom: OWLSubClassOfAxiom): List[Rule] = {
@@ -63,18 +71,18 @@ class ProgramGenerator(
         val visitor =
           new RDFoxAxiomConverter(
             term,
+            unsafe,
             SkolemStrategy.Standard(axiom.toString),
-            unsafe
+            RSASuffix.Forward
           )
         axiom.accept(visitor)
       } else {
-        // TODO; Handle forks
+        List()
       }
     } else {
       // Fallback to standard OWL to LP translation
       super.visit(axiom)
     }
-    List()
   }
 
   override def visit(axiom: OWLSubObjectPropertyOfAxiom): List[Rule] = {

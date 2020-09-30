@@ -73,8 +73,9 @@ trait RSAOntology {
         axiom <- axioms
         visitor = new RDFoxAxiomConverter(
           RSA.getFreshVariable(),
+          unsafe,
           SkolemStrategy.ConstantRSA(axiom.toString),
-          unsafe
+          RSASuffix.None
         )
         rule <- axiom.accept(visitor)
       } yield rule
@@ -124,7 +125,7 @@ trait RSAOntology {
       graph.isAcyclic
     }
 
-    private def unsafeRoles: List[OWLObjectPropertyExpression] = {
+    lazy val unsafeRoles: List[OWLObjectPropertyExpression] = {
       // The reasoner is used to check unsafety condition for the ontology roles
       val factory = new StructuralReasonerFactory()
       val reasoner = factory.createReasoner(ontology)

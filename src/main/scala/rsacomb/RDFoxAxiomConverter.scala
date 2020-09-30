@@ -23,24 +23,26 @@ object RDFoxAxiomConverter {
 
   def apply(
       term: Term,
+      unsafe: List[OWLObjectPropertyExpression],
       skolem: SkolemStrategy = SkolemStrategy.None,
-      unsafe: List[OWLObjectPropertyExpression] = List()
+      suffix: RSASuffix = RSASuffix.None
   ): RDFoxAxiomConverter =
-    new RDFoxAxiomConverter(term, skolem, unsafe)
+    new RDFoxAxiomConverter(term, unsafe, skolem, suffix)
 
 } // object RDFoxAxiomConverter
 
 class RDFoxAxiomConverter(
     term: Term,
+    unsafe: List[OWLObjectPropertyExpression],
     skolem: SkolemStrategy,
-    unsafe: List[OWLObjectPropertyExpression]
+    suffix: RSASuffix
 ) extends OWLAxiomVisitorEx[List[Rule]] {
 
   override def visit(axiom: OWLSubClassOfAxiom): List[Rule] = {
     // Skolemization is needed only for the head of an axiom
     val subVisitor =
-      new RDFoxClassExprConverter(term, SkolemStrategy.None, unsafe)
-    val superVisitor = new RDFoxClassExprConverter(term, skolem, unsafe)
+      new RDFoxClassExprConverter(term, unsafe, SkolemStrategy.None, suffix)
+    val superVisitor = new RDFoxClassExprConverter(term, unsafe, skolem, suffix)
     // Each visitor returns a `RDFoxRuleShards`, a tuple (res,ext):
     // - the `res` List is a list of atoms resulting from the conversion
     //   of the axiom.
@@ -66,8 +68,8 @@ class RDFoxAxiomConverter(
   override def visit(axiom: OWLSubObjectPropertyOfAxiom): List[Rule] = {
     val term1 = RSA.getFreshVariable()
     val subVisitor =
-      new RDFoxPropertyExprConverter(term, term1, SkolemStrategy.None)
-    val superVisitor = new RDFoxPropertyExprConverter(term, term1, skolem)
+      new RDFoxPropertyExprConverter(term, term1, suffix)
+    val superVisitor = new RDFoxPropertyExprConverter(term, term1, suffix)
     val body: List[BodyFormula] = axiom.getSubProperty.accept(subVisitor)
     val head: List[Atom] = axiom.getSuperProperty.accept(superVisitor)
     List(Rule.create(head.asJava, body.asJava))
