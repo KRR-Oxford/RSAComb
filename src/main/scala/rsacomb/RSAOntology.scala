@@ -5,7 +5,10 @@ import java.util.HashMap
 import java.util.stream.{Collectors, Stream}
 
 import org.semanticweb.owlapi.model.OWLOntology
-import org.semanticweb.owlapi.model.OWLObjectPropertyExpression
+import org.semanticweb.owlapi.model.{
+  OWLObjectProperty,
+  OWLObjectPropertyExpression
+}
 import org.semanticweb.owlapi.model.parameters.Imports
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory
 
@@ -14,6 +17,7 @@ import tech.oxfordsemantic.jrdfox.logic.{Resource, Rule, Atom, Variable, IRI}
 
 /* Scala imports */
 import scala.collection.JavaConverters._
+import scala.collection.mutable.Set
 import scalax.collection.immutable.Graph
 import scalax.collection.GraphEdge.UnDiEdge
 
@@ -30,7 +34,7 @@ trait RSAOntology {
    */
   implicit class RSAOntology(ontology: OWLOntology) extends RSAAxiom {
 
-    /* TDOO: implement method to retrieve all ontology named individuals
+    /* Retrieve individuals in the original ontology
      */
     lazy val individuals: List[IRI] = {
       ontology
@@ -40,6 +44,17 @@ trait RSAOntology {
         .map(RDFoxUtil.owlapi2rdfox)
         .toList
     }
+
+    private lazy val roles: Set[OWLObjectPropertyExpression] =
+      ontology
+        .rboxAxioms(Imports.INCLUDED)
+        .collect(Collectors.toSet())
+        .asScala
+        .flatMap(_.objectPropertyExpressionsInSignature)
+
+    // OWLAPI reasoner for same easier tasks
+    private val reasoner =
+      (new StructuralReasonerFactory()).createReasoner(ontology)
 
     /* Steps for RSA check
      * 1) convert ontology axioms into LP rules
@@ -126,9 +141,6 @@ trait RSAOntology {
     }
 
     lazy val unsafeRoles: List[OWLObjectPropertyExpression] = {
-      // The reasoner is used to check unsafety condition for the ontology roles
-      val factory = new StructuralReasonerFactory()
-      val reasoner = factory.createReasoner(ontology)
 
       val tbox = ontology
         .tboxAxioms(Imports.INCLUDED)
@@ -203,6 +215,28 @@ trait RSAOntology {
 
     def filteringProgram(query: Query): List[Rule] =
       FilteringProgram(query, individuals).rules
+
+    // TODO: needs testing
+    def confl(
+        role: OWLObjectPropertyExpression
+    ): Set[OWLObjectPropertyExpression] = {
+
+      val invSuperRoles = reasoner
+        .superObjectProperties(role)
+        .collect(Collectors.toSet())
+        .asScala
+        .addOne(role)
+        .map(_.getInverseProperty)
+
+      roles.filter(
+        reasoner
+          .superObjectProperties(_)
+          .collect(Collectors.toSet())
+          .asScala
+          .intersect(invSuperRoles)
+          .nonEmpty
+      )
+    }
 
   } // implicit class RSAOntology
 
