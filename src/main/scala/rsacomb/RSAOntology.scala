@@ -239,7 +239,7 @@ trait RSAOntology {
       )
     }
 
-    def self(axiom: OWLSubClassOfAxiom): Set[Term] = {
+    private def self(axiom: OWLSubClassOfAxiom): Set[Term] = {
       // Assuming just one role in the signature of a T5 axiom
       val role = axiom.objectPropertyExpressionsInSignature(0)
       if (this.confl(role).contains(role)) {
@@ -251,6 +251,34 @@ trait RSAOntology {
         Set()
       }
     }
+
+    // TODO: this implementation is not correct when taking into
+    // account equality.
+    def cycle(axiom: OWLSubClassOfAxiom): Set[Term] = {
+      // Assuming just one role in the signature of a T5 axiom
+      val roleR = axiom.objectPropertyExpressionsInSignature(0)
+      val conflR = this.confl(roleR)
+      // We just need the TBox to find
+      val tbox = ontology
+        .tboxAxioms(Imports.INCLUDED)
+        .collect(Collectors.toSet())
+        .asScala
+      for {
+        axiom1 <- tbox
+        if axiom1.isT5
+        roleS <- axiom1.objectPropertyExpressionsInSignature // Just 1
+        if conflR.contains(roleS)
+        individual =
+          if (axiom.hashCode < axiom1.hashCode) {
+            RSA.internal("v0_" ++ axiom1.hashCode.toString())
+          } else {
+            RSA.internal("v1_" ++ axiom1.hashCode.toString())
+          }
+      } yield individual
+    }
+
+    def unfold(axiom: OWLSubClassOfAxiom): Set[Term] =
+      this.self(axiom) | this.cycle(axiom)
 
   } // implicit class RSAOntology
 
