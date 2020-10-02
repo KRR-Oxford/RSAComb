@@ -7,7 +7,8 @@ import java.util.stream.{Collectors, Stream}
 import org.semanticweb.owlapi.model.OWLOntology
 import org.semanticweb.owlapi.model.{
   OWLObjectProperty,
-  OWLObjectPropertyExpression
+  OWLObjectPropertyExpression,
+  OWLSubClassOfAxiom
 }
 import org.semanticweb.owlapi.model.parameters.Imports
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory
@@ -216,7 +217,7 @@ trait RSAOntology {
     def filteringProgram(query: Query): List[Rule] =
       FilteringProgram(query, individuals).rules
 
-    // TODO: needs testing
+    // TODO: the following functions needs testing
     def confl(
         role: OWLObjectPropertyExpression
     ): Set[OWLObjectPropertyExpression] = {
@@ -236,6 +237,19 @@ trait RSAOntology {
           .intersect(invSuperRoles)
           .nonEmpty
       )
+    }
+
+    def self(axiom: OWLSubClassOfAxiom): Set[Term] = {
+      // Assuming just one role in the signature of a T5 axiom
+      val role = axiom.objectPropertyExpressionsInSignature(0)
+      if (this.confl(role).contains(role)) {
+        Set(
+          RSA.internal("v0_" ++ axiom.hashCode.toString()),
+          RSA.internal("v1_" ++ axiom.hashCode.toString())
+        )
+      } else {
+        Set()
+      }
     }
 
   } // implicit class RSAOntology
