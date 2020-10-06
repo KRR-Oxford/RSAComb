@@ -8,6 +8,7 @@ import org.semanticweb.owlapi.model.{
 }
 import org.semanticweb.owlapi.model.{
   OWLObjectPropertyExpression,
+  OWLSubObjectPropertyOfAxiom,
   OWLClass,
   OWLClassExpression,
   OWLObjectSomeValuesFrom,
@@ -148,11 +149,16 @@ trait RSAAxiom {
         List()
       }
 
+      override def visit(
+          axiom: OWLSubObjectPropertyOfAxiom
+      ): List[OWLObjectPropertyExpression] =
+        List(axiom.getSubProperty(), axiom.getSuperProperty())
+
       def doDefault(axiom: OWLAxiom): List[OWLObjectPropertyExpression] = List()
     }
 
     /* Exposed methods */
-    def objectPropertyExpressionsInSignature
+    lazy val objectPropertyExpressionsInSignature
         : List[OWLObjectPropertyExpression] = {
       val visitor = new RSAAxiomRoleExtractor()
       axiom.accept(visitor)

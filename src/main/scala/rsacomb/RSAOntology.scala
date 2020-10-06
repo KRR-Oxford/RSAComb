@@ -46,12 +46,13 @@ trait RSAOntology {
         .toList
     }
 
-    private lazy val roles: Set[OWLObjectPropertyExpression] =
+    private val roles: Set[OWLObjectPropertyExpression] = {
       ontology
         .rboxAxioms(Imports.INCLUDED)
         .collect(Collectors.toSet())
         .asScala
         .flatMap(_.objectPropertyExpressionsInSignature)
+    }
 
     // OWLAPI reasoner for same easier tasks
     private val reasoner =
@@ -197,6 +198,37 @@ trait RSAOntology {
       } yield role1
 
       (unsafe1 ++ unsafe2).toList
+    }
+
+    lazy val canonicalModel: List[Rule] = {
+      // Compute program to generate canonical model
+      val tbox =
+        ontology
+          .tboxAxioms(Imports.INCLUDED)
+          .collect(Collectors.toList())
+          .asScala
+          .toList
+      val rbox =
+        ontology
+          .rboxAxioms(Imports.INCLUDED)
+          .collect(Collectors.toList())
+          .asScala
+          .toList
+      val axioms = tbox ++ rbox
+      val varX = Variable.create("X")
+      val visitor = ProgramGenerator(ontology, varX, unsafeRoles)
+      val facts = ProgramGenerator.NIs(individuals)
+      val rules1 = ProgramGenerator.generateRoleRules(
+        axioms
+          .flatMap(
+            _.objectPropertiesInSignature.collect(Collectors.toSet()).asScala
+          )
+          .toSet
+      )
+      val rules2 = axioms.flatMap(_.accept(visitor))
+
+      rules1 ++ rules2
+      // Call RDFox to generate the canonical model
     }
 
     private def rsaGraph(

@@ -29,12 +29,12 @@ object ProgramGenerator {
     new ProgramGenerator(ontology, term, unsafe)
 
   def generateRoleRules(
-      roles: List[OWLObjectPropertyExpression]
+      roles: Set[OWLObjectProperty]
   ): List[Rule] = {
     def additional(pred: String): Seq[Rule] = {
       val varX = Variable.create("X")
       val varY = Variable.create("Y")
-      Seq(
+      List(
         Rule.create(
           Atom.rdf(varX, IRI.create(pred), varY),
           Atom.rdf(varX, IRI.create(pred ++ RSASuffix.Forward.getSuffix), varY)
@@ -62,10 +62,14 @@ object ProgramGenerator {
       )
     }
     roles
-      .filter(_.isInstanceOf[OWLObjectProperty]) // Can we avoid this?
-      .map(_.asInstanceOf[OWLObjectProperty].getIRI.getIRIString)
+      .map(_.getIRI.getIRIString)
       .flatMap(additional)
+      .toList
   }
+
+  def NIs(individuals: List[IRI]): List[Atom] =
+    individuals.map(Atom.rdf(_, IRI.RDF_TYPE, RSA.internal("NI")))
+
 }
 
 class ProgramGenerator(
@@ -78,7 +82,7 @@ class ProgramGenerator(
 
   import RDFoxUtil._
 
-  def rules1(axiom: OWLSubClassOfAxiom): (List[Rule], List[Atom]) = {
+  def rules1(axiom: OWLSubClassOfAxiom): List[Rule] = {
     val unfold = ontology.cycle(axiom).toList
     // Fresh Variables
     val v0 = IRI.create("v0_" ++ axiom.hashCode.toString)
@@ -112,13 +116,16 @@ class ProgramGenerator(
         .getIRI
       Atom.rdf(v0, IRI.RDF_TYPE, cls)
     }
-    (
-      List(
-        Rule.create(roleRf, atomA, notIn(varX)),
-        Rule.create(atomB, atomA, notIn(varX))
-      ),
-      unfold map notIn
+    // TODO: To be consistent with the specifics of the visitor we are
+    // returning facts as `Rule`s with true body. While this is correct
+    // there is an easier way to import facts into RDFox. Are we able to
+    // do that?
+    val facts = unfold.map(x => Rule.create(notIn(x)))
+    val rules = List(
+      Rule.create(roleRf, atomA, notIn(varX)),
+      Rule.create(atomB, atomA, notIn(varX))
     )
+    facts ++ rules
   }
 
   def rules2(axiom: OWLSubClassOfAxiom): List[Rule] = {
@@ -209,10 +216,7 @@ class ProgramGenerator(
           )
         axiom.accept(visitor)
       } else {
-        val (r1, f1) = rules1(axiom)
-        val r2 = rules2(axiom)
-        val r3 = rules3(axiom)
-        r1 ++ r2 ++ r3
+        rules1(axiom) ++ rules2(axiom) ++ rules3(axiom)
       }
     } else {
       // Fallback to standard OWL to LP translation
@@ -221,9 +225,21 @@ class ProgramGenerator(
   }
 
   override def visit(axiom: OWLSubObjectPropertyOfAxiom): List[Rule] = {
-    // TODO: Generate additional rules for role inclusion
-    val additional = List()
-    super.visit(axiom) ++ additional
+    val varX = Variable.create("X")
+    val varY = Variable.create("Y")
+    val visitorF = new RDFoxAxiomConverter(
+      term,
+      unsafe,
+      SkolemStrategy.None,
+      RSASuffix.Forward
+    )
+    val visitorB = new RDFoxAxiomConverter(
+      term,
+      unsafe,
+      SkolemStrategy.None,
+      RSASuffix.Backward
+    )
+    axiom.accept(visitorB) ++ axiom.accept(visitorF)
   }
 
 }
