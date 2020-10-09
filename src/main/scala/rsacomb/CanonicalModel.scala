@@ -18,15 +18,15 @@ import tech.oxfordsemantic.jrdfox.logic.{
   Variable
 }
 import scala.collection.JavaConverters._
+import rsacomb.RSA._
 
 object ProgramGenerator {
 
   def apply(
       ontology: OWLOntology,
-      term: Term,
-      unsafe: List[OWLObjectPropertyExpression] = List()
+      term: Term
   ): RDFoxAxiomConverter =
-    new ProgramGenerator(ontology, term, unsafe)
+    new ProgramGenerator(ontology, term)
 
   def generateRoleRules(
       roles: Set[OWLObjectProperty]
@@ -74,10 +74,13 @@ object ProgramGenerator {
 
 class ProgramGenerator(
     ontology: OWLOntology,
-    term: Term,
-    unsafe: List[OWLObjectPropertyExpression]
-) extends RDFoxAxiomConverter(term, unsafe, SkolemStrategy.None, RSASuffix.None)
-    with RSAOntology
+    term: Term
+) extends RDFoxAxiomConverter(
+      term,
+      ontology.unsafeRoles,
+      SkolemStrategy.None,
+      RSASuffix.None
+    )
     with RSAAxiom {
 
   import RDFoxUtil._
@@ -206,11 +209,11 @@ class ProgramGenerator(
       // TODO: get role in T5 axiom
       // Assuming one role here
       val role = axiom.objectPropertyExpressionsInSignature(0)
-      if (unsafe.contains(role)) {
+      if (ontology.unsafeRoles.contains(role)) {
         val visitor =
           new RDFoxAxiomConverter(
             term,
-            unsafe,
+            ontology.unsafeRoles,
             SkolemStrategy.Standard(axiom.toString),
             RSASuffix.Forward
           )
@@ -229,13 +232,13 @@ class ProgramGenerator(
     val varY = Variable.create("Y")
     val visitorF = new RDFoxAxiomConverter(
       term,
-      unsafe,
+      ontology.unsafeRoles,
       SkolemStrategy.None,
       RSASuffix.Forward
     )
     val visitorB = new RDFoxAxiomConverter(
       term,
-      unsafe,
+      ontology.unsafeRoles,
       SkolemStrategy.None,
       RSASuffix.Backward
     )

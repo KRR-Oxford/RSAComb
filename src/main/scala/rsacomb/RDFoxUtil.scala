@@ -12,14 +12,21 @@ import tech.oxfordsemantic.jrdfox.client.{
 }
 import tech.oxfordsemantic.jrdfox.formats.SPARQLParser
 
+import tech.oxfordsemantic.jrdfox.logic.{IRI => RDFox_IRI}
+import org.semanticweb.owlapi.model.{IRI => OWL_IRI}
+
 object RDFoxUtil {
 
-  implicit def owlapi2rdfox(iri: org.semanticweb.owlapi.model.IRI): IRI = {
-    IRI.create(iri.getIRIString())
+  implicit def rdfox2owlapi(iri: RDFox_IRI): OWL_IRI = {
+    OWL_IRI.create(iri.getIRI)
   }
 
-  implicit def owlapi2rdfox(iri: String): IRI = {
-    IRI.create(iri)
+  implicit def owlapi2rdfox(iri: OWL_IRI): RDFox_IRI = {
+    RDFox_IRI.create(iri.getIRIString())
+  }
+
+  implicit def owlapi2rdfox(iri: String): RDFox_IRI = {
+    RDFox_IRI.create(iri)
   }
 
   def openConnection(

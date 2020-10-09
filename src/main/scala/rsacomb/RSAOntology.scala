@@ -216,7 +216,7 @@ trait RSAOntology {
           .toList
       val axioms = tbox ++ rbox
       val varX = Variable.create("X")
-      val visitor = ProgramGenerator(ontology, varX, unsafeRoles)
+      val visitor = ProgramGenerator(ontology, varX)
       val facts = ProgramGenerator.NIs(individuals)
       val rules1 = ProgramGenerator.generateRoleRules(
         axioms

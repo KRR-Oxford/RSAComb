@@ -39,6 +39,12 @@ object RSA extends RSAOntology {
     Variable.create(f"I$counter%03d")
   }
 
+  def base(name: Any): IRI =
+    IRI.create(
+      Prefixes.getPrefixIRIsByPrefixName.get(":").getIRI
+        + name.toString
+    )
+
   def internal(name: Any): IRI =
     IRI.create(
       Prefixes.getPrefixIRIsByPrefixName.get("internal:").getIRI
