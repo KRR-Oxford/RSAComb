@@ -163,7 +163,7 @@ object OWLAxiomSpec {
       term: Term,
       skolem: SkolemStrategy = SkolemStrategy.None
   ): List[Rule] = {
-    axiom.accept(RDFoxAxiomConverter(term, skolem))
+    axiom.accept(RDFoxAxiomConverter(term, List()))
   }
 
 } // object OWLAxiomSpec

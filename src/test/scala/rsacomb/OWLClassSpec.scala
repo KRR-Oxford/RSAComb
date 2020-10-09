@@ -165,13 +165,13 @@ class OWLClassSpec extends FlatSpec with Matchers with LoneElement {
   // OWLObjectSomeValuesFrom
   (class_OWLObjectSomeValuesFrom.toString ++ " w/o skolemization") should
     "be converted into a RDFoxRuleShards" in {
-    val visitor = RDFoxClassExprConverter(term_x, SkolemStrategy.None)
+    val visitor = RDFoxClassExprConverter(term_x)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
     result shouldBe a[RDFoxRuleShards]
   }
 
   it should "have two Atoms in its result list" in {
-    val visitor = RDFoxClassExprConverter(term_x, SkolemStrategy.None)
+    val visitor = RDFoxClassExprConverter(term_x)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
     exactly(2, result.res) should (be(an[Atom]) and have(
       'numberOfArguments (3)
@@ -179,7 +179,7 @@ class OWLClassSpec extends FlatSpec with Matchers with LoneElement {
   }
 
   it should "have an empty extension list" in {
-    val visitor = RDFoxClassExprConverter(term_x, SkolemStrategy.None)
+    val visitor = RDFoxClassExprConverter(term_x)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
     result.ext shouldBe empty
   }
@@ -187,14 +187,14 @@ class OWLClassSpec extends FlatSpec with Matchers with LoneElement {
   (class_OWLObjectSomeValuesFrom.toString ++ " w/ skolemization") should
     "be converted into a RDFoxRuleShards" in {
     val skolem = SkolemStrategy.Standard(class_OWLObjectSomeValuesFrom.toString)
-    val visitor = RDFoxClassExprConverter(term_x, skolem)
+    val visitor = RDFoxClassExprConverter(term_x, List(), skolem)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
     result shouldBe a[RDFoxRuleShards]
   }
 
   it should "have exactly two Atoms in its result list" in {
     val skolem = SkolemStrategy.Standard(class_OWLObjectSomeValuesFrom.toString)
-    val visitor = RDFoxClassExprConverter(term_x, skolem)
+    val visitor = RDFoxClassExprConverter(term_x, List(), skolem)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
     exactly(2, result.res) should (be(an[Atom]) and have(
       'numberOfArguments (3)
@@ -203,7 +203,7 @@ class OWLClassSpec extends FlatSpec with Matchers with LoneElement {
 
   it should "should have a single SKOLEM call in the extension list" in {
     val skolem = SkolemStrategy.Standard(class_OWLObjectSomeValuesFrom.toString)
-    val visitor = RDFoxClassExprConverter(term_x, skolem)
+    val visitor = RDFoxClassExprConverter(term_x, List(), skolem)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
     result.ext.loneElement shouldBe a[BindAtom]
     val builtin = result.ext.head.asInstanceOf[BindAtom].getBuiltinExpression
@@ -215,14 +215,14 @@ class OWLClassSpec extends FlatSpec with Matchers with LoneElement {
   (class_OWLObjectSomeValuesFrom.toString ++ " w/ constant skolemization") should
     "be converted into a RDFoxRuleShards" in {
     val skolem = SkolemStrategy.Constant(class_OWLObjectSomeValuesFrom.toString)
-    val visitor = RDFoxClassExprConverter(term_x, skolem)
+    val visitor = RDFoxClassExprConverter(term_x, List(), skolem)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
     result shouldBe a[RDFoxRuleShards]
   }
 
   it should "have exactly two Atoms in its result list" in {
     val skolem = SkolemStrategy.Constant(class_OWLObjectSomeValuesFrom.toString)
-    val visitor = RDFoxClassExprConverter(term_x, skolem)
+    val visitor = RDFoxClassExprConverter(term_x, List(), skolem)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
     exactly(2, result.res) should (be(an[Atom]) and have(
       'numberOfArguments (3)
@@ -231,7 +231,7 @@ class OWLClassSpec extends FlatSpec with Matchers with LoneElement {
 
   it should "have an empty extension list" in {
     val skolem = SkolemStrategy.Constant(class_OWLObjectSomeValuesFrom.toString)
-    val visitor = RDFoxClassExprConverter(term_x, skolem)
+    val visitor = RDFoxClassExprConverter(term_x, List(), skolem)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
     result.ext shouldBe empty
   }

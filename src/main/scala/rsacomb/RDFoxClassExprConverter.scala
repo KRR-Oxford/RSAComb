@@ -35,7 +35,7 @@ object RDFoxClassExprConverter {
 
   def apply(
       term: Term,
-      unsafe: List[OWLObjectPropertyExpression],
+      unsafe: List[OWLObjectPropertyExpression] = List(),
       skolem: SkolemStrategy = SkolemStrategy.None,
       suffix: RSASuffix = RSASuffix.None
   ): RDFoxClassExprConverter =
