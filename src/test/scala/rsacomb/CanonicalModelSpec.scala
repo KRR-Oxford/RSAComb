@@ -5,6 +5,7 @@ import org.scalatest.{FlatSpec, Matchers, LoneElement}
 
 import org.semanticweb.owlapi.model._
 import uk.ac.manchester.cs.owl.owlapi._
+import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
 
 import tech.oxfordsemantic.jrdfox.logic.{Rule, Variable}
 
@@ -13,34 +14,89 @@ import scala.collection.JavaConverters._
 import rsacomb.RSA._
 import rsacomb.RDFoxUtil._
 
-object CanonicalModelSpec {
+object Ontology1_CanonicalModelSpec {
 
-  val ontology1_path: File = new File("examples/example1.owl")
-  val ontology1 = RSA.loadOntology(ontology1_path)
-  val program1 = ontology1.canonicalModel
+  /* Renderer to display OWL Axioms with DL syntax*/
+  val renderer = new DLSyntaxObjectRenderer()
 
-  val axiom1 = new OWLSubClassOfAxiomImpl(
+  val ontology_path: File = new File("examples/example1.owl")
+  val ontology = RSA.loadOntology(ontology_path)
+  val program = ontology.canonicalModel
+
+  val roleR = new OWLObjectPropertyImpl(RSA.base("R"))
+  val roleS = new OWLObjectPropertyImpl(RSA.base("S"))
+  val roleT = new OWLObjectPropertyImpl(RSA.base("T"))
+  val roleR_inv = roleR.getInverseProperty()
+  val roleS_inv = roleS.getInverseProperty()
+  val roleT_inv = roleT.getInverseProperty()
+
+  val AsubClassOfD = new OWLSubClassOfAxiomImpl(
     new OWLClassImpl(RSA.base("A")),
     new OWLClassImpl(RSA.base("D")),
     Seq().asJava
   )
 
+  val DsomeValuesFromRB = new OWLSubClassOfAxiomImpl(
+    new OWLClassImpl(RSA.base("D")),
+    new OWLObjectSomeValuesFromImpl(
+      roleR,
+      new OWLClassImpl(RSA.base("B"))
+    ),
+    Seq().asJava
+  )
+
 } // object OWLAxiomSpec
 
-class CanonicalModelSpec extends FlatSpec with Matchers with LoneElement {
+class Ontology1_CanonicalModelSpec
+    extends FlatSpec
+    with Matchers
+    with LoneElement {
 
-  import CanonicalModelSpec._
+  import Ontology1_CanonicalModelSpec._
 
-  // Example 1
-  "The program generated from Example1" should "not be empty" in {
-    program1 should not be empty
+  "The program generated from Example #1" should "not be empty" in {
+    program should not be empty
   }
 
-  axiom1.toString should "be converted into a single Rule" in {
+  renderer.render(AsubClassOfD) should "be converted into a single Rule" in {
     val varX = Variable.create("X")
-    val visitor = ProgramGenerator(ontology1, varX)
-    val rules = axiom1.accept(visitor)
+    val visitor = ProgramGenerator(ontology, varX)
+    val rules = AsubClassOfD.accept(visitor)
     rules.loneElement shouldBe a[Rule]
   }
 
+  renderer.render(roleR) should "be safe" in {
+    ontology.unsafeRoles should not contain roleR
+  }
+
+  it should "contain S in its conflict set" in {
+    ontology.confl(roleR) should contain(roleS)
+  }
+
+  renderer.render(roleS) should "be safe" in {
+    ontology.unsafeRoles should not contain roleS
+  }
+
+  it should "contain R in its conflict set" in {
+    ontology.confl(roleS) should contain(roleR)
+  }
+
+  renderer.render(roleS_inv) should "be unsafe" in {
+    ontology.unsafeRoles should contain(roleS_inv)
+  }
+
+  it should ("contain " + renderer.render(
+    roleR_inv
+  ) + " in its conflict set") in {
+    ontology.confl(roleS_inv) should contain(roleR_inv)
+  }
+
+  renderer.render(
+    DsomeValuesFromRB
+  ) should "produce 5 rules" ignore {
+    val varX = Variable.create("X")
+    val visitor = ProgramGenerator(ontology, varX)
+    val rules = DsomeValuesFromRB.accept(visitor)
+    rules should have length 5
+  }
 } // class OWLAxiomSpec

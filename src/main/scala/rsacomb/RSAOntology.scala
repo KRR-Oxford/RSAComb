@@ -270,7 +270,7 @@ trait RSAOntology {
         .filterNot(_.isOWLBottomObjectProperty())
     }
 
-    private def self(axiom: OWLSubClassOfAxiom): Set[Term] = {
+    def self(axiom: OWLSubClassOfAxiom): Set[Term] = {
       // Assuming just one role in the signature of a T5 axiom
       val role = axiom.objectPropertyExpressionsInSignature(0)
       if (this.confl(role).contains(role)) {
