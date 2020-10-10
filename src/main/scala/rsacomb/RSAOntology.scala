@@ -12,6 +12,8 @@ import org.semanticweb.owlapi.model.{
 }
 import org.semanticweb.owlapi.model.parameters.Imports
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory
+import org.semanticweb.owlapi.model.{IRI => OWLIRI}
+import uk.ac.manchester.cs.owl.owlapi.OWLObjectPropertyImpl
 
 import tech.oxfordsemantic.jrdfox.client.{UpdateType, DataStoreConnection}
 import tech.oxfordsemantic.jrdfox.logic.{Resource, Rule, Atom, Variable, IRI}
@@ -261,14 +263,11 @@ trait RSAOntology {
         .addOne(role)
         .map(_.getInverseProperty)
 
-      roles.filter(
-        reasoner
-          .superObjectProperties(_)
-          .collect(Collectors.toSet())
-          .asScala
-          .intersect(invSuperRoles)
-          .nonEmpty
-      )
+      invSuperRoles
+        .flatMap(
+          reasoner.subObjectProperties(_).collect(Collectors.toSet()).asScala
+        )
+        .filterNot(_.isOWLBottomObjectProperty())
     }
 
     private def self(axiom: OWLSubClassOfAxiom): Set[Term] = {
