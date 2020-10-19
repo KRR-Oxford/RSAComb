@@ -1,7 +1,10 @@
 package rsacomb
 
 import java.io.File
-import org.scalatest.{FlatSpec, Matchers, LoneElement}
+import org.scalatest.LoneElement
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+
 
 import org.semanticweb.owlapi.model._
 import uk.ac.manchester.cs.owl.owlapi._
@@ -48,7 +51,7 @@ object Ontology1_CanonicalModelSpec {
 } // object OWLAxiomSpec
 
 class Ontology1_CanonicalModelSpec
-    extends FlatSpec
+    extends AnyFlatSpec
     with Matchers
     with LoneElement {
 

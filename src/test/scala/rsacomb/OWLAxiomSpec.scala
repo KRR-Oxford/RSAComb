@@ -1,7 +1,9 @@
 package rsacomb
 
 import java.util.ArrayList
-import org.scalatest.{FlatSpec, Matchers, LoneElement}
+import org.scalatest.LoneElement
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 import uk.ac.manchester.cs.owl.owlapi.{OWLSubClassOfAxiomImpl}
 import uk.ac.manchester.cs.owl.owlapi.{
@@ -168,7 +170,7 @@ object OWLAxiomSpec {
 
 } // object OWLAxiomSpec
 
-class OWLAxiomSpec extends FlatSpec with Matchers with LoneElement {
+class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
 
   // Import required data
   import OWLAxiomSpec._

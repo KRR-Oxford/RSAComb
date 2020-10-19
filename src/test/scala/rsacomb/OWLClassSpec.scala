@@ -1,6 +1,8 @@
 package rsacomb
 
-import org.scalatest.{FlatSpec, Matchers, LoneElement}
+import org.scalatest.LoneElement
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 import uk.ac.manchester.cs.owl.owlapi.{
   OWLClassImpl,
@@ -99,7 +101,7 @@ object OWLClassSpec {
     )
 } // object OWLClassSpec
 
-class OWLClassSpec extends FlatSpec with Matchers with LoneElement {
+class OWLClassSpec extends AnyFlatSpec with Matchers with LoneElement {
   // Import required data
   import OWLClassSpec._
 
