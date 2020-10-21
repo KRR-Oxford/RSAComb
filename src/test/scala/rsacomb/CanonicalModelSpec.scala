@@ -5,7 +5,6 @@ import org.scalatest.LoneElement
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-
 import org.semanticweb.owlapi.model._
 import uk.ac.manchester.cs.owl.owlapi._
 import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
@@ -72,8 +71,22 @@ class Ontology1_CanonicalModelSpec
     ontology.unsafeRoles should not contain roleR
   }
 
+  it should "have 3 elements in its conflict set" in {
+    ontology.confl(roleR) should have size 3
+  }
+
   it should "contain S in its conflict set" in {
     ontology.confl(roleR) should contain(roleS)
+  }
+
+  it should "contain T in its conflict set" in {
+    ontology.confl(roleR) should contain(roleT)
+  }
+
+  it should ("contain " + renderer.render(
+    roleR_inv
+  ) + " in its conflict set") in {
+    ontology.confl(roleR) should contain(roleR_inv)
   }
 
   renderer.render(roleS) should "be safe" in {

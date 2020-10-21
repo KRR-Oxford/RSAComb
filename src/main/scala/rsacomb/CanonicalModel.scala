@@ -86,10 +86,10 @@ class ProgramGenerator(
   import RDFoxUtil._
 
   def rules1(axiom: OWLSubClassOfAxiom): List[Rule] = {
-    val unfold = ontology.cycle(axiom).toList
+    val unfold = ontology.unfold(axiom).toList
     // Fresh Variables
     val v0 = IRI.create("v0_" ++ axiom.hashCode.toString)
-    val varX = Variable.create("x")
+    val varX = Variable.create("X")
     // Predicates
     val atomA: Atom = {
       val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI

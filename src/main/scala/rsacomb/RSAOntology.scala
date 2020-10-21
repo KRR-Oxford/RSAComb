@@ -264,10 +264,15 @@ trait RSAOntology {
         .map(_.getInverseProperty)
 
       invSuperRoles
-        .flatMap(
-          reasoner.subObjectProperties(_).collect(Collectors.toSet()).asScala
+        .flatMap(x =>
+          reasoner
+            .subObjectProperties(x)
+            .collect(Collectors.toSet())
+            .asScala
+            .addOne(x)
         )
         .filterNot(_.isOWLBottomObjectProperty())
+        .filterNot(_.getInverseProperty.isOWLTopObjectProperty())
     }
 
     def self(axiom: OWLSubClassOfAxiom): Set[Term] = {
