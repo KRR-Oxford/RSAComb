@@ -48,13 +48,13 @@ trait RSAOntology {
         .toList
     }
 
-    private val roles: Set[OWLObjectPropertyExpression] = {
-      ontology
-        .rboxAxioms(Imports.INCLUDED)
-        .collect(Collectors.toSet())
-        .asScala
-        .flatMap(_.objectPropertyExpressionsInSignature)
-    }
+    // private val roles: Set[OWLObjectPropertyExpression] = {
+    //   ontology
+    //     .rboxAxioms(Imports.INCLUDED)
+    //     .collect(Collectors.toSet())
+    //     .asScala
+    //     .flatMap(_.objectPropertyExpressionsInSignature)
+    // }
 
     // OWLAPI reasoner for same easier tasks
     private val reasoner =
