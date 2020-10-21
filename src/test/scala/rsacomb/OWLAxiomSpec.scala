@@ -1,10 +1,11 @@
 package rsacomb
 
-import java.util.ArrayList
+import java.util.{ArrayList => JList}
 import org.scalatest.LoneElement
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
+import org.semanticweb.owlapi.model.OWLClassExpression
 import uk.ac.manchester.cs.owl.owlapi.{OWLSubClassOfAxiomImpl}
 import uk.ac.manchester.cs.owl.owlapi.{
   OWLClassImpl,
@@ -72,11 +73,12 @@ object OWLAxiomSpec {
   //
   //    Student ∧ Worker
   //
-  val class_OWLObjectIntersectionOf =
-    new OWLObjectIntersectionOfImpl(
-      class_Student,
-      class_Worker
-    )
+  val class_OWLObjectIntersectionOf = {
+    val conjuncts = new JList[OWLClassExpression]()
+    conjuncts.add(class_Student)
+    conjuncts.add(class_Worker)
+    new OWLObjectIntersectionOfImpl(conjuncts)
+  }
   // Singleton Class corresponding to
   //
   //    { alice }
@@ -113,7 +115,7 @@ object OWLAxiomSpec {
     new OWLSubClassOfAxiomImpl(
       class_OWLObjectIntersectionOf,
       class_PartTimeStudent,
-      new ArrayList()
+      new JList()
     )
 
   // Axiom SubClassOf corresponding to
@@ -124,7 +126,7 @@ object OWLAxiomSpec {
     new OWLSubClassOfAxiomImpl(
       class_Student,
       class_OWLObjectSomeValuesFrom,
-      new ArrayList()
+      new JList()
     )
 
   // Axiom SubClassOf corresponding to
@@ -135,7 +137,7 @@ object OWLAxiomSpec {
     new OWLSubClassOfAxiomImpl(
       class_OWLObjectSomeValuesFrom,
       class_Student,
-      new ArrayList()
+      new JList()
     )
 
   // Axiom SubClassOf corresponding to
@@ -146,7 +148,7 @@ object OWLAxiomSpec {
     new OWLSubClassOfAxiomImpl(
       class_Student,
       class_OWLObjectOneOf,
-      new ArrayList()
+      new JList()
     )
 
   // Axiom SubClassOf corresponding to
@@ -157,7 +159,7 @@ object OWLAxiomSpec {
     new OWLSubClassOfAxiomImpl(
       class_Student,
       class_OWLObjectMaxCardinality,
-      new ArrayList()
+      new JList()
     )
 
   def convertAxiom(

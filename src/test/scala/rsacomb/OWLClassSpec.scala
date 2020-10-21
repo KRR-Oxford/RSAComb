@@ -1,9 +1,12 @@
 package rsacomb
 
+import java.util.{ArrayList => JList}
+
 import org.scalatest.LoneElement
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
+import org.semanticweb.owlapi.model.OWLClassExpression
 import uk.ac.manchester.cs.owl.owlapi.{
   OWLClassImpl,
   OWLObjectSomeValuesFromImpl,
@@ -67,12 +70,13 @@ object OWLClassSpec {
   //
   //    Female ∧ Student ∧ Worker
   //
-  val class_OWLObjectIntersectionOf =
-    new OWLObjectIntersectionOfImpl(
-      class_Female,
-      class_Student,
-      class_Worker
-    )
+  val class_OWLObjectIntersectionOf = {
+    val conjuncts = new JList[OWLClassExpression]()
+    conjuncts.add(class_Female)
+    conjuncts.add(class_Student)
+    conjuncts.add(class_Worker)
+    new OWLObjectIntersectionOfImpl(conjuncts)
+  }
   // Singleton Class corresponding to
   //
   //    { alice }
