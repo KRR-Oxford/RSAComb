@@ -47,6 +47,15 @@ object Ontology1_CanonicalModelSpec {
     Seq().asJava
   )
 
+  val BsomeValuesFromSD = new OWLSubClassOfAxiomImpl(
+    new OWLClassImpl(RSA.base("B")),
+    new OWLObjectSomeValuesFromImpl(
+      roleS,
+      new OWLClassImpl(RSA.base("D"))
+    ),
+    Seq().asJava
+  )
+
 } // object OWLAxiomSpec
 
 class Ontology1_CanonicalModelSpec
@@ -66,6 +75,8 @@ class Ontology1_CanonicalModelSpec
     val rules = AsubClassOfD.accept(visitor)
     rules.loneElement shouldBe a[Rule]
   }
+
+  // Role R //
 
   renderer.render(roleR) should "be safe" in {
     ontology.unsafeRoles should not contain roleR
@@ -89,12 +100,30 @@ class Ontology1_CanonicalModelSpec
     ontology.confl(roleR) should contain(roleR_inv)
   }
 
+  // Role S //
+
   renderer.render(roleS) should "be safe" in {
     ontology.unsafeRoles should not contain roleS
   }
 
+  it should "have 3 elements in its conflict set" in {
+    ontology.confl(roleS) should have size 3
+  }
+
   it should "contain R in its conflict set" in {
     ontology.confl(roleS) should contain(roleR)
+  }
+
+  it should ("contain " + renderer.render(
+    roleS_inv
+  ) + " in its conflict set") in {
+    ontology.confl(roleS) should contain(roleS_inv)
+  }
+
+  it should ("contain " + renderer.render(
+    roleT_inv
+  ) + " in its conflict set") in {
+    ontology.confl(roleS) should contain(roleT_inv)
   }
 
   renderer.render(roleS_inv) should "be unsafe" in {
@@ -109,10 +138,38 @@ class Ontology1_CanonicalModelSpec
 
   renderer.render(
     DsomeValuesFromRB
-  ) should "produce 5 rules" ignore {
+  ) should "have a sigleton 'cycle' set" in {
+    // Using `hashCode` we are assuming (B,S,D) < (D,R,B)
+    val ind = RSA.internal("v1_" ++ BsomeValuesFromSD.hashCode.toString())
+    ontology.cycle(DsomeValuesFromRB).loneElement shouldBe ind
+  }
+
+  it should "produce 5 rules" in {
+    // Rule 1 provides 1 rule (split in 2) + 1 fact
+    // Rule 2 provides 0 rules
+    // Rule 3 provides 1 rule (split in 2)
     val varX = Variable.create("X")
     val visitor = ProgramGenerator(ontology, varX)
     val rules = DsomeValuesFromRB.accept(visitor)
     rules should have length 5
   }
+
+  renderer.render(
+    BsomeValuesFromSD
+  ) should "have a sigleton 'cycle' set" in {
+    // Using `hashCode` we are assuming (B,S,D) < (D,R,B)
+    val ind = RSA.internal("v0_" ++ DsomeValuesFromRB.hashCode.toString())
+    ontology.cycle(BsomeValuesFromSD).loneElement shouldBe ind
+  }
+
+  it should "produce 5 rules" ignore {
+    // Rule 1 provides 1 rule (split in 2) + 1 fact
+    // Rule 2 provides 0 rules
+    // Rule 3 provides 1 rule (split in 2)
+    val varX = Variable.create("X")
+    val visitor = ProgramGenerator(ontology, varX)
+    val rules = BsomeValuesFromSD.accept(visitor)
+    rules should have length 5
+  }
+
 } // class OWLAxiomSpec
