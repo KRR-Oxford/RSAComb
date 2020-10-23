@@ -56,6 +56,21 @@ object Ontology1_CanonicalModelSpec {
     Seq().asJava
   )
 
+  val AsomeValuesFromSiC = new OWLSubClassOfAxiomImpl(
+    new OWLClassImpl(RSA.base("A")),
+    new OWLObjectSomeValuesFromImpl(
+      roleS_inv,
+      new OWLClassImpl(RSA.base("C"))
+    ),
+    Seq().asJava
+  )
+
+  val SsubPropertyOfT = new OWLSubObjectPropertyOfAxiomImpl(
+    new OWLObjectPropertyImpl(RSA.base("S")),
+    new OWLObjectPropertyImpl(RSA.base("T")),
+    Seq().asJava
+  )
+
 } // object OWLAxiomSpec
 
 class Ontology1_CanonicalModelSpec
@@ -126,14 +141,19 @@ class Ontology1_CanonicalModelSpec
     ontology.confl(roleS) should contain(roleT_inv)
   }
 
+  // S⁻
+
   renderer.render(roleS_inv) should "be unsafe" in {
     ontology.unsafeRoles should contain(roleS_inv)
   }
 
-  it should ("contain " + renderer.render(
-    roleR_inv
-  ) + " in its conflict set") in {
-    ontology.confl(roleS_inv) should contain(roleR_inv)
+  renderer.render(
+    AsomeValuesFromSiC
+  ) should "produce 1 rule" in {
+    val varX = Variable.create("X")
+    val visitor = ProgramGenerator(ontology, varX)
+    val rules = AsomeValuesFromSiC.accept(visitor)
+    rules should have length 1
   }
 
   renderer.render(
@@ -162,7 +182,7 @@ class Ontology1_CanonicalModelSpec
     ontology.cycle(BsomeValuesFromSD).loneElement shouldBe ind
   }
 
-  it should "produce 5 rules" ignore {
+  it should "produce 5 rules" in {
     // Rule 1 provides 1 rule (split in 2) + 1 fact
     // Rule 2 provides 0 rules
     // Rule 3 provides 1 rule (split in 2)
@@ -170,6 +190,15 @@ class Ontology1_CanonicalModelSpec
     val visitor = ProgramGenerator(ontology, varX)
     val rules = BsomeValuesFromSD.accept(visitor)
     rules should have length 5
+  }
+
+  renderer.render(
+    SsubPropertyOfT
+  ) should "produce 2 rules" in {
+    val varX = Variable.create("X")
+    val visitor = ProgramGenerator(ontology, varX)
+    val rules = SsubPropertyOfT.accept(visitor)
+    rules should have length 2
   }
 
 } // class OWLAxiomSpec
