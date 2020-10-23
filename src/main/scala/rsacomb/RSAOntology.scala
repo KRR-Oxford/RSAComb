@@ -6,6 +6,7 @@ import java.util.stream.{Collectors, Stream}
 
 import org.semanticweb.owlapi.model.OWLOntology
 import org.semanticweb.owlapi.model.{
+  OWLClass,
   OWLObjectProperty,
   OWLObjectPropertyExpression,
   OWLSubClassOfAxiom
@@ -288,31 +289,67 @@ trait RSAOntology {
       }
     }
 
-    // TODO: this implementation is not correct when taking into
-    // account equality.
+    // def cycle(axiom: OWLSubClassOfAxiom): Set[Term] = {
+    //   // Assuming just one role in the signature of a T5 axiom
+    //   val roleR = axiom.objectPropertyExpressionsInSignature(0)
+    //   val conflR = this.confl(roleR)
+    //   // We just need the TBox to find
+    //   val tbox = ontology
+    //     .tboxAxioms(Imports.INCLUDED)
+    //     .collect(Collectors.toSet())
+    //     .asScala
+    //   for {
+    //     axiom1 <- tbox
+    //     // TODO: is this an optimization or an error?
+    //     if axiom1.isT5
+    //     // We expect only one role coming out of a T5 axiom
+    //     roleS <- axiom1.objectPropertyExpressionsInSignature
+    //     // Triples ordering is among triples involving safe roles.
+    //     if !unsafeRoles.contains(roleS)
+    //     if conflR.contains(roleS)
+    //     individual =
+    //       if (axiom.hashCode < axiom1.hashCode) {
+    //         RSA.internal("v0_" ++ axiom1.hashCode.toString())
+    //       } else {
+    //         RSA.internal("v1_" ++ axiom1.hashCode.toString())
+    //       }
+    //   } yield individual
+    // }
+
     def cycle(axiom: OWLSubClassOfAxiom): Set[Term] = {
-      // Assuming just one role in the signature of a T5 axiom
-      val roleR = axiom.objectPropertyExpressionsInSignature(0)
+      val classes =
+        axiom.classesInSignature.collect(Collectors.toList()).asScala
+      val classA = classes(0)
+      val roleR = axiom
+        .objectPropertyExpressionsInSignature(0)
+        .asInstanceOf[OWLObjectProperty]
+      val classB = classes(1)
+      cycle_aux(classA, roleR, classB)
+    }
+
+    def cycle_aux(
+        classA: OWLClass,
+        roleR: OWLObjectProperty,
+        classB: OWLClass
+    ): Set[Term] = {
       val conflR = this.confl(roleR)
-      // We just need the TBox to find
-      val tbox = ontology
-        .tboxAxioms(Imports.INCLUDED)
+      val classes = ontology
+        .classesInSignature(Imports.INCLUDED)
         .collect(Collectors.toSet())
         .asScala
       for {
-        axiom1 <- tbox
-        // TODO: is this an optimization or an error?
-        if axiom1.isT5
-        // We expect only one role coming out of a T5 axiom
-        roleS <- axiom1.objectPropertyExpressionsInSignature
-        // Triples ordering is among triples involving safe roles.
+        classD <- classes
+        roleS <- conflR
+        classC <- classes
+        // Keeping this check for now
         if !unsafeRoles.contains(roleS)
-        if conflR.contains(roleS)
+        tripleARB = Seq(classA, roleR, classB).hashCode
+        tripleDSC = Seq(classD, roleS, classC).hashCode
         individual =
-          if (axiom.hashCode < axiom1.hashCode) {
-            RSA.internal("v0_" ++ axiom1.hashCode.toString())
+          if (tripleARB < tripleDSC) {
+            RSA.internal("v0_" ++ tripleDSC.hashCode.toString())
           } else {
-            RSA.internal("v1_" ++ axiom1.hashCode.toString())
+            RSA.internal("v1_" ++ tripleDSC.hashCode.toString())
           }
       } yield individual
     }
