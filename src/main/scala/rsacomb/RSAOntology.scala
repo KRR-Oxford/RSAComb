@@ -301,8 +301,12 @@ trait RSAOntology {
         .asScala
       for {
         axiom1 <- tbox
+        // TODO: is this an optimization or an error?
         if axiom1.isT5
-        roleS <- axiom1.objectPropertyExpressionsInSignature // Just 1
+        // We expect only one role coming out of a T5 axiom
+        roleS <- axiom1.objectPropertyExpressionsInSignature
+        // Triples ordering is among triples involving safe roles.
+        if !unsafeRoles.contains(roleS)
         if conflR.contains(roleS)
         individual =
           if (axiom.hashCode < axiom1.hashCode) {
