@@ -24,7 +24,7 @@ object ProgramGenerator {
 
   def apply(
       ontology: OWLOntology,
-      term: Term
+      term: Term = Variable.create("X")
   ): RDFoxAxiomConverter =
     new ProgramGenerator(ontology, term)
 

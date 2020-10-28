@@ -71,7 +71,7 @@ object Ontology1_CanonicalModelSpec {
     Seq().asJava
   )
 
-} // object OWLAxiomSpec
+}
 
 class Ontology1_CanonicalModelSpec
     extends AnyFlatSpec
@@ -181,7 +181,7 @@ class Ontology1_CanonicalModelSpec
 
   renderer.render(
     BsomeValuesFromSD
-  ) should "have a sigleton 'cycle' set" in {
+  ) should "have a 'cycle' set of 32 elements" in {
     // Cycle introduces a new constant for each possible triple (the
     // order among triples is total). In this example there are 4
     // concept names and S has 2 safe roles in its conflict set (R,
@@ -211,4 +211,153 @@ class Ontology1_CanonicalModelSpec
     rules should have length 2
   }
 
-} // class OWLAxiomSpec
+}
+
+object Ontology2_CanonicalModelSpec {
+
+  /* Renderer to display OWL Axioms with DL syntax*/
+  val renderer = new DLSyntaxObjectRenderer()
+
+  val ontology_path: File = new File("examples/example2.owl")
+  val ontology = RSA.loadOntology(ontology_path)
+  val program = ontology.canonicalModel
+
+  val roleR = new OWLObjectPropertyImpl(RSA.base("R"))
+  val roleS = new OWLObjectPropertyImpl(RSA.base("S"))
+  val roleT = new OWLObjectPropertyImpl(RSA.base("T"))
+  val roleP = new OWLObjectPropertyImpl(RSA.base("P"))
+  val roleR_inv = roleR.getInverseProperty()
+  val roleS_inv = roleS.getInverseProperty()
+  val roleT_inv = roleT.getInverseProperty()
+  val roleP_inv = roleP.getInverseProperty()
+
+  val AsomeValuesFromRB = new OWLSubClassOfAxiomImpl(
+    new OWLClassImpl(RSA.base("A")),
+    new OWLObjectSomeValuesFromImpl(
+      roleR,
+      new OWLClassImpl(RSA.base("B"))
+    ),
+    Seq().asJava
+  )
+
+  val BsomeValuesFromSC = new OWLSubClassOfAxiomImpl(
+    new OWLClassImpl(RSA.base("B")),
+    new OWLObjectSomeValuesFromImpl(
+      roleS,
+      new OWLClassImpl(RSA.base("C"))
+    ),
+    Seq().asJava
+  )
+
+  val CsomeValuesFromTD = new OWLSubClassOfAxiomImpl(
+    new OWLClassImpl(RSA.base("C")),
+    new OWLObjectSomeValuesFromImpl(
+      roleT,
+      new OWLClassImpl(RSA.base("D"))
+    ),
+    Seq().asJava
+  )
+
+  val DsomeValuesFromPA = new OWLSubClassOfAxiomImpl(
+    new OWLClassImpl(RSA.base("D")),
+    new OWLObjectSomeValuesFromImpl(
+      roleP,
+      new OWLClassImpl(RSA.base("A"))
+    ),
+    Seq().asJava
+  )
+
+}
+
+class Ontology2_CanonicalModelSpec
+    extends AnyFlatSpec
+    with Matchers
+    with LoneElement {
+
+  import Ontology2_CanonicalModelSpec._
+
+  "The program generated from Example #1" should "not be empty" in {
+    program should not be empty
+  }
+
+  // Role R //
+
+  renderer.render(roleR) should "be unsafe" in {
+    ontology.unsafeRoles should contain(roleR)
+  }
+
+  it should "have only its inverse in its conflict set" in {
+    ontology.confl(roleR).loneElement shouldBe roleR_inv
+  }
+
+  // Role S //
+
+  renderer.render(roleS) should "be unsafe" in {
+    ontology.unsafeRoles should contain(roleS)
+  }
+
+  it should "have only its inverse in its conflict set" in {
+    ontology.confl(roleS).loneElement shouldBe roleS_inv
+  }
+
+  // Role T //
+
+  renderer.render(roleT) should "be unsafe" in {
+    ontology.unsafeRoles should contain(roleT)
+  }
+
+  it should "have only its inverse in its conflict set" in {
+    ontology.confl(roleT).loneElement shouldBe roleT_inv
+  }
+
+  // Role P //
+
+  renderer.render(roleP) should "be unsafe" in {
+    ontology.unsafeRoles should contain(roleP)
+  }
+
+  it should "have only its inverse in its conflict set" in {
+    ontology.confl(roleP).loneElement shouldBe roleP_inv
+  }
+
+  // A ⊑ ∃ R.B
+
+  renderer.render(
+    AsomeValuesFromRB
+  ) should "produce 1 rule" in {
+    val visitor = ProgramGenerator(ontology)
+    val rules = AsomeValuesFromRB.accept(visitor)
+    rules should have length 1
+  }
+
+  // B ⊑ ∃ S.C
+
+  renderer.render(
+    BsomeValuesFromSC
+  ) should "produce 1 rule" in {
+    val visitor = ProgramGenerator(ontology)
+    val rules = BsomeValuesFromSC.accept(visitor)
+    rules should have length 1
+  }
+
+  // C ⊑ ∃ T.D
+
+  renderer.render(
+    CsomeValuesFromTD
+  ) should "produce 1 rule" in {
+    val visitor = ProgramGenerator(ontology)
+    val rules = CsomeValuesFromTD.accept(visitor)
+    rules should have length 1
+  }
+
+  // D ⊑ ∃ P.A
+
+  renderer.render(
+    DsomeValuesFromPA
+  ) should "produce 1 rule" in {
+    val visitor = ProgramGenerator(ontology)
+    val rules = DsomeValuesFromPA.accept(visitor)
+    rules should have length 1
+  }
+
+}
