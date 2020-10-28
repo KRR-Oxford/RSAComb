@@ -158,38 +158,48 @@ class Ontology1_CanonicalModelSpec
 
   renderer.render(
     DsomeValuesFromRB
-  ) should "have a sigleton 'cycle' set" in {
-    // Using `hashCode` we are assuming (B,S,D) < (D,R,B)
-    val ind = RSA.internal("v1_" ++ BsomeValuesFromSD.hashCode.toString())
-    ontology.cycle(DsomeValuesFromRB).loneElement shouldBe ind
+  ) should "have a 'cycle' set of 48 elements" in {
+    // Cycle introduces a new constant for each possible triple (the
+    // order among triples is total). In this example there are 4
+    // concept names and R has 3 safe roles in its conflict set (S, T,
+    // Inv(R)). Triples are
+    //    (concept, role, concept)
+    // and hence we have 4*3*4=48 new constants introduced.
+    ontology.cycle(DsomeValuesFromRB) should have size 48
   }
 
   it should "produce 5 rules" in {
-    // Rule 1 provides 1 rule (split in 2) + 1 fact
+    // Rule 1 provides 1 rule (split in 2) + 48 fact
     // Rule 2 provides 0 rules
-    // Rule 3 provides 1 rule (split in 2)
+    // Rule 3 provides 48 rule (split in 2)
+    // Then (1*2 + 48) + (0) + (48*2) = 146
     val varX = Variable.create("X")
     val visitor = ProgramGenerator(ontology, varX)
     val rules = DsomeValuesFromRB.accept(visitor)
-    rules should have length 5
+    rules should have length 146
   }
 
   renderer.render(
     BsomeValuesFromSD
   ) should "have a sigleton 'cycle' set" in {
-    // Using `hashCode` we are assuming (B,S,D) < (D,R,B)
-    val ind = RSA.internal("v0_" ++ DsomeValuesFromRB.hashCode.toString())
-    ontology.cycle(BsomeValuesFromSD).loneElement shouldBe ind
+    // Cycle introduces a new constant for each possible triple (the
+    // order among triples is total). In this example there are 4
+    // concept names and S has 2 safe roles in its conflict set (R,
+    // Inv(T)). Triples are
+    //    (concept, role, concept)
+    // and hence we have 4*2*4=32 new constants introduced.
+    ontology.cycle(BsomeValuesFromSD) should have size 32
   }
 
   it should "produce 5 rules" in {
-    // Rule 1 provides 1 rule (split in 2) + 1 fact
+    // Rule 1 provides 1 rule (split in 2) + 32 fact
     // Rule 2 provides 0 rules
-    // Rule 3 provides 1 rule (split in 2)
+    // Rule 3 provides 32 rule (split in 2)
+    // Then (1*2 + 32) + (0) + (32*2) = 98
     val varX = Variable.create("X")
     val visitor = ProgramGenerator(ontology, varX)
-    val rules = BsomeValuesFromSD.accept(visitor)
-    rules should have length 5
+    val rules = DsomeValuesFromRB.accept(visitor)
+    rules should have length 146
   }
 
   renderer.render(

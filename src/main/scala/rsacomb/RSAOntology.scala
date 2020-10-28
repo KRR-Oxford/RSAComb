@@ -346,10 +346,12 @@ trait RSAOntology {
         tripleARB = Seq(classA, roleR, classB).hashCode
         tripleDSC = Seq(classD, roleS, classC).hashCode
         individual =
-          if (tripleARB < tripleDSC) {
-            RSA.internal("v0_" ++ tripleDSC.hashCode.toString())
-          } else {
+          if (tripleARB > tripleDSC) {
             RSA.internal("v1_" ++ tripleDSC.hashCode.toString())
+          } else {
+            // Note that this is also the case for
+            // `tripleARB == tripleDSC`
+            RSA.internal("v0_" ++ tripleDSC.hashCode.toString())
           }
       } yield individual
     }
