@@ -8,8 +8,8 @@ class FilteringProgram(query: Query, constants: List[Term]) extends RDFTriple {
   /* Makes mplicit conversion OWLAPI IRI <-> RDFox IRI available */
   import RDFoxUtil._
 
-  private val answer: List[Term] = query.getAnswerVariables.asScala.toList
-  private val bounded: List[Term] = this.getBoundedVariables
+  val answer: List[Term] = query.getAnswerVariables.asScala.toList
+  val bounded: List[Term] = this.getBoundedVariables
 
   val facts: List[Atom] = constants.map(named)
   val rules: List[Rule] = this.generateFilteringProgram().map(reifyRule)

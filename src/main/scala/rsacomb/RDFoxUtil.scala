@@ -51,9 +51,9 @@ object RDFoxUtil {
     (server, data)
   }
 
-  def parseQuery(query: String): Query = {
+  def parseQuery(query: String, prefixes: Prefixes = RSA.Prefixes): Query = {
     val parser = new SPARQLParser(
-      RSA.Prefixes,
+      prefixes,
       new ByteArrayInputStream(query.getBytes())
     )
     parser.parseSingleQuery()
