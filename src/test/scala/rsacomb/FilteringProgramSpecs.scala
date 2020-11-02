@@ -81,7 +81,7 @@ object FilteringProgramSpec {
   val query2 = Query.create(
     QueryType.SELECT,
     false,
-    List(v("w"), v("doc"), v("doc"), v("document_hyperlink")).asJava,
+    List(v("w"), v("doc"), v("document_hyperlink")).asJava,
     Conjunction.create(
       Atom.rdf(v("w"), IRI.RDF_TYPE, c("Wellbore")),
       Atom.rdf(v("w"), c("wellboreDocument"), v("doc")),
@@ -93,24 +93,26 @@ object FilteringProgramSpec {
 
   // val query3 = parseQuery(
   //   """
-  //   SELECT  ?w ?doc ?document_hyperlink
+  //   SELECT  ?wellbore ?formation_pressure
   //   WHERE {
-  //     ?w    a                     :Wellbore ;
-  //           :wellboreDocument     ?doc .
-  //     ?doc  :hasURL               ?document_hyperlink
+  //     ?w   a                      :Wellbore ;
+  //          :name                  ?wellbore ;
+  //          :hasFormationPressure  ?fp .
+  //     ?fp  :valueInStandardUnit   ?formation_pressure
   //   }
-  // """,
+  //   """,
   //   prefixes
   // )
 
   val query3 = Query.create(
     QueryType.SELECT,
     false,
-    List(v("w"), v("doc"), v("document_hyperlink")).asJava,
+    List(v("wellbore"), v("formation_pressure")).asJava,
     Conjunction.create(
       Atom.rdf(v("w"), IRI.RDF_TYPE, c("Wellbore")),
-      Atom.rdf(v("w"), c("wellboreDocument"), v("doc")),
-      Atom.rdf(v("doc"), c("hasURL"), v("document_hyperlink"))
+      Atom.rdf(v("w"), c("name"), v("wellbore")),
+      Atom.rdf(v("w"), c("hasFormationPressure"), v("fp")),
+      Atom.rdf(v("fp"), c("valueInStandardUnit"), v("formation_pressure"))
     )
   )
 
@@ -118,24 +120,37 @@ object FilteringProgramSpec {
 
   // val query4 = parseQuery(
   //   """
-  //   SELECT  ?w ?doc ?document_hyperlink
+  //   SELECT  *
   //   WHERE {
-  //     ?w    a                     :Wellbore ;
-  //           :wellboreDocument     ?doc .
-  //     ?doc  :hasURL               ?document_hyperlink
+  //     ?w            a                           :Wellbore ;
+  //                   :hasGeochemicalMeasurement  ?measurement .
+  //     ?measurement  :cgType                     ?cgtype ;
+  //                   :peakName                   ?peakType ;
+  //                   :peakHeight                 ?peak_height ;
+  //                   :peakAmount                 ?peak_amount
   //   }
-  // """,
+  //   """,
   //   prefixes
   // )
 
   val query4 = Query.create(
     QueryType.SELECT,
     false,
-    List(v("w"), v("doc"), v("document_hyperlink")).asJava,
+    List(
+      v("w"),
+      v("measurement"),
+      v("cgtype"),
+      v("peakType"),
+      v("peak_height"),
+      v("peak_amount")
+    ).asJava,
     Conjunction.create(
       Atom.rdf(v("w"), IRI.RDF_TYPE, c("Wellbore")),
-      Atom.rdf(v("w"), c("wellboreDocument"), v("doc")),
-      Atom.rdf(v("doc"), c("hasURL"), v("document_hyperlink"))
+      Atom.rdf(v("w"), c("hasGeochemicalMeasurement"), v("measurement")),
+      Atom.rdf(v("measurement"), c("cgType"), v("cgtype")),
+      Atom.rdf(v("measurement"), c("peakName"), v("peakType")),
+      Atom.rdf(v("measurement"), c("peakHeight"), v("peak_height")),
+      Atom.rdf(v("measurement"), c("peakAmount"), v("peak_amount"))
     )
   )
 
@@ -303,5 +318,66 @@ class FilteringProgramSpec
   query2.toString() should "have no bounded variable" in {
     val program = new FilteringProgram(query2, List())
     program.bounded shouldBe empty
+  }
+
+  query3.toString() should "have {?w, ?fp} as bounded variables" in {
+    val w = Variable.create("w")
+    val fp = Variable.create("fp")
+    val program = new FilteringProgram(query3, List())
+    program.bounded should contain theSameElementsAs List(w, fp)
+  }
+
+  query4.toString() should "have no bounded variable" in {
+    val program = new FilteringProgram(query4, List())
+    program.bounded shouldBe empty
+  }
+
+  query5.toString() should "have a non-empty bounded set" in {
+    val w = Variable.create("w")
+    val c_int = Variable.create("c_int")
+    val f_int = Variable.create("f_int")
+    val c_unit = Variable.create("c_unit")
+    val program = new FilteringProgram(query5, List())
+    program.bounded should contain theSameElementsAs List(
+      w,
+      c_int,
+      f_int,
+      c_unit
+    )
+  }
+
+  query6.toString() should "have a non-empty bounded set" in {
+    val w = Variable.create("w")
+    val int = Variable.create("int")
+    val program = new FilteringProgram(query6, List())
+    program.bounded should contain theSameElementsAs List(w, int)
+  }
+
+  query7.toString() should "have a non-empty bounded set" in {
+    val w = Variable.create("w")
+    val z = Variable.create("z")
+    val u = Variable.create("u")
+    val strat_unit_name = Variable.create("strat_unit_name")
+    val wellbore = Variable.create("wellbore")
+    val cored_int = Variable.create("cored_int")
+    val c = Variable.create("c")
+    val sample_depth = Variable.create("sample_depth")
+    val p = Variable.create("p")
+    val top = Variable.create("top")
+    val bot = Variable.create("bot")
+    val program = new FilteringProgram(query7, List())
+    program.bounded should contain theSameElementsAs List(
+      w,
+      z,
+      u,
+      strat_unit_name,
+      wellbore,
+      cored_int,
+      c,
+      sample_depth,
+      p,
+      top,
+      bot
+    )
   }
 }
