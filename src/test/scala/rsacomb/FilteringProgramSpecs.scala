@@ -303,36 +303,36 @@ class FilteringProgramSpec
     }
   }
 
-  query0.toString() should "have {?obj, ?pred} as bounded variables" in {
+  "Query 0" should "have {?obj, ?pred} as bounded variables" in {
     val pred = Variable.create("obj")
     val obj = Variable.create("pred")
     val program = new FilteringProgram(query0, List())
     program.bounded should contain theSameElementsAs List(pred, obj)
   }
 
-  query1.toString() should "have no bounded variable" in {
+  "Query 1" should "have no bounded variable" in {
     val program = new FilteringProgram(query1, List())
     program.bounded shouldBe empty
   }
 
-  query2.toString() should "have no bounded variable" in {
+  "Query 2" should "have no bounded variable" in {
     val program = new FilteringProgram(query2, List())
     program.bounded shouldBe empty
   }
 
-  query3.toString() should "have {?w, ?fp} as bounded variables" in {
+  "Query 3" should "have {?w, ?fp} as bounded variables" in {
     val w = Variable.create("w")
     val fp = Variable.create("fp")
     val program = new FilteringProgram(query3, List())
     program.bounded should contain theSameElementsAs List(w, fp)
   }
 
-  query4.toString() should "have no bounded variable" in {
+  "Query 4" should "have no bounded variable" in {
     val program = new FilteringProgram(query4, List())
     program.bounded shouldBe empty
   }
 
-  query5.toString() should "have a non-empty bounded set" in {
+  "Query 5" should "have a non-empty bounded set" in {
     val w = Variable.create("w")
     val c_int = Variable.create("c_int")
     val f_int = Variable.create("f_int")
@@ -346,14 +346,14 @@ class FilteringProgramSpec
     )
   }
 
-  query6.toString() should "have a non-empty bounded set" in {
+  "Query 6" should "have a non-empty bounded set" in {
     val w = Variable.create("w")
     val int = Variable.create("int")
     val program = new FilteringProgram(query6, List())
     program.bounded should contain theSameElementsAs List(w, int)
   }
 
-  query7.toString() should "have a non-empty bounded set" in {
+  "Query 7" should "have a non-empty bounded set" in {
     val w = Variable.create("w")
     val z = Variable.create("z")
     val u = Variable.create("u")
