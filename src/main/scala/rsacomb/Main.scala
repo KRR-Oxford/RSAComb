@@ -62,8 +62,7 @@ object RSAComb extends App {
       "SELECT ?X WHERE {?X ?Y ?Z}"
     )
 
-    /* Compute the filtering program from the given query */
-    val filter = ontology.filteringProgram(query)
+    val filter = query map { q => ontology.filteringProgram(q) }
 
     /* ... */
   }

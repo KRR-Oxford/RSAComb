@@ -9,7 +9,8 @@ import org.semanticweb.owlapi.model._
 import uk.ac.manchester.cs.owl.owlapi._
 import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
 
-import tech.oxfordsemantic.jrdfox.logic.{Rule, Variable}
+import tech.oxfordsemantic.jrdfox.logic.datalog.Rule
+import tech.oxfordsemantic.jrdfox.logic.expression.Variable
 
 import scala.collection.JavaConverters._
 

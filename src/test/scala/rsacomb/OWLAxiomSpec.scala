@@ -19,18 +19,22 @@ import uk.ac.manchester.cs.owl.owlapi.{
 import uk.ac.manchester.cs.owl.owlapi.{OWLObjectPropertyImpl}
 import org.semanticweb.owlapi.model.{OWLAxiom}
 
-import tech.oxfordsemantic.jrdfox.logic.{Rule, BindAtom, BuiltinFunctionCall}
-import tech.oxfordsemantic.jrdfox.logic.{
-  Atom,
-  TupleTableName,
+import tech.oxfordsemantic.jrdfox.logic.Datatype
+import tech.oxfordsemantic.jrdfox.logic.datalog.{
+  Rule,
+  BindAtom,
+  TupleTableAtom,
+  TupleTableName
+}
+import tech.oxfordsemantic.jrdfox.logic.expression.{
+  FunctionCall,
   Term,
   Variable,
-  Literal,
-  Datatype
+  Literal
 }
 
 import org.semanticweb.owlapi.model.{IRI => OWLIRI}
-import tech.oxfordsemantic.jrdfox.logic.{IRI => RDFIRI}
+import tech.oxfordsemantic.jrdfox.logic.expression.{IRI => RDFIRI}
 
 object OWLAxiomSpec {
 
@@ -188,15 +192,15 @@ class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
   it should "contain a conjuction of atoms (Student[?x],Worker[?x]) in the body of the rule" in {
     val result = convertAxiom(axiom_OWLSubClassOf1, term_x)
     val body = List(
-      Atom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Student),
-      Atom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Worker)
+      TupleTableAtom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Student),
+      TupleTableAtom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Worker)
     )
     result.loneElement.getBody should contain theSameElementsAs body
   }
 
   it should "contain a single atom (PartTimeStudent[?x]) in the head of the rule" in {
     val result = convertAxiom(axiom_OWLSubClassOf1, term_x)
-    val head = Atom.rdf(term_x, RDFIRI.RDF_TYPE, iri_PartTimeStudent)
+    val head = TupleTableAtom.rdf(term_x, RDFIRI.RDF_TYPE, iri_PartTimeStudent)
     result.loneElement.getHead.loneElement should be(head)
   }
 
@@ -212,7 +216,7 @@ class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
     val skolem = SkolemStrategy.Constant(axiom_OWLSubClassOf2.toString)
     val result = convertAxiom(axiom_OWLSubClassOf2, term_x, skolem)
     val body =
-      Atom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Student.getIRIString)
+      TupleTableAtom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Student.getIRIString)
     result.loneElement.getBody.loneElement should equal(body)
   }
 
@@ -221,8 +225,8 @@ class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
   //   val result = convertAxiom(axiom_OWLSubClassOf2, term_x, skolem)
   //   val term_c = RSA.internal(skolem.const.getIRI)
   //   val head = List(
-  //     Atom.rdf(term_x, iri_hasSupervisor, term_c),
-  //     Atom.rdf(term_c, RDFIRI.RDF_TYPE, iri_Professor)
+  //     TupleTableAtom.rdf(term_x, iri_hasSupervisor, term_c),
+  //     TupleTableAtom.rdf(term_c, RDFIRI.RDF_TYPE, iri_Professor)
   //   )
   //   result.loneElement.getHead should contain theSameElementsAs (head)
   // }
@@ -239,7 +243,7 @@ class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
     val skolem = SkolemStrategy.Standard(axiom_OWLSubClassOf2.toString)
     val result = convertAxiom(axiom_OWLSubClassOf2, term_x, skolem)
     val body =
-      Atom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Student)
+      TupleTableAtom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Student)
     result.loneElement.getBody should contain(body)
   }
 
@@ -255,8 +259,8 @@ class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
   //   val skolem = SkolemStrategy.Standard(axiom_OWLSubClassOf2.toString)
   //   val result = convertAxiom(axiom_OWLSubClassOf2, term_x, skolem)
   //   val head = List(
-  //     Atom.rdf(term_x, iri_hasSupervisor, term_y),
-  //     Atom.rdf(term_y, RDFIRI.RDF_TYPE, iri_Professor)
+  //     TupleTableAtom.rdf(term_x, iri_hasSupervisor, term_y),
+  //     TupleTableAtom.rdf(term_y, RDFIRI.RDF_TYPE, iri_Professor)
   //   )
   //   result.loneElement.getHead should contain theSameElementsAs head
   // }
@@ -270,8 +274,8 @@ class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
   // it should "contain a conjunction of atoms (hasSupervisor[?x,?y],Professor[?y]) in the body of the rule" in {
   //   val result = convertAxiom(axiom_OWLSubClassOf3, term_x)
   //   val body = List(
-  //     Atom.rdf(term_x, iri_hasSupervisor, term_y),
-  //     Atom.rdf(term_y, RDFIRI.RDF_TYPE, iri_Professor)
+  //     TupleTableAtom.rdf(term_x, iri_hasSupervisor, term_y),
+  //     TupleTableAtom.rdf(term_y, RDFIRI.RDF_TYPE, iri_Professor)
   //   )
   //   result.loneElement.getBody should contain theSameElementsAs body
   // }
@@ -279,7 +283,7 @@ class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
   it should "contain a single atom (Student[?x]) in the head of the rule" in {
     val result = convertAxiom(axiom_OWLSubClassOf3, term_x)
     val head =
-      Atom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Student)
+      TupleTableAtom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Student)
     result.loneElement.getHead.loneElement should be(head)
   }
 
@@ -292,13 +296,13 @@ class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
   it should "contain a single atoms (Student[?x]) in the body of the rule" in {
     val result = convertAxiom(axiom_OWLSubClassOf4, term_x)
     val body =
-      Atom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Student)
+      TupleTableAtom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Student)
     result.loneElement.getBody.loneElement should be(body)
   }
 
   it should "contain a single atom (sameAs[?x,alice])) in the head of the rule" in {
     val result = convertAxiom(axiom_OWLSubClassOf4, term_x)
-    val head = Atom.rdf(term_x, RDFIRI.SAME_AS, term_alice)
+    val head = TupleTableAtom.rdf(term_x, RDFIRI.SAME_AS, term_alice)
     result.loneElement.getHead.loneElement should be(head)
   }
 
@@ -311,18 +315,18 @@ class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
   // it should "contain a conjunction of atoms (...) in the body of the rule" in {
   //   val result = convertAxiom(axiom_OWLSubClassOf5, term_x)
   //   val body = List(
-  //     Atom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Student),
-  //     Atom.rdf(term_x, iri_hasSupervisor, term_y),
-  //     Atom.rdf(term_y, RDFIRI.RDF_TYPE, iri_Professor),
-  //     Atom.rdf(term_x, iri_hasSupervisor, term_z),
-  //     Atom.rdf(term_z, RDFIRI.RDF_TYPE, iri_Professor)
+  //     TupleTableAtom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Student),
+  //     TupleTableAtom.rdf(term_x, iri_hasSupervisor, term_y),
+  //     TupleTableAtom.rdf(term_y, RDFIRI.RDF_TYPE, iri_Professor),
+  //     TupleTableAtom.rdf(term_x, iri_hasSupervisor, term_z),
+  //     TupleTableAtom.rdf(term_z, RDFIRI.RDF_TYPE, iri_Professor)
   //   )
   //   result.loneElement.getBody should contain theSameElementsAs body
   // }
 
   // it should "contain a single atom (sameAs[?x,?z])) in the head of the rule" in {
   //   val result = convertAxiom(axiom_OWLSubClassOf5, term_x)
-  //   val head = Atom.rdf(term_y, RDFIRI.SAME_AS, term_z)
+  //   val head = TupleTableAtom.rdf(term_y, RDFIRI.SAME_AS, term_z)
   //   result.loneElement.getHead.loneElement should be(head)
   // }
 

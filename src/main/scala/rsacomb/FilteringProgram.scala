@@ -32,8 +32,29 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
   /* Makes mplicit conversion OWLAPI IRI <-> RDFox IRI available */
   import RDFoxUtil._
 
-  val answer: List[Term] = query.getSelection.asScala.map(_.getVariable).toList
-  val bounded: List[Term] = this.getBoundedVariables
+  lazy val variables = {
+    query.getQueryBody.getWherePattern match {
+      case b: ConjunctionPattern => {
+        b.getConjuncts.asScala.toSet.flatMap { conj: QueryPattern =>
+          conj match {
+            case c: TriplePattern =>
+              Set(c.getSubject, c.getPredicate, c.getObject)
+                .filter(_.isInstanceOf[Variable])
+            case _ => Set()
+          }
+        }
+      }
+      case _ => Set()
+    }
+  }.toList
+
+  val answer: List[Term] =
+    if (query.getAllPossibleVariables) {
+      variables
+    } else {
+      query.getSelection.asScala.map(_.getVariable).toList
+    }
+  val bounded: List[Term] = this.variables.filterNot(answer.contains(_))
 
   val facts: List[TupleTableAtom] = constants.map(named)
   val rules: List[Rule] = this.generateFilteringProgram().map(reifyRule)
@@ -44,26 +65,6 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       IRI.RDF_TYPE,
       RSA.internal("NAMED")
     )
-
-  private def getBoundedVariables: List[Term] = {
-    def extract(body: GroupGraphPattern): Set[Term] = {
-      body match {
-        case b: ConjunctionPattern => {
-          b.getConjuncts.asScala.toSet.flatMap { conj: QueryPattern =>
-            conj match {
-              case c: TriplePattern =>
-                Set(c.getSubject, c.getPredicate, c.getObject).filter(
-                  _.isInstanceOf[Variable]
-                )
-              case _ => Set()
-            }
-          }
-        }
-        case _ => Set()
-      }
-    }
-    extract(query.getQueryBody.getWherePattern).toList
-  }
 
   /* NOTE: we are restricting to queries that contain conjunctions of
    * atoms for the time being. This might need to be reviewed in the
