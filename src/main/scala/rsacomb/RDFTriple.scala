@@ -1,10 +1,11 @@
 package rsacomb
 
-import tech.oxfordsemantic.jrdfox.logic.{Atom, IRI, TupleTableName}
+import tech.oxfordsemantic.jrdfox.logic.datalog.{TupleTableAtom, TupleTableName}
+import tech.oxfordsemantic.jrdfox.logic.expression.{IRI}
 
 trait RDFTriple {
 
-  implicit class RDFTriple(atom: Atom) {
+  implicit class RDFTriple(atom: TupleTableAtom) {
 
     /* Is this the best way to determine if an atom is an RDF triple?
      * Note that we can't use `getNumberOfArguments()` because is not
@@ -21,39 +22,39 @@ trait RDFTriple {
      * ```
      */
     def isRdfTriple: Boolean =
-      atom.getTupleTableName.getIRI.equals("internal:triple")
+      atom.getTupleTableName.getName.equals("internal:triple")
 
     def isClassAssertion: Boolean =
-      atom.isRdfTriple && atom.getArgument(1).equals(IRI.RDF_TYPE)
+      atom.isRdfTriple && atom.getArguments.get(1).equals(IRI.RDF_TYPE)
 
     def isRoleAssertion: Boolean =
-      atom.isRdfTriple && !atom.getArgument(1).equals(IRI.RDF_TYPE)
+      atom.isRdfTriple && !atom.getArguments.get(1).equals(IRI.RDF_TYPE)
 
-    def suffix(sx: String): Atom =
+    def suffix(sx: String): TupleTableAtom =
       if (this.isClassAssertion) {
-        val newclass = atom.getArgument(2) match {
+        val newclass = atom.getArguments.get(2) match {
           case iri: IRI => IRI.create(iri.getIRI.appendedAll(sx))
           case other    => other
         }
-        Atom.rdf(
-          atom getArgument 0,
-          atom getArgument 1,
+        TupleTableAtom.rdf(
+          atom.getArguments.get(0),
+          atom.getArguments.get(1),
           newclass
         )
       } else if (this.isRoleAssertion) {
-        val newrole = atom.getArgument(1) match {
+        val newrole = atom.getArguments.get(1) match {
           case iri: IRI => IRI.create(iri.getIRI.appendedAll(sx))
           case other    => other
         }
-        Atom.rdf(
-          atom getArgument 0,
+        TupleTableAtom.rdf(
+          atom.getArguments.get(0),
           newrole,
-          atom getArgument 2
+          atom.getArguments.get(2)
         )
       } else {
         val newname =
-          TupleTableName.create(atom.getTupleTableName.getIRI.appendedAll(sx))
-        Atom.create(newname, atom.getArguments())
+          TupleTableName.create(atom.getTupleTableName.getName.appendedAll(sx))
+        TupleTableAtom.create(newname, atom.getArguments())
       }
   }
 

@@ -1,6 +1,6 @@
 package rsacomb
 
-import tech.oxfordsemantic.jrdfox.logic.IRI
+import tech.oxfordsemantic.jrdfox.logic.expression.IRI
 
 sealed trait SkolemStrategy
 

@@ -8,9 +8,13 @@ import org.semanticweb.owlapi.model.{
 }
 import org.semanticweb.owlapi.model.OWLAxiomVisitorEx
 
-import tech.oxfordsemantic.jrdfox.logic.{Rule, BodyFormula}
-import tech.oxfordsemantic.jrdfox.logic.{Atom, Term, Variable, Literal}
-import tech.oxfordsemantic.jrdfox.logic.{TupleTableName}
+import tech.oxfordsemantic.jrdfox.logic.datalog.{
+  Rule,
+  BodyFormula,
+  TupleTableAtom,
+  TupleTableName
+}
+import tech.oxfordsemantic.jrdfox.logic.expression.{Term, Variable, Literal}
 
 import scala.collection.JavaConverters._
 
@@ -71,7 +75,7 @@ class RDFoxAxiomConverter(
       new RDFoxPropertyExprConverter(term, term1, suffix)
     val superVisitor = new RDFoxPropertyExprConverter(term, term1, suffix)
     val body: List[BodyFormula] = axiom.getSubProperty.accept(subVisitor)
-    val head: List[Atom] = axiom.getSuperProperty.accept(superVisitor)
+    val head: List[TupleTableAtom] = axiom.getSuperProperty.accept(superVisitor)
     List(Rule.create(head.asJava, body.asJava))
   }
 

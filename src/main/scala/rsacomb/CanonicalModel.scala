@@ -9,14 +9,14 @@ import org.semanticweb.owlapi.model.{
   OWLObjectPropertyExpression,
   OWLObjectSomeValuesFrom
 }
-import tech.oxfordsemantic.jrdfox.logic.{
-  IRI,
+import tech.oxfordsemantic.jrdfox.logic.Datatype
+import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Term, Variable}
+import tech.oxfordsemantic.jrdfox.logic.datalog.{
   BodyFormula,
-  Atom,
-  Rule,
-  Term,
-  Variable
+  TupleTableAtom,
+  Rule
 }
+
 import scala.collection.JavaConverters._
 import rsacomb.RSA._
 
@@ -36,28 +36,35 @@ object ProgramGenerator {
       val varY = Variable.create("Y")
       List(
         Rule.create(
-          Atom.rdf(varX, IRI.create(pred), varY),
-          Atom.rdf(varX, IRI.create(pred ++ RSASuffix.Forward.getSuffix), varY)
+          TupleTableAtom.rdf(varX, IRI.create(pred), varY),
+          TupleTableAtom
+            .rdf(varX, IRI.create(pred ++ RSASuffix.Forward.getSuffix), varY)
         ),
         Rule.create(
-          Atom.rdf(varX, IRI.create(pred), varY),
-          Atom.rdf(varX, IRI.create(pred ++ RSASuffix.Backward.getSuffix), varY)
+          TupleTableAtom.rdf(varX, IRI.create(pred), varY),
+          TupleTableAtom
+            .rdf(varX, IRI.create(pred ++ RSASuffix.Backward.getSuffix), varY)
         ),
         Rule.create(
-          Atom.rdf(
+          TupleTableAtom.rdf(
             varY,
             IRI.create(pred ++ RSASuffix.Backward.getSuffix ++ "_inv"),
             varX
           ),
-          Atom.rdf(varX, IRI.create(pred ++ RSASuffix.Forward.getSuffix), varY)
+          TupleTableAtom
+            .rdf(varX, IRI.create(pred ++ RSASuffix.Forward.getSuffix), varY)
         ),
         Rule.create(
-          Atom.rdf(
+          TupleTableAtom.rdf(
             varY,
             IRI.create(pred ++ RSASuffix.Forward.getSuffix ++ "_inv"),
             varX
           ),
-          Atom.rdf(varX, IRI.create(pred ++ RSASuffix.Backward.getSuffix), varY)
+          TupleTableAtom.rdf(
+            varX,
+            IRI.create(pred ++ RSASuffix.Backward.getSuffix),
+            varY
+          )
         )
       )
     }
@@ -67,8 +74,8 @@ object ProgramGenerator {
       .toList
   }
 
-  def NIs(individuals: List[IRI]): List[Atom] =
-    individuals.map(Atom.rdf(_, IRI.RDF_TYPE, RSA.internal("NI")))
+  def NIs(individuals: List[IRI]): List[TupleTableAtom] =
+    individuals.map(TupleTableAtom.rdf(_, IRI.RDF_TYPE, RSA.internal("NI")))
 
 }
 
@@ -91,18 +98,18 @@ class ProgramGenerator(
     val v0 = IRI.create("v0_" ++ axiom.hashCode.toString)
     val varX = Variable.create("X")
     // Predicates
-    val atomA: Atom = {
+    val atomA: TupleTableAtom = {
       val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
-      Atom.rdf(varX, IRI.RDF_TYPE, cls)
+      TupleTableAtom.rdf(varX, IRI.RDF_TYPE, cls)
     }
-    def notIn(t: Term): Atom = {
-      Atom.rdf(
+    def notIn(t: Term): TupleTableAtom = {
+      TupleTableAtom.rdf(
         t,
         RSA.internal("notIn"),
         RSA.internal(unfold.hashCode.toString)
       )
     }
-    val roleRf: Atom = {
+    val roleRf: TupleTableAtom = {
       val visitor =
         new RDFoxPropertyExprConverter(varX, v0, RSASuffix.Forward)
       axiom.getSuperClass
@@ -111,13 +118,13 @@ class ProgramGenerator(
         .accept(visitor)
         .head
     }
-    val atomB: Atom = {
+    val atomB: TupleTableAtom = {
       val cls = axiom.getSuperClass
         .asInstanceOf[OWLObjectSomeValuesFrom]
         .getFiller
         .asInstanceOf[OWLClass]
         .getIRI
-      Atom.rdf(v0, IRI.RDF_TYPE, cls)
+      TupleTableAtom.rdf(v0, IRI.RDF_TYPE, cls)
     }
     // TODO: To be consistent with the specifics of the visitor we are
     // returning facts as `Rule`s with true body. While this is correct
@@ -142,21 +149,21 @@ class ProgramGenerator(
       val v1 = IRI.create("v1_" ++ axiom.hashCode.toString)
       val v2 = IRI.create("v2_" ++ axiom.hashCode.toString)
       // Predicates
-      def atomA(t: Term): Atom = {
+      def atomA(t: Term): TupleTableAtom = {
         val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
-        Atom.rdf(t, IRI.RDF_TYPE, cls)
+        TupleTableAtom.rdf(t, IRI.RDF_TYPE, cls)
       }
-      def roleRf(t1: Term, t2: Term): Atom = {
+      def roleRf(t1: Term, t2: Term): TupleTableAtom = {
         val visitor = new RDFoxPropertyExprConverter(t1, t2, RSASuffix.Forward)
         roleR.accept(visitor).head
       }
-      def atomB(t: Term): Atom = {
+      def atomB(t: Term): TupleTableAtom = {
         val cls = axiom.getSuperClass
           .asInstanceOf[OWLObjectSomeValuesFrom]
           .getFiller
           .asInstanceOf[OWLClass]
           .getIRI
-        Atom.rdf(t, IRI.RDF_TYPE, cls)
+        TupleTableAtom.rdf(t, IRI.RDF_TYPE, cls)
       }
       //Rules
       List(
@@ -179,22 +186,22 @@ class ProgramGenerator(
     // Fresh Variables
     val v1 = IRI.create("v1_" ++ axiom.hashCode.toString)
     // Predicates
-    def atomA(t: Term): Atom = {
+    def atomA(t: Term): TupleTableAtom = {
       val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
-      Atom.rdf(t, IRI.RDF_TYPE, cls)
+      TupleTableAtom.rdf(t, IRI.RDF_TYPE, cls)
     }
-    def roleRf(t: Term): Atom = {
+    def roleRf(t: Term): TupleTableAtom = {
       val visitor =
         new RDFoxPropertyExprConverter(t, v1, RSASuffix.Forward)
       roleR.accept(visitor).head
     }
-    val atomB: Atom = {
+    val atomB: TupleTableAtom = {
       val cls = axiom.getSuperClass
         .asInstanceOf[OWLObjectSomeValuesFrom]
         .getFiller
         .asInstanceOf[OWLClass]
         .getIRI
-      Atom.rdf(v1, IRI.RDF_TYPE, cls)
+      TupleTableAtom.rdf(v1, IRI.RDF_TYPE, cls)
     }
     cycle.flatMap { x =>
       List(

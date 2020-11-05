@@ -12,17 +12,16 @@ import org.semanticweb.owlapi.model.{
   OWLObjectMaxCardinality
 }
 import org.semanticweb.owlapi.model.OWLClassExpressionVisitorEx
-import tech.oxfordsemantic.jrdfox.logic.{
+import tech.oxfordsemantic.jrdfox.logic.Datatype
+import tech.oxfordsemantic.jrdfox.logic.datalog.{
   BindAtom,
-  BuiltinFunctionCall,
-  TupleTableName
+  TupleTableName,
+  TupleTableAtom
 }
-import tech.oxfordsemantic.jrdfox.logic.{
-  Atom,
+import tech.oxfordsemantic.jrdfox.logic.expression.{
   Term,
   Variable,
-  Literal,
-  Datatype,
+  FunctionCall,
   IRI
 }
 
@@ -64,7 +63,7 @@ class RDFoxClassExprConverter(
   // OWLClass
   override def visit(expr: OWLClass): RDFoxRuleShards = {
     val iri: IRI = if (expr.isTopEntity()) IRI.THING else expr.getIRI()
-    val atom = List(Atom.rdf(term, IRI.RDF_TYPE, iri))
+    val atom = List(TupleTableAtom.rdf(term, IRI.RDF_TYPE, iri))
     RDFoxRuleShards(atom, List())
   }
 
@@ -90,7 +89,7 @@ class RDFoxClassExprConverter(
       .asOWLNamedIndividual
       .getIRI
     val atom = List(
-      Atom.sameAs(term, ind)
+      TupleTableAtom.rdf(term, IRI.SAME_AS, ind)
     )
     RDFoxRuleShards(atom, List())
   }
@@ -110,8 +109,8 @@ class RDFoxClassExprConverter(
         if (unsafe.contains(prop))
           (
             List(
-              Atom.rdf(term, RSA.internal("PE"), c),
-              Atom.rdf(c, IRI.RDF_TYPE, RSA.internal("U"))
+              TupleTableAtom.rdf(term, RSA.internal("PE"), c),
+              TupleTableAtom.rdf(c, IRI.RDF_TYPE, RSA.internal("U"))
             ),
             List(),
             c
@@ -124,7 +123,7 @@ class RDFoxClassExprConverter(
         // a simple builtin function with a "special" name.
         (
           List(),
-          List(BindAtom.create(BuiltinFunctionCall.create("SKOLEM", term), y)),
+          List(BindAtom.create(FunctionCall.create("SKOLEM", term), y)),
           y
         )
     }
@@ -154,7 +153,7 @@ class RDFoxClassExprConverter(
         .map(expr.getProperty.accept(_))
         .flatten
     RDFoxRuleShards(
-      List(Atom.sameAs(vars(0), vars(1))),
+      List(TupleTableAtom.rdf(vars(0), IRI.SAME_AS, vars(1))),
       classResult.res ++ propertyResult
     )
   }

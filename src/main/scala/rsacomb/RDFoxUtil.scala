@@ -2,9 +2,9 @@ package rsacomb
 
 /* Java imports */
 import java.util.HashMap
-import java.io.ByteArrayInputStream
+import java.io.StringReader
 import tech.oxfordsemantic.jrdfox.Prefixes
-import tech.oxfordsemantic.jrdfox.logic.{IRI, Query}
+import tech.oxfordsemantic.jrdfox.logic.sparql.statement.{Query, SelectQuery}
 import tech.oxfordsemantic.jrdfox.client.{
   ConnectionFactory,
   ServerConnection,
@@ -12,7 +12,7 @@ import tech.oxfordsemantic.jrdfox.client.{
 }
 import tech.oxfordsemantic.jrdfox.formats.SPARQLParser
 
-import tech.oxfordsemantic.jrdfox.logic.{IRI => RDFox_IRI}
+import tech.oxfordsemantic.jrdfox.logic.expression.{IRI => RDFox_IRI}
 import org.semanticweb.owlapi.model.{IRI => OWL_IRI}
 
 object RDFoxUtil {
@@ -51,12 +51,19 @@ object RDFoxUtil {
     (server, data)
   }
 
-  def parseQuery(query: String, prefixes: Prefixes = RSA.Prefixes): Query = {
+  def parseQuery(
+      query: String,
+      prefixes: Prefixes = RSA.Prefixes
+  ): Option[SelectQuery] = {
     val parser = new SPARQLParser(
       prefixes,
-      new ByteArrayInputStream(query.getBytes())
+      new StringReader(query)
     )
-    parser.parseSingleQuery()
+    // NOTE: return only conjunctive queries for now (SelectQuery)
+    parser.parseSingleQuery() match {
+      case q: SelectQuery => Some(q)
+      case _              => None
+    }
   }
 
   def submitQuery(

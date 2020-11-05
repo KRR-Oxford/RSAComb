@@ -6,20 +6,12 @@ import java.util.Map
 
 import tech.oxfordsemantic.jrdfox.formats.SPARQLParser
 import tech.oxfordsemantic.jrdfox.Prefixes
-import tech.oxfordsemantic.jrdfox.logic.IRI
+import tech.oxfordsemantic.jrdfox.logic.expression.{Variable, IRI}
 import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model.OWLOntology
 import rsacomb.RSAOntology
 
 // Debug only
-import tech.oxfordsemantic.jrdfox.logic.{
-  Formula,
-  Atom,
-  Variable,
-  Query,
-  QueryType,
-  Conjunction
-}
 import scala.collection.JavaConverters._
 
 object RSA extends RSAOntology {

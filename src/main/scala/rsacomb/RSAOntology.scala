@@ -17,7 +17,14 @@ import org.semanticweb.owlapi.model.{IRI => OWLIRI}
 import uk.ac.manchester.cs.owl.owlapi.OWLObjectPropertyImpl
 
 import tech.oxfordsemantic.jrdfox.client.{UpdateType, DataStoreConnection}
-import tech.oxfordsemantic.jrdfox.logic.{Resource, Rule, Atom, Variable, IRI}
+import tech.oxfordsemantic.jrdfox.logic.datalog.{Rule, TupleTableAtom}
+import tech.oxfordsemantic.jrdfox.logic.expression.{
+  Term,
+  Variable,
+  IRI,
+  Resource
+}
+import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 
 /* Scala imports */
 import scala.collection.JavaConverters._
@@ -249,7 +256,7 @@ trait RSAOntology {
       Graph(edges: _*)
     }
 
-    def filteringProgram(query: Query): List[Rule] =
+    def filteringProgram(query: SelectQuery): List[Rule] =
       FilteringProgram(query, individuals).rules
 
     // TODO: the following functions needs testing
