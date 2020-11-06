@@ -2,6 +2,10 @@ package rsacomb
 
 /* Java imports */
 import java.io.File
+import java.util.HashMap
+import scala.collection.JavaConverters._
+
+import tech.oxfordsemantic.jrdfox.client.UpdateType
 
 /* Local imports */
 import rsacomb.RSA._
@@ -46,25 +50,64 @@ object RSAComb extends App {
    * case.
    */
 
-  val ontology = RSA.loadOntology(ontoPath)
+  val ontology: RSAOntology = RSA.loadOntology(ontoPath)
   if (ontology.isRSA) {
-
-    /* Build canonical model */
-    //val tboxCanon = rsa.canonicalModel()
-
-    // DEBUG: print program to generate canonical model
-    {
-      ontology.canonicalModel.foreach(println)
-    }
 
     /* Load query */
     val query = RDFoxUtil.parseQuery(
-      "SELECT ?X WHERE {?X ?Y ?Z}"
+      """
+        SELECT ?uno
+        WHERE {
+          ?uno a  :D ;
+               :R ?due .
+          ?due :S ?tre .
+          ?tre a  :D .
+        }
+      """
     )
 
-    val filter = query map { q => ontology.filteringProgram(q) }
+    /* Compute answers to query */
+    query match {
+      case Some(query) => {
+        // Open connection to RDFox
+        val (server, data) = RDFoxUtil.openConnection("AnswerComputation")
 
-    /* ... */
+        // Gather canonical model and filtering rules
+        val canon = ontology.canonicalModel
+        val filter = ontology.filteringProgram(query)
+
+        // Import relevant data
+        data.importData(UpdateType.ADDITION, RSA.Prefixes, ":a a :A .")
+        data.addRules(canon.rules.asJava)
+        data.addRules(filter.rules.asJava)
+
+        // Collect answers to query
+        for ((v, i) <- filter.variables.view.zipWithIndex) {
+          println(s"Variable $i:")
+          val query = s"SELECT ?X ?Y WHERE { ?X internal:Ans_$i ?Y }"
+          val cursor =
+            data.createCursor(
+              RSA.Prefixes,
+              query,
+              new HashMap[String, String]()
+            );
+          var mul = cursor.open()
+          while (mul > 0) {
+            printf(
+              "Ans_%d(%s,%s)",
+              i,
+              cursor.getResource(0),
+              cursor.getResource(1)
+            )
+            mul = cursor.advance()
+          }
+        }
+
+        // Close connection to RDFox
+        RDFoxUtil.closeConnection(server, data)
+      }
+      case None => {}
+    }
   }
 }
 
