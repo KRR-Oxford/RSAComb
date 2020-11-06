@@ -82,12 +82,12 @@ class Ontology1_CanonicalModelSpec
   import Ontology1_CanonicalModelSpec._
 
   "The program generated from Example #1" should "not be empty" in {
-    program should not be empty
+    program.rules should not be empty
   }
 
   renderer.render(AsubClassOfD) should "be converted into a single Rule" in {
     val varX = Variable.create("X")
-    val visitor = ProgramGenerator(ontology, varX)
+    val visitor = program.ProgramGenerator
     val rules = AsubClassOfD.accept(visitor)
     rules.loneElement shouldBe a[Rule]
   }
@@ -152,7 +152,7 @@ class Ontology1_CanonicalModelSpec
     AsomeValuesFromSiC
   ) should "produce 1 rule" in {
     val varX = Variable.create("X")
-    val visitor = ProgramGenerator(ontology, varX)
+    val visitor = program.ProgramGenerator
     val rules = AsomeValuesFromSiC.accept(visitor)
     rules should have length 1
   }
@@ -175,7 +175,7 @@ class Ontology1_CanonicalModelSpec
     // Rule 3 provides 48 rule (split in 2)
     // Then (1*2 + 48) + (0) + (48*2) = 146
     val varX = Variable.create("X")
-    val visitor = ProgramGenerator(ontology, varX)
+    val visitor = program.ProgramGenerator
     val rules = DsomeValuesFromRB.accept(visitor)
     rules should have length 146
   }
@@ -198,7 +198,7 @@ class Ontology1_CanonicalModelSpec
     // Rule 3 provides 32 rule (split in 2)
     // Then (1*2 + 32) + (0) + (32*2) = 98
     val varX = Variable.create("X")
-    val visitor = ProgramGenerator(ontology, varX)
+    val visitor = program.ProgramGenerator
     val rules = DsomeValuesFromRB.accept(visitor)
     rules should have length 146
   }
@@ -207,7 +207,7 @@ class Ontology1_CanonicalModelSpec
     SsubPropertyOfT
   ) should "produce 2 rules" in {
     val varX = Variable.create("X")
-    val visitor = ProgramGenerator(ontology, varX)
+    val visitor = program.ProgramGenerator
     val rules = SsubPropertyOfT.accept(visitor)
     rules should have length 2
   }
@@ -278,7 +278,7 @@ class Ontology2_CanonicalModelSpec
   import Ontology2_CanonicalModelSpec._
 
   "The program generated from Example #1" should "not be empty" in {
-    program should not be empty
+    program.rules should not be empty
   }
 
   // Role R //
@@ -326,7 +326,7 @@ class Ontology2_CanonicalModelSpec
   renderer.render(
     AsomeValuesFromRB
   ) should "produce 1 rule" in {
-    val visitor = ProgramGenerator(ontology)
+    val visitor = program.ProgramGenerator
     val rules = AsomeValuesFromRB.accept(visitor)
     rules should have length 1
   }
@@ -336,7 +336,7 @@ class Ontology2_CanonicalModelSpec
   renderer.render(
     BsomeValuesFromSC
   ) should "produce 1 rule" in {
-    val visitor = ProgramGenerator(ontology)
+    val visitor = program.ProgramGenerator
     val rules = BsomeValuesFromSC.accept(visitor)
     rules should have length 1
   }
@@ -346,7 +346,7 @@ class Ontology2_CanonicalModelSpec
   renderer.render(
     CsomeValuesFromTD
   ) should "produce 1 rule" in {
-    val visitor = ProgramGenerator(ontology)
+    val visitor = program.ProgramGenerator
     val rules = CsomeValuesFromTD.accept(visitor)
     rules should have length 1
   }
@@ -356,7 +356,7 @@ class Ontology2_CanonicalModelSpec
   renderer.render(
     DsomeValuesFromPA
   ) should "produce 1 rule" in {
-    val visitor = ProgramGenerator(ontology)
+    val visitor = program.ProgramGenerator
     val rules = DsomeValuesFromPA.accept(visitor)
     rules should have length 1
   }
