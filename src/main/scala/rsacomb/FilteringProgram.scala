@@ -300,17 +300,17 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       arg2 = role.getArguments.get(2)
       if bounded contains arg0
       if bounded contains arg2
-      sx <- List("_f", "_b")
+      sx <- List("f", "b")
     } yield Rule.create(
       predAQ(sx, Variable.create("V"), Variable.create("W")),
       role suffix sx,
       predID(
         RSA.internal(bounded indexOf arg0),
-        RSA.internal(Variable.create("V"))
+        Variable.create("V")
       ),
       predID(
         RSA.internal(bounded indexOf arg2),
-        RSA.internal(Variable.create("W"))
+        Variable.create("W")
       )
     )
 
@@ -335,7 +335,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
     val r8b =
       Rule.create(predSP, predFK)
     val r8c =
-      for (sx <- List("_f", "_b"))
+      for (sx <- List("f", "b"))
         yield Rule.create(
           predSP,
           predTQ(sx, Variable.create("V"), Variable.create("V"))
