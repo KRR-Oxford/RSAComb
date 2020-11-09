@@ -19,7 +19,7 @@ import org.semanticweb.owlapi.model.{IRI => OWLIRI}
 import uk.ac.manchester.cs.owl.owlapi.OWLObjectPropertyImpl
 
 import tech.oxfordsemantic.jrdfox.client.{UpdateType, DataStoreConnection}
-import tech.oxfordsemantic.jrdfox.logic.datalog.{Rule, TupleTableAtom}
+import tech.oxfordsemantic.jrdfox.logic.datalog.{Rule, TupleTableAtom, Negation}
 import tech.oxfordsemantic.jrdfox.logic.expression.{
   Term,
   Variable,
@@ -97,11 +97,11 @@ trait RSAOntology {
       val unsafe = this.unsafeRoles
 
       /* DEBUG: print rules in DL syntax and unsafe roles */
-      val renderer = new DLSyntaxObjectRenderer()
-      println("\nDL rules:")
-      axioms.foreach(x => println(renderer.render(x)))
-      println("\nUnsafe roles:")
-      println(unsafe)
+      //val renderer = new DLSyntaxObjectRenderer()
+      //println("\nDL rules:")
+      //axioms.foreach(x => println(renderer.render(x)))
+      //println("\nUnsafe roles:")
+      //println(unsafe)
 
       /* Ontology convertion into LP rules */
       val datalog = for {
@@ -116,8 +116,8 @@ trait RSAOntology {
       } yield rule
 
       /* DEBUG: print datalog rules */
-      println("\nDatalog roles:")
-      datalog.foreach(println)
+      //println("\nDatalog roles:")
+      //datalog.foreach(println)
 
       // Open connection with RDFox
       val (server, data) = RDFoxUtil.openConnection("RSACheck")
@@ -147,7 +147,7 @@ trait RSAOntology {
       /* Build graph
        */
       val graph = this.rsaGraph(data);
-      println(graph)
+      //println(graph)
 
       // Close connection to RDFox
       RDFoxUtil.closeConnection(server, data)
@@ -426,20 +426,21 @@ trait RSAOntology {
         private def rules1(axiom: OWLSubClassOfAxiom): List[Rule] = {
           val unfold = ontology.unfold(axiom).toList
           // Fresh Variables
-          val v0 = IRI.create("v0_" ++ axiom.hashCode.toString)
+          val v0 = RSA.internal("v0_" ++ axiom.hashCode.toString)
           val varX = Variable.create("X")
           // Predicates
           val atomA: TupleTableAtom = {
             val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
             TupleTableAtom.rdf(varX, IRI.RDF_TYPE, cls)
           }
-          def notIn(t: Term): TupleTableAtom = {
+          def in(t: Term): TupleTableAtom = {
             TupleTableAtom.rdf(
               t,
-              RSA.internal("notIn"),
+              RSA.internal("IN"),
               RSA.internal(unfold.hashCode.toString)
             )
           }
+          def notIn(t: Term): Negation = Negation.create(in(t))
           val roleRf: TupleTableAtom = {
             val visitor =
               new RDFoxPropertyExprConverter(varX, v0, RSASuffix.Forward)
@@ -461,7 +462,7 @@ trait RSAOntology {
           // returning facts as `Rule`s with true body. While this is correct
           // there is an easier way to import facts into RDFox. Are we able to
           // do that?
-          val facts = unfold.map(x => Rule.create(notIn(x)))
+          val facts = unfold.map(x => Rule.create(in(x)))
           val rules = List(
             Rule.create(roleRf, atomA, notIn(varX)),
             Rule.create(atomB, atomA, notIn(varX))
@@ -476,9 +477,9 @@ trait RSAOntology {
               .getProperty
           if (ontology.confl(roleR) contains roleR) {
             // Fresh Variables
-            val v0 = IRI.create("v0_" ++ axiom.hashCode.toString)
-            val v1 = IRI.create("v1_" ++ axiom.hashCode.toString)
-            val v2 = IRI.create("v2_" ++ axiom.hashCode.toString)
+            val v0 = RSA.internal("v0_" ++ axiom.hashCode.toString)
+            val v1 = RSA.internal("v1_" ++ axiom.hashCode.toString)
+            val v2 = RSA.internal("v2_" ++ axiom.hashCode.toString)
             // Predicates
             def atomA(t: Term): TupleTableAtom = {
               val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
@@ -516,7 +517,7 @@ trait RSAOntology {
               .asInstanceOf[OWLObjectSomeValuesFrom]
               .getProperty
           // Fresh Variables
-          val v1 = IRI.create("v1_" ++ axiom.hashCode.toString)
+          val v1 = RSA.internal("v1_" ++ axiom.hashCode.toString)
           // Predicates
           def atomA(t: Term): TupleTableAtom = {
             val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
