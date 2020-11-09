@@ -76,6 +76,10 @@ object RSAComb extends App {
         val canon = ontology.canonicalModel
         val filter = ontology.filteringProgram(query)
 
+        {
+          filter.rules.foreach(println)
+        }
+
         // Import relevant data
         data.importData(UpdateType.ADDITION, RSA.Prefixes, ":a a :A .")
         data.addRules(canon.rules.asJava)

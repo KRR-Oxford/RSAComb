@@ -13,6 +13,7 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
   TupleTableAtom,
   BindAtom,
   TupleTableName,
+  Atom,
   BodyFormula,
   Negation
 }
@@ -364,84 +365,53 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       .prepended(r1)
   }
 
-  private sealed trait Reified;
-  private case class ReifiedHead(bind: BindAtom, atoms: List[TupleTableAtom])
-      extends Reified
-  private case class ReifiedBody(atoms: List[TupleTableAtom]) extends Reified
-  private case class Unaltered(formula: BodyFormula) extends Reified
-
-  private def getBindAtom(atom: TupleTableAtom): BindAtom = {
-    val newvar = RSA.getFreshVariable()
-    val name =
-      Literal.create(atom.getTupleTableName.toString(), Datatype.XSD_STRING)
-    val args = atom
-      .getArguments()
-      .asScala
-      .toSeq
-      .prepended(name) /* Unclear requirement for SKOLEM func calls */
-    BindAtom.create(
-      FunctionCall
-        .create("SKOLEM", args: _*),
-      newvar
-    )
+  private def reifyTupleTableAtom(
+      atom: TupleTableAtom
+  ): (Option[BindAtom], List[TupleTableAtom]) = {
+    if (!atom.isRdfTriple) {
+      // Compute binding atom
+      val bvar = RSA.getFreshVariable()
+      val name =
+        Literal.create(atom.getTupleTableName.toString(), Datatype.XSD_STRING)
+      val args = atom.getArguments.asScala.toList.prepended(name)
+      val bind = BindAtom.create(FunctionCall.create("SKOLEM", args: _*), bvar)
+      // Compute reified atom
+      def reifiedIRI(i: Int) = atom.getTupleTableName.getName ++ s"_$i"
+      val atoms = atom.getArguments.asScala.toList.zipWithIndex
+        .map { case (t, i) => TupleTableAtom.rdf(bvar, reifiedIRI(i), t) }
+      (Some(bind), atoms)
+    } else {
+      (None, List(atom))
+    }
   }
 
-  private def reifyAtom(
-      atom: TupleTableAtom,
-      variable: Variable
-  ): List[TupleTableAtom] = {
-    def iri(i: Int) = atom.getTupleTableName.getName ++ s"_$i"
-    atom
-      .getArguments()
-      .asScala
-      .zipWithIndex
-      .map { case (t, i) => TupleTableAtom.rdf(variable, iri(i), t) }
-      .toList
+  private def reifyAtom(atom: Atom): (Option[BindAtom], List[Atom]) = {
+    atom match {
+      case tta: TupleTableAtom => reifyTupleTableAtom(tta)
+      case other               => (None, List(other))
+    }
   }
 
-  private def reifyBodyFormula(
-      formula: BodyFormula,
-      head: Boolean
-  ): Reified = {
+  private def reifyBodyFormula(formula: BodyFormula): List[BodyFormula] = {
     formula match {
-      case a: TupleTableAtom => {
-        if (!a.isRdfTriple) {
-          if (head) {
-            val b = getBindAtom(a)
-            ReifiedHead(b, reifyAtom(a, b.getBoundVariable))
-          } else {
-            ReifiedBody(reifyAtom(a, RSA.getFreshVariable))
-          }
-        } else {
-          Unaltered(a)
-        }
+      case atom: TupleTableAtom => reifyTupleTableAtom(atom)._2
+      case neg: Negation => {
+        val (bs, as) = neg.getNegatedAtoms.asScala.toList.map(reifyAtom).unzip
+        val bind = bs.flatten.map(_.getBoundVariable).asJava
+        val atoms = as.flatten.asJava
+        List(Negation.create(bind, atoms))
       }
-      case a => Unaltered(a)
+      case other => List(other)
     }
   }
 
   private def reifyRule(rule: Rule): Rule = {
-    // Rule body
-    val body =
-      rule.getBody.asScala.map(reifyBodyFormula(_, false)).flatMap {
-        case ReifiedHead(_, _) => List(); /* handle impossible case */
-        case ReifiedBody(x)    => x;
-        case Unaltered(x)      => List(x)
-      }
-    // Rule head
-    val reified = rule.getHead.asScala.map(reifyBodyFormula(_, true))
-    val skols = reified.flatMap {
-      case ReifiedHead(x, _) => Some(x);
-      case ReifiedBody(_)    => None; /* handle impossible case */
-      case Unaltered(_)      => None
-    }
-    val head = reified.flatMap {
-      case ReifiedHead(_, x) => x;
-      case ReifiedBody(_)    => List(); /* handle impossible case */
-      case Unaltered(x) =>
-        List(x.asInstanceOf[TupleTableAtom]) /* Can we do better that a cast? */
-    }
-    Rule.create(head.asJava, (skols ++ body).asJava)
+    val (bs, hs) = rule.getHead.asScala.toList.map(reifyTupleTableAtom).unzip
+    val head: List[TupleTableAtom] = hs.flatten
+    val bind: List[BodyFormula] = bs.flatten
+    val body: List[BodyFormula] =
+      rule.getBody.asScala.toList.map(reifyBodyFormula).flatten
+    Rule.create(head.asJava, (body ++ bind).asJava)
   }
 
 } // class FilteringProgram
