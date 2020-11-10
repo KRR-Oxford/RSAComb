@@ -380,6 +380,24 @@ trait RSAOntology {
                 )
             ),
             Rule.create(
+              TupleTableAtom.rdf(varX, IRI.create(pred ++ "_inv"), varY),
+              TupleTableAtom
+                .rdf(
+                  varX,
+                  IRI.create(pred ++ RSASuffix.Forward.getSuffix ++ "_inv"),
+                  varY
+                )
+            ),
+            Rule.create(
+              TupleTableAtom.rdf(varX, IRI.create(pred ++ "_inv"), varY),
+              TupleTableAtom
+                .rdf(
+                  varX,
+                  IRI.create(pred ++ RSASuffix.Backward.getSuffix ++ "_inv"),
+                  varY
+                )
+            ),
+            Rule.create(
               TupleTableAtom.rdf(
                 varY,
                 IRI.create(pred ++ RSASuffix.Backward.getSuffix ++ "_inv"),
@@ -401,6 +419,31 @@ trait RSAOntology {
               TupleTableAtom.rdf(
                 varX,
                 IRI.create(pred ++ RSASuffix.Backward.getSuffix),
+                varY
+              )
+            ),
+            Rule.create(
+              TupleTableAtom.rdf(
+                varY,
+                IRI.create(pred ++ RSASuffix.Backward.getSuffix),
+                varX
+              ),
+              TupleTableAtom
+                .rdf(
+                  varX,
+                  IRI.create(pred ++ RSASuffix.Forward.getSuffix ++ "_inv"),
+                  varY
+                )
+            ),
+            Rule.create(
+              TupleTableAtom.rdf(
+                varY,
+                IRI.create(pred ++ RSASuffix.Forward.getSuffix),
+                varX
+              ),
+              TupleTableAtom.rdf(
+                varX,
+                IRI.create(pred ++ RSASuffix.Backward.getSuffix ++ "_inv"),
                 varY
               )
             )
