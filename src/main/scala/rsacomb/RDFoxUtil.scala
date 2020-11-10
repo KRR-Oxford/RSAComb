@@ -72,7 +72,7 @@ object RDFoxUtil {
       query: String,
       answers: Int
   ): Unit = {
-    println(s"\nQUERY { $query }")
+    println(s"\nQUERY {\n$query\n}")
     val cursor = data.createCursor(
       prefixes,
       query,
