@@ -47,7 +47,7 @@ trait RSAOntology {
    */
   implicit class RSAOntology(ontology: OWLOntology) extends RSAAxiom {
 
-    // Gather TBox+RBox from original ontology
+    // Gather TBox/RBox/ABox from original ontology
     lazy val tbox: List[OWLAxiom] =
       ontology
         .tboxAxioms(Imports.INCLUDED)
@@ -62,7 +62,14 @@ trait RSAOntology {
         .asScala
         .toList
 
-    lazy val axioms: List[OWLAxiom] = tbox ++ rbox
+    lazy val abox: List[OWLAxiom] =
+      ontology
+        .aboxAxioms(Imports.INCLUDED)
+        .collect(Collectors.toList())
+        .asScala
+        .toList
+
+    lazy val axioms: List[OWLAxiom] = abox ++ tbox ++ rbox
 
     /* Retrieve individuals in the original ontology
      */
