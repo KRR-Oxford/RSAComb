@@ -1,6 +1,7 @@
 package rsacomb
 
-import tech.oxfordsemantic.jrdfox.logic.expression.IRI
+import tech.oxfordsemantic.jrdfox.logic.Datatype
+import tech.oxfordsemantic.jrdfox.logic.expression.{Literal, IRI}
 
 sealed trait SkolemStrategy
 
@@ -22,13 +23,24 @@ object SkolemStrategy {
    * From
    *    A ⊑ ∃R.B
    * to
-   *    A(y) -> R(x,f(x)), B(f(x))
+   *    A(x) -> R(x,f(x)), B(f(x))
    * for f, fresh function associated with the input axiom
+   *
+   * In RDFox this can represented combining the BIND operator with the
+   * SKOLEM operator as such:
+   *    A(x), BIND(y, SKOLEM("f", x)) -> R(x,y), B(y)
+   * The first argument of a SKOLEM call is a literal string (ideally
+   * identifing the simulated function name).
+   *
+   * NOTE: this requirement for the SKOLEM operator is not enforced by
+   * RDFox, that will fail silently if omitted.
    */
-  case class Standard(func: IRI) extends SkolemStrategy
+  case class Standard(func: Literal) extends SkolemStrategy
   object Standard {
     def apply(axiom: String) =
-      new Standard(IRI.create(genFunctionString(axiom)))
+      new Standard(
+        Literal.create(genFunctionString(axiom), Datatype.XSD_STRING)
+      )
     def genFunctionString(str: String) = "f_" ++ str.hashCode.toString
   }
 

@@ -20,6 +20,7 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
 }
 import tech.oxfordsemantic.jrdfox.logic.expression.{
   Term,
+  Literal,
   Variable,
   FunctionCall,
   IRI
@@ -118,14 +119,13 @@ class RDFoxClassExprConverter(
         else
           (List(), List(), c)
       }
-      case SkolemStrategy.Standard(f) =>
-        // particular class for the "SKOLEM" operator and it is instead
-        // a simple builtin function with a "special" name.
+      case SkolemStrategy.Standard(f) => {
         (
           List(),
-          List(BindAtom.create(FunctionCall.create("SKOLEM", term), y)),
+          List(BindAtom.create(FunctionCall.create("SKOLEM", f, term), y)),
           y
         )
+      }
     }
     val classVisitor =
       new RDFoxClassExprConverter(term1, unsafe, skolem, suffix)
