@@ -14,6 +14,8 @@
     B ⊑ ∃ S.D
     R ⊑ T⁻
     S ⊑ T 
+
+    a : A
     -->
 
     <owl:Class rdf:ID="A">
@@ -76,5 +78,7 @@
     <owl:ObjectProperty rdf:ID="S">
         <rdfs:subPropertyOf rdf:resource="#T" />
     </owl:ObjectProperty> 
+
+    <A rdf:about="#a"> </A>
 
 </rdf:RDF>

@@ -1,0 +1,51 @@
+
+@prefix : <http://example.com/rsa_example.owl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@base <http://example.com/rsa_example.owl> .
+
+# A ⊑ D
+# A ⊑ ∃ S⁻.C
+# ∃ S.A ⊑ D
+# D ⊑ ∃ R.B
+# B ⊑ ∃ S.D
+# R ⊑ T⁻
+# S ⊑ T 
+# 
+# a : A
+
+:A  rdf:type        owl:Class ;
+    rdfs:subClassOf :D ;
+    rdfs:subClassOf [ rdf:type owl:Restriction ;
+                               owl:onProperty [ owl:inverseOf :S ] ;
+                               owl:someValuesFrom :C
+                    ] .
+
+[ rdf:type  owl:Restriction ;
+            owl:onProperty  :S  ;
+            owl:someValuesFrom  :B
+] rdfs:subClassOf :D .
+
+:D  rdf:type        owl:Class ;
+    rdfs:subClassOf [ rdf:type owl:Restriction ;
+                               owl:onProperty :R ;
+                               owl:someValuesFrom :B
+                    ] .
+
+:B  rdf:type        owl:Class ;
+    rdfs:subClassOf [ rdf:type owl:Restriction ;
+                               owl:onProperty :S ;
+                               owl:someValuesFrom :D
+                    ] .
+
+:R  rdf:type owl:ObjectProperty ;
+    rdfs:subPropertyOf [ owl:inverseOf :T ] .
+
+:S  rdf:type owl:ObjectProperty ;
+    rdfs:subPropertyOf :T .
+
+:a rdf:type :A .
+
