@@ -89,7 +89,6 @@ class RDFoxAxiomConverter(
     val ind = axiom.getIndividual
     if (ind.isNamed) {
       val term = IRI.create(ind.asOWLNamedIndividual().getIRI.getIRIString)
-      println("This is executed")
       val cls = axiom.getClassExpression
       val visitor =
         new RDFoxClassExprConverter(term, unsafe, SkolemStrategy.None, suffix)
