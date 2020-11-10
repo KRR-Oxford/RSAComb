@@ -38,6 +38,7 @@ import scalax.collection.GraphEdge.UnDiEdge
 import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
 import tech.oxfordsemantic.jrdfox.logic._
 
+object RSAOntology {}
 /* Wrapper trait for the implicit class `RSAOntology`.
  */
 trait RSAOntology {
@@ -267,8 +268,8 @@ trait RSAOntology {
       val role = axiom.objectPropertyExpressionsInSignature(0)
       if (this.confl(role).contains(role)) {
         Set(
-          RSA.internal("v0_" ++ axiom.hashCode.toString()),
-          RSA.internal("v1_" ++ axiom.hashCode.toString())
+          RSA.internal("v0_" ++ RSA.hashed(axiom)),
+          RSA.internal("v1_" ++ RSA.hashed(axiom))
         )
       } else {
         Set()
@@ -329,15 +330,15 @@ trait RSAOntology {
         classC <- classes
         // Keeping this check for now
         if !unsafeRoles.contains(roleS)
-        tripleARB = Seq(classA, roleR, classB).hashCode
-        tripleDSC = Seq(classD, roleS, classC).hashCode
+        tripleARB = RSA.hashed(classA, roleR, classB)
+        tripleDSC = RSA.hashed(classD, roleS, classC)
         individual =
           if (tripleARB > tripleDSC) {
-            RSA.internal("v1_" ++ tripleDSC.hashCode.toString())
+            RSA.internal("v1_" ++ tripleDSC)
           } else {
             // Note that this is also the case for
             // `tripleARB == tripleDSC`
-            RSA.internal("v0_" ++ tripleDSC.hashCode.toString())
+            RSA.internal("v0_" ++ tripleDSC)
           }
       } yield individual
     }
@@ -433,7 +434,7 @@ trait RSAOntology {
         private def rules1(axiom: OWLSubClassOfAxiom): List[Rule] = {
           val unfold = ontology.unfold(axiom).toList
           // Fresh Variables
-          val v0 = RSA.internal("v0_" ++ axiom.hashCode.toString)
+          val v0 = RSA.internal("v0_" ++ RSA.hashed(axiom))
           val varX = Variable.create("X")
           // Predicates
           val atomA: TupleTableAtom = {
@@ -484,9 +485,9 @@ trait RSAOntology {
               .getProperty
           if (ontology.confl(roleR) contains roleR) {
             // Fresh Variables
-            val v0 = RSA.internal("v0_" ++ axiom.hashCode.toString)
-            val v1 = RSA.internal("v1_" ++ axiom.hashCode.toString)
-            val v2 = RSA.internal("v2_" ++ axiom.hashCode.toString)
+            val v0 = RSA.internal("v0_" ++ RSA.hashed(axiom))
+            val v1 = RSA.internal("v1_" ++ RSA.hashed(axiom))
+            val v2 = RSA.internal("v2_" ++ RSA.hashed(axiom))
             // Predicates
             def atomA(t: Term): TupleTableAtom = {
               val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
@@ -524,7 +525,7 @@ trait RSAOntology {
               .asInstanceOf[OWLObjectSomeValuesFrom]
               .getProperty
           // Fresh Variables
-          val v1 = RSA.internal("v1_" ++ axiom.hashCode.toString)
+          val v1 = RSA.internal("v1_" ++ RSA.hashed(axiom))
           // Predicates
           def atomA(t: Term): TupleTableAtom = {
             val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI

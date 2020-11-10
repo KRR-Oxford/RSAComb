@@ -9,12 +9,17 @@ import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.logic.expression.{Variable, IRI}
 import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model.OWLOntology
+import org.semanticweb.owlapi.model.{
+  OWLAxiom,
+  OWLClass,
+  OWLObjectPropertyExpression
+}
 import rsacomb.RSAOntology
 
 // Debug only
 import scala.collection.JavaConverters._
 
-object RSA extends RSAOntology {
+object RSA extends RSAOntology with RSAAxiom {
 
   val Prefixes = new Prefixes()
   Prefixes.declarePrefix(":", "http://example.com/rsa_example.owl#")
@@ -42,6 +47,18 @@ object RSA extends RSAOntology {
       Prefixes.getPrefixIRIsByPrefixName.get("internal:").getIRI
         + name.toString
     )
+
+  def hashed(
+      cls1: OWLClass,
+      prop: OWLObjectPropertyExpression,
+      cls2: OWLClass
+  ): String =
+    (cls1, prop, cls2).hashCode.toString
+
+  def hashed(axiom: OWLAxiom): String = {
+    val (cls1, prop, cls2) = axiom.toTriple.get
+    this.hashed(cls1, prop, cls2)
+  }
 
   // TODO: move this somewhere else... maybe an OntoUtils class or something.
   def loadOntology(onto: File): OWLOntology = {

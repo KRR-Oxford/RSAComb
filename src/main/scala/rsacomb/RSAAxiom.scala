@@ -19,6 +19,7 @@ import org.semanticweb.owlapi.model.{
   OWLAxiomVisitorEx,
   OWLClassExpressionVisitorEx
 }
+import org.semanticweb.owlapi.model.OWLObjectProperty
 
 /* Wrapper trait for the implicit class `RSAAxiom`.
  */
@@ -163,6 +164,19 @@ trait RSAAxiom {
       val visitor = new RSAAxiomRoleExtractor()
       axiom.accept(visitor)
     }
+
+    lazy val toTriple: Option[(OWLClass, OWLObjectProperty, OWLClass)] =
+      for {
+        subClass <- Some(axiom) collect { case a: OWLSubClassOfAxiom => a }
+        cls1 <- Some(subClass.getSubClass) collect { case a: OWLClass => a }
+        someValues <- Some(subClass.getSuperClass) collect {
+          case a: OWLObjectSomeValuesFrom => a
+        }
+        prop <- Some(someValues.getProperty) collect {
+          case a: OWLObjectProperty => a
+        }
+        cls2 <- Some(someValues.getFiller) collect { case a: OWLClass => a }
+      } yield (cls1, prop, cls2)
   }
 
 } // trait RSAAxiom
