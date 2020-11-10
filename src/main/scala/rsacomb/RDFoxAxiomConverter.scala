@@ -14,7 +14,12 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
   TupleTableAtom,
   TupleTableName
 }
-import tech.oxfordsemantic.jrdfox.logic.expression.{Term, Variable, Literal}
+import tech.oxfordsemantic.jrdfox.logic.expression.{
+  Term,
+  IRI,
+  Variable,
+  Literal
+}
 
 import scala.collection.JavaConverters._
 
@@ -22,6 +27,7 @@ import rsacomb.SkolemStrategy
 import rsacomb.RDFoxRuleShards
 import org.semanticweb.owlapi.model.OWLSubObjectPropertyOfAxiom
 import org.semanticweb.owlapi.model.OWLObjectProperty
+import org.semanticweb.owlapi.model.OWLClassAssertionAxiom
 
 object RDFoxAxiomConverter {
 
@@ -77,6 +83,21 @@ class RDFoxAxiomConverter(
     val body: List[BodyFormula] = axiom.getSubProperty.accept(subVisitor)
     val head: List[TupleTableAtom] = axiom.getSuperProperty.accept(superVisitor)
     List(Rule.create(head.asJava, body.asJava))
+  }
+
+  override def visit(axiom: OWLClassAssertionAxiom): List[Rule] = {
+    val ind = axiom.getIndividual
+    if (ind.isNamed) {
+      val term = IRI.create(ind.asOWLNamedIndividual().getIRI.getIRIString)
+      println("This is executed")
+      val cls = axiom.getClassExpression
+      val visitor =
+        new RDFoxClassExprConverter(term, unsafe, SkolemStrategy.None, suffix)
+      val shard = cls.accept(visitor)
+      List(Rule.create(shard.res.asJava, shard.ext.asJava))
+    } else {
+      List()
+    }
   }
 
   def doDefault(axiom: OWLAxiom): List[Rule] = List()
