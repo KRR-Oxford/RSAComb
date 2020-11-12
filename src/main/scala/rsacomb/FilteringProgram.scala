@@ -58,7 +58,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
   val bounded: List[Term] = this.variables.filterNot(answer.contains(_))
 
   val facts: List[TupleTableAtom] = constants.map(named)
-  val rules: List[Rule] = this.generateFilteringProgram().map(reifyRule)
+  val rules: List[Rule] =
+    this.generateFilteringProgram().map(reifyRule) ++ facts.map(Rule.create(_))
 
   private def named(t: Term): TupleTableAtom =
     TupleTableAtom.rdf(
