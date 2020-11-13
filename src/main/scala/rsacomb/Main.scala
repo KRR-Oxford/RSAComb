@@ -6,6 +6,7 @@ import java.util.HashMap
 import scala.collection.JavaConverters._
 
 import tech.oxfordsemantic.jrdfox.client.UpdateType
+import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 
 /* Local imports */
 import rsacomb.RSA._
@@ -56,12 +57,12 @@ object RSAComb extends App {
     /* Load query */
     val query = RDFoxUtil.parseQuery(
       """
-        SELECT ?uno
+        SELECT ?X
         WHERE {
-          ?uno a  :D ;
-               :R ?due .
-          ?due :S ?tre .
-          ?tre a  :D .
+          ?X a  :D ;
+             :R ?Y .
+          ?Y :S ?Z .
+          ?Z a  :D .
         }
       """
     )
@@ -77,35 +78,91 @@ object RSAComb extends App {
         val filter = ontology.filteringProgram(query)
 
         {
+          println("\nCanonical Model rules:")
+          canon.rules.foreach(println)
+          println("\nFiltering rules")
           filter.rules.foreach(println)
+          println("\nQuery")
+          println(query)
         }
 
-        // Import relevant data
-        data.importData(UpdateType.ADDITION, RSA.Prefixes, ":a a :A .")
+        // Add canonical model and filtering rules
         data.addRules(canon.rules.asJava)
         data.addRules(filter.rules.asJava)
 
-        // Collect answers to query
-        for ((v, i) <- filter.variables.view.zipWithIndex) {
-          println(s"Variable $i:")
-          val query = s"SELECT ?X ?Y WHERE { ?X internal:Ans_$i ?Y }"
-          val cursor =
-            data.createCursor(
-              RSA.Prefixes,
-              query,
-              new HashMap[String, String]()
-            );
-          var mul = cursor.open()
-          while (mul > 0) {
-            printf(
-              "Ans_%d(%s,%s)",
-              i,
-              cursor.getResource(0),
-              cursor.getResource(1)
-            )
-            mul = cursor.advance()
+        def retrieveInstances(pred: String, arity: Int): Unit = {
+          // Build query
+          var query = "SELECT"
+          for (i <- 0 until arity) {
+            query ++= s" ?X$i"
           }
+          query ++= " WHERE {"
+          for (i <- 0 until arity) {
+            query ++= s" ?S internal:${pred}_$i ?X$i ."
+          }
+          query ++= " }"
+          // Collect answers
+          RDFoxUtil.submitQuery(
+            data,
+            RSA.Prefixes,
+            query,
+            arity
+          )
         }
+
+        // Retrieve answers
+        println("\nAnswers:")
+        retrieveInstances("ANS", filter.answer.length)
+
+        /* DEBUG: adding additional checks
+         */
+        println("\nIndividuals:")
+        ontology.individuals.foreach(println)
+
+        println("\nThings:")
+        RDFoxUtil.submitQuery(
+          data,
+          RSA.Prefixes,
+          "SELECT ?X { ?X a owl:Thing }",
+          1
+        )
+
+        println("\nNIs:")
+        RDFoxUtil.submitQuery(
+          data,
+          RSA.Prefixes,
+          "SELECT ?X { ?X a internal:NI }",
+          1
+        )
+
+        // ID instances
+        println("\nID instances:")
+        retrieveInstances("ID", filter.variables.length + 2)
+
+        println("\nSameAs instances:")
+        RDFoxUtil.submitQuery(
+          data,
+          RSA.Prefixes,
+          "SELECT ?X ?Y { ?X owl:sameAs ?Y }",
+          2
+        )
+
+        // Unfiltered answers
+        println("\nPossible answers:")
+        retrieveInstances("QM", filter.variables.length)
+
+        // Cycle detected
+        println("\nCycle detection:")
+        retrieveInstances("AQ_f", filter.variables.length + 2)
+        retrieveInstances("AQ_b", filter.variables.length + 2)
+
+        // Forks detected
+        println("\nForks:")
+        retrieveInstances("FK", filter.variables.length)
+
+        // Spurious answers
+        println("\nSpurious answers")
+        retrieveInstances("SP", filter.variables.length)
 
         // Close connection to RDFox
         RDFoxUtil.closeConnection(server, data)
