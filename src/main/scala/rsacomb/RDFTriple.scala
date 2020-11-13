@@ -33,7 +33,7 @@ trait RDFTriple {
     def suffix(sx: String): TupleTableAtom =
       if (this.isClassAssertion) {
         val newclass = atom.getArguments.get(2) match {
-          case iri: IRI => IRI.create(iri.getIRI.appendedAll(sx))
+          case iri: IRI => IRI.create(s"${iri.getIRI}_$sx")
           case other    => other
         }
         TupleTableAtom.rdf(
@@ -43,7 +43,7 @@ trait RDFTriple {
         )
       } else if (this.isRoleAssertion) {
         val newrole = atom.getArguments.get(1) match {
-          case iri: IRI => IRI.create(iri.getIRI.appendedAll(sx))
+          case iri: IRI => IRI.create(s"${iri.getIRI}_$sx")
           case other    => other
         }
         TupleTableAtom.rdf(
@@ -53,7 +53,7 @@ trait RDFTriple {
         )
       } else {
         val newname =
-          TupleTableName.create(atom.getTupleTableName.getName.appendedAll(sx))
+          TupleTableName.create(s"${atom.getTupleTableName.getName}_$sx")
         TupleTableAtom.create(newname, atom.getArguments())
       }
   }

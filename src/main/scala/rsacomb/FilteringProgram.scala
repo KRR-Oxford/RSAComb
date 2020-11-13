@@ -161,8 +161,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       if bounded contains (role2.getArguments.get(2))
     } yield Rule.create(
       predFK,
-      role1 suffix "_f",
-      role2 suffix "_f",
+      role1 suffix "f",
+      role2 suffix "f",
       predID(
         RSA.internal(bounded.indexOf(role1.getArguments.get(2))),
         RSA.internal(bounded.indexOf(role2.getArguments.get(2)))
@@ -182,8 +182,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       if bounded contains (role2.getArguments.get(0))
     } yield Rule.create(
       predFK,
-      role1 suffix "_f",
-      role2 suffix "_b",
+      role1 suffix "f",
+      role2 suffix "b",
       predID(
         RSA.internal(bounded.indexOf(role1.getArguments.get(2))),
         RSA.internal(bounded.indexOf(role2.getArguments.get(0)))
@@ -203,8 +203,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       if bounded contains (role2.getArguments.get(0))
     } yield Rule.create(
       predFK,
-      role1 suffix "_b",
-      role2 suffix "_b",
+      role1 suffix "b",
+      role2 suffix "b",
       predID(
         RSA.internal(bounded.indexOf(role1.getArguments.get(0))),
         RSA.internal(bounded.indexOf(role2.getArguments.get(0)))
@@ -235,8 +235,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA.internal(bounded indexOf role1arg0),
         RSA.internal(bounded indexOf role2arg0)
       ),
-      role1 suffix "_f",
-      role2 suffix "_f",
+      role1 suffix "f",
+      role2 suffix "f",
       predID(
         RSA.internal(bounded indexOf role1arg2),
         RSA.internal(bounded indexOf role2arg2)
@@ -260,8 +260,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA.internal(bounded indexOf role1arg0),
         RSA.internal(bounded indexOf role2arg2)
       ),
-      role1 suffix "_f",
-      role2 suffix "_b",
+      role1 suffix "f",
+      role2 suffix "b",
       predID(
         RSA.internal(bounded indexOf role1arg2),
         RSA.internal(bounded indexOf role2arg0)
@@ -285,8 +285,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA.internal(bounded indexOf role1arg2),
         RSA.internal(bounded indexOf role2arg2)
       ),
-      role1 suffix "_b",
-      role2 suffix "_b",
+      role1 suffix "b",
+      role2 suffix "b",
       predID(
         RSA.internal(bounded indexOf role1arg0),
         RSA.internal(bounded indexOf role2arg0)
