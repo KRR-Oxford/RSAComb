@@ -19,7 +19,12 @@ import org.semanticweb.owlapi.model.{IRI => OWLIRI}
 import uk.ac.manchester.cs.owl.owlapi.OWLObjectPropertyImpl
 
 import tech.oxfordsemantic.jrdfox.client.{UpdateType, DataStoreConnection}
-import tech.oxfordsemantic.jrdfox.logic.datalog.{Rule, TupleTableAtom, Negation}
+import tech.oxfordsemantic.jrdfox.logic.datalog.{
+  Rule,
+  TupleTableAtom,
+  Negation,
+  BodyFormula
+}
 import tech.oxfordsemantic.jrdfox.logic.expression.{
   Term,
   Variable,
@@ -37,6 +42,7 @@ import scalax.collection.GraphEdge.UnDiEdge
 /* Debug only */
 import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
 import tech.oxfordsemantic.jrdfox.logic._
+import org.semanticweb.owlapi.model.OWLObjectInverseOf
 
 object RSAOntology {}
 /* Wrapper trait for the implicit class `RSAOntology`.
@@ -81,6 +87,9 @@ trait RSAOntology {
         .map(_.getIRI)
         .map(RDFoxUtil.owlapi2rdfox)
         .toList
+
+    lazy val concepts: List[OWLClass] =
+      ontology.getClassesInSignature().asScala.toList
 
     lazy val roles: List[OWLObjectPropertyExpression] =
       axioms
@@ -459,11 +468,58 @@ trait RSAOntology {
           .flatMap(additional)
       }
 
+      private lazy val topAxioms: List[Rule] =
+        concepts.map(c => {
+          val x = Variable.create("X")
+          Rule.create(
+            TupleTableAtom.rdf(x, IRI.RDF_TYPE, IRI.THING),
+            TupleTableAtom.rdf(x, IRI.RDF_TYPE, c.getIRI)
+          )
+        }) ++
+          roles.map(r => {
+            val x = Variable.create("X")
+            val y = Variable.create("Y")
+            val iri: IRI = r match {
+              case x: OWLObjectProperty => x.getIRI
+              case x: OWLObjectInverseOf =>
+                IRI.create(x.getNamedProperty.getIRI.getIRIString ++ "_inv")
+              case x => x.getNamedProperty.getIRI
+            }
+            Rule.create(
+              List(
+                TupleTableAtom.rdf(x, IRI.RDF_TYPE, IRI.THING),
+                TupleTableAtom.rdf(y, IRI.RDF_TYPE, IRI.THING)
+              ).asJava,
+              List[BodyFormula](TupleTableAtom.rdf(x, iri, y)).asJava
+            )
+          })
+
+      private val equalityAxioms: List[Rule] = {
+        val x = Variable.create("X")
+        val y = Variable.create("Y")
+        val z = Variable.create("Z")
+        List(
+          Rule.create(
+            TupleTableAtom.rdf(x, IRI.SAME_AS, x),
+            TupleTableAtom.rdf(x, IRI.RDF_TYPE, IRI.THING)
+          ),
+          Rule.create(
+            TupleTableAtom.rdf(y, IRI.SAME_AS, x),
+            TupleTableAtom.rdf(x, IRI.SAME_AS, y)
+          ),
+          Rule.create(
+            TupleTableAtom.rdf(x, IRI.SAME_AS, z),
+            TupleTableAtom.rdf(x, IRI.SAME_AS, y),
+            TupleTableAtom.rdf(y, IRI.SAME_AS, z)
+          )
+        )
+      }
+
       val rules: List[Rule] = {
         // Compute rules from ontology axioms
         val rules = axioms.flatMap(_.accept(this.ProgramGenerator))
         // Return full set of rules
-        rules ++ rolesAdditionalRules ++ NIs
+        rules ++ rolesAdditionalRules ++ topAxioms ++ equalityAxioms ++ NIs
       }
 
       object ProgramGenerator
