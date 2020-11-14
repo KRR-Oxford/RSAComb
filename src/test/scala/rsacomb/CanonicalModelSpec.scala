@@ -22,8 +22,8 @@ object Ontology1_CanonicalModelSpec {
   /* Renderer to display OWL Axioms with DL syntax*/
   val renderer = new DLSyntaxObjectRenderer()
 
-  val ontology_path: File = new File("examples/example1.owl")
-  val ontology = RSA.loadOntology(ontology_path)
+  val ontology_path: File = new File("examples/example1.ttl")
+  val ontology: RSAOntology = RSA.loadOntology(ontology_path)
   val program = ontology.canonicalModel
 
   val roleR = new OWLObjectPropertyImpl(RSA.base("R"))
@@ -220,7 +220,7 @@ object Ontology2_CanonicalModelSpec {
   val renderer = new DLSyntaxObjectRenderer()
 
   val ontology_path: File = new File("examples/example2.owl")
-  val ontology = RSA.loadOntology(ontology_path)
+  val ontology: RSAOntology = RSA.loadOntology(ontology_path)
   val program = ontology.canonicalModel
 
   val roleR = new OWLObjectPropertyImpl(RSA.base("R"))

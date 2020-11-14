@@ -316,6 +316,7 @@ trait RSAOntology {
     // }
 
     def cycle(axiom: OWLSubClassOfAxiom): Set[Term] = {
+      // TODO: we can actually use `toTriple` from `RSAAxiom`
       val classes =
         axiom.classesInSignature.collect(Collectors.toList()).asScala
       val classA = classes(0)
