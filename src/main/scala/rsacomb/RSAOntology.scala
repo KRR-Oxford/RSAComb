@@ -245,8 +245,11 @@ trait RSAOntology {
       Graph(edges: _*)
     }
 
-    def filteringProgram(query: SelectQuery): FilteringProgram =
-      FilteringProgram(query, individuals)
+    def filteringProgram(
+        query: SelectQuery,
+        nis: List[Term]
+    ): FilteringProgram =
+      new FilteringProgram(query, nis)
 
     // TODO: the following functions needs testing
     def confl(
@@ -359,9 +362,11 @@ trait RSAOntology {
 
       import RDFoxUtil._
 
-      val NIs: List[Rule] =
+      val named: List[Rule] =
         individuals.map(a =>
-          Rule.create(TupleTableAtom.rdf(a, IRI.RDF_TYPE, RSA.internal("NI")))
+          Rule.create(
+            TupleTableAtom.rdf(a, IRI.RDF_TYPE, RSA.internal("NAMED"))
+          )
         )
 
       val rolesAdditionalRules: List[Rule] = {
@@ -500,17 +505,17 @@ trait RSAOntology {
         val z = Variable.create("Z")
         List(
           Rule.create(
-            TupleTableAtom.rdf(x, IRI.SAME_AS, x),
+            TupleTableAtom.rdf(x, RSA.EquivTo, x),
             TupleTableAtom.rdf(x, IRI.RDF_TYPE, IRI.THING)
           ),
           Rule.create(
-            TupleTableAtom.rdf(y, IRI.SAME_AS, x),
-            TupleTableAtom.rdf(x, IRI.SAME_AS, y)
+            TupleTableAtom.rdf(y, RSA.EquivTo, x),
+            TupleTableAtom.rdf(x, RSA.EquivTo, y)
           ),
           Rule.create(
-            TupleTableAtom.rdf(x, IRI.SAME_AS, z),
-            TupleTableAtom.rdf(x, IRI.SAME_AS, y),
-            TupleTableAtom.rdf(y, IRI.SAME_AS, z)
+            TupleTableAtom.rdf(x, RSA.EquivTo, z),
+            TupleTableAtom.rdf(x, RSA.EquivTo, y),
+            TupleTableAtom.rdf(y, RSA.EquivTo, z)
           )
         )
       }
@@ -519,7 +524,7 @@ trait RSAOntology {
         // Compute rules from ontology axioms
         val rules = axioms.flatMap(_.accept(this.ProgramGenerator))
         // Return full set of rules
-        rules ++ rolesAdditionalRules ++ topAxioms ++ equalityAxioms ++ NIs
+        rules ++ rolesAdditionalRules ++ topAxioms ++ equalityAxioms ++ named
       }
 
       object ProgramGenerator

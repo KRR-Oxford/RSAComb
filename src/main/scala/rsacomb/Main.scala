@@ -7,6 +7,7 @@ import scala.collection.JavaConverters._
 
 import tech.oxfordsemantic.jrdfox.client.UpdateType
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
+import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Term}
 
 /* Local imports */
 import rsacomb.RSA._
@@ -73,22 +74,49 @@ object RSAComb extends App {
         // Open connection to RDFox
         val (server, data) = RDFoxUtil.openConnection("AnswerComputation")
 
-        // Gather canonical model and filtering rules
-        val canon = ontology.canonicalModel
-        val filter = ontology.filteringProgram(query)
-
         {
-          println("\nCanonical Model rules:")
-          canon.rules.foreach(println)
-          println("\nFiltering rules")
-          filter.rules.foreach(println)
           println("\nQuery")
           println(query)
         }
 
-        // Add canonical model and filtering rules
+        // Step 1. Computing the canonical model
+        val canon = ontology.canonicalModel
         data.addRules(canon.rules.asJava)
+
+        {
+          println("\nCanonical Model rules:")
+          canon.rules.foreach(println)
+        }
+
+        // Step 2. Computing the canonical model
+        val nis = {
+          val query =
+            "SELECT ?Y WHERE { ?X internal:EquivTo ?Y ; a internal:NAMED . }"
+          val cursor =
+            data.createCursor(
+              RSA.Prefixes,
+              query,
+              new HashMap[String, String]()
+            );
+          var mul = cursor.open()
+          var iris: List[IRI] = List()
+          while (mul > 0) {
+            println(cursor.getResource(0))
+            iris = cursor.getResource(0) match {
+              case iri: IRI => iri :: iris
+              case _        => iris
+            }
+            mul = cursor.advance()
+          }
+          iris
+        }
+        val filter = ontology.filteringProgram(query, nis)
         data.addRules(filter.rules.asJava)
+
+        {
+          println("\nFiltering rules")
+          filter.rules.foreach(println)
+        }
 
         def retrieveInstances(pred: String, arity: Int): Unit = {
           // Build query
@@ -127,6 +155,14 @@ object RSAComb extends App {
           1
         )
 
+        println("\nNAMEDs:")
+        RDFoxUtil.submitQuery(
+          data,
+          RSA.Prefixes,
+          "SELECT ?X { ?X a internal:NAMED }",
+          1
+        )
+
         println("\nNIs:")
         RDFoxUtil.submitQuery(
           data,
@@ -143,7 +179,7 @@ object RSAComb extends App {
         RDFoxUtil.submitQuery(
           data,
           RSA.Prefixes,
-          "SELECT ?X ?Y { ?X owl:sameAs ?Y }",
+          "SELECT ?X ?Y { ?X internal:EquivTo ?Y }",
           2
         )
 

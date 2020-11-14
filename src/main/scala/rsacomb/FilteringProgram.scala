@@ -57,16 +57,12 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
     }
   val bounded: List[Term] = this.variables.filterNot(answer.contains(_))
 
-  val facts: List[TupleTableAtom] = constants.map(named)
+  val facts: List[Rule] = constants.map(c => Rule.create(predNI(c)))
   val rules: List[Rule] =
-    this.generateFilteringProgram().map(reifyRule) ++ facts.map(Rule.create(_))
+    this.generateFilteringProgram().map(reifyRule) ++ facts
 
-  private def named(t: Term): TupleTableAtom =
-    TupleTableAtom.rdf(
-      t,
-      IRI.RDF_TYPE,
-      RSA.internal("NAMED")
-    )
+  private def predNI(t: Term): TupleTableAtom =
+    TupleTableAtom.rdf(t, IRI.RDF_TYPE, RSA.internal("NI"))
 
   /* NOTE: we are restricting to queries that contain conjunctions of
    * atoms for the time being. This might need to be reviewed in the
@@ -104,8 +100,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         TupleTableName.create(RSA.internal("ID").getIRI),
         (answer ++ bounded).appended(t1).appended(t2): _*
       )
-    def predNI(t1: Term): TupleTableAtom =
-      TupleTableAtom.rdf(t1, IRI.RDF_TYPE, RSA.internal("NI"))
+    def predNAMED(t1: Term): TupleTableAtom =
+      TupleTableAtom.rdf(t1, IRI.RDF_TYPE, RSA.internal("NAMED"))
     def predTQ(sx: String, t1: Term, t2: Term) =
       TupleTableAtom.create(
         TupleTableName.create(RSA.internal(s"TQ_$sx").getIRI),
@@ -170,7 +166,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       not(
         TupleTableAtom.rdf(
           role1.getArguments.get(0),
-          IRI.SAME_AS,
+          RSA.EquivTo,
           role2.getArguments.get(0)
         )
       )
@@ -191,7 +187,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       not(
         TupleTableAtom.rdf(
           role1.getArguments.get(0),
-          IRI.SAME_AS,
+          RSA.EquivTo,
           role2.getArguments.get(2)
         )
       )
@@ -212,7 +208,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       not(
         TupleTableAtom.rdf(
           role1.getArguments.get(2),
-          IRI.SAME_AS,
+          RSA.EquivTo,
           role2.getArguments.get(2)
         )
       )
@@ -241,7 +237,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA.internal(bounded indexOf role1arg2),
         RSA.internal(bounded indexOf role2arg2)
       ),
-      TupleTableAtom.rdf(role1arg0, IRI.SAME_AS, role2arg0),
+      TupleTableAtom.rdf(role1arg0, RSA.EquivTo, role2arg0),
       not(predNI(role1arg0))
     )
     val r5b = for {
@@ -266,7 +262,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA.internal(bounded indexOf role1arg2),
         RSA.internal(bounded indexOf role2arg0)
       ),
-      TupleTableAtom.rdf(role1arg0, IRI.SAME_AS, role2arg2),
+      TupleTableAtom.rdf(role1arg0, RSA.EquivTo, role2arg2),
       not(predNI(role1arg0))
     )
     val r5c = for {
@@ -291,7 +287,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA.internal(bounded indexOf role1arg0),
         RSA.internal(bounded indexOf role2arg0)
       ),
-      TupleTableAtom.rdf(role1arg2, IRI.SAME_AS, role2arg2),
+      TupleTableAtom.rdf(role1arg2, RSA.EquivTo, role2arg2),
       not(predNI(role1arg2))
     )
 
@@ -333,7 +329,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
 
     /* Rules 8x */
     val r8a =
-      for (v <- answer) yield Rule.create(predSP, predQM, not(named(v)))
+      for (v <- answer) yield Rule.create(predSP, predQM, not(predNAMED(v)))
     val r8b =
       Rule.create(predSP, predFK)
     val r8c =
