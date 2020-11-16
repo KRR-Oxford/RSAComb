@@ -21,14 +21,14 @@ import scala.collection.JavaConverters._
 
 object RSA extends RSAOntology with RSAAxiom {
 
-  val Prefixes = new Prefixes()
+  val Prefixes: Prefixes = new Prefixes()
   Prefixes.declarePrefix(":", "http://example.com/rsa_example.owl#")
-  Prefixes.declarePrefix("internal:", "http://127.0.0.1/")
+  Prefixes.declarePrefix("rsa:", "http://127.0.0.1/")
   Prefixes.declarePrefix("rdf:", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
   Prefixes.declarePrefix("rdfs:", "http://www.w3.org/2000/01/rdf-schema#")
   Prefixes.declarePrefix("owl:", "http://www.w3.org/2002/07/owl#")
 
-  val EquivTo: IRI = this.internal("EquivTo")
+  val EquivTo: IRI = this.rsa("EquivTo")
 
   // Counter used to implement a simple fresh variable generator
   private var counter = -1;
@@ -44,9 +44,9 @@ object RSA extends RSAOntology with RSAAxiom {
         + name.toString
     )
 
-  def internal(name: Any): IRI =
+  def rsa(name: Any): IRI =
     IRI.create(
-      Prefixes.getPrefixIRIsByPrefixName.get("internal:").getIRI
+      Prefixes.getPrefixIRIsByPrefixName.get("rsa:").getIRI
         + name.toString
     )
 

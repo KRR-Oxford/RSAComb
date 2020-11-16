@@ -53,8 +53,8 @@ object OWLAxiomSpec {
   val term_x = Variable.create("x")
   val term_y = Variable.create("y")
   val term_z = Variable.create("z")
-  val term_c1 = RSA.internal("c_1")
-  val term_c2 = RSA.internal("c_2")
+  val term_c1 = RSA.rsa("c_1")
+  val term_c2 = RSA.rsa("c_2")
   val term_alice = RDFIRI.create("univ:alice")
 
   // RDFox Predicates
@@ -223,7 +223,7 @@ class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
   // it should "contain a conjuction of atoms (hasSupervisor[?x,?c],Professor[?c]) in the head of the rule" in {
   //   val skolem = SkolemStrategy.Constant(axiom_OWLSubClassOf2.toString)
   //   val result = convertAxiom(axiom_OWLSubClassOf2, term_x, skolem)
-  //   val term_c = RSA.internal(skolem.const.getIRI)
+  //   val term_c = RSA.rsa(skolem.const.getIRI)
   //   val head = List(
   //     TupleTableAtom.rdf(term_x, iri_hasSupervisor, term_c),
   //     TupleTableAtom.rdf(term_c, RDFIRI.RDF_TYPE, iri_Professor)

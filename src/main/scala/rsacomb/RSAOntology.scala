@@ -233,7 +233,7 @@ trait RSAOntology {
     private def rsaGraph(
         data: DataStoreConnection
     ): Graph[Resource, UnDiEdge] = {
-      val query = "SELECT ?X ?Y WHERE { ?X internal:E ?Y }"
+      val query = "SELECT ?X ?Y WHERE { ?X rsa:E ?Y }"
       val cursor =
         data.createCursor(RSA.Prefixes, query, new HashMap[String, String]());
       var mul = cursor.open()
@@ -280,8 +280,8 @@ trait RSAOntology {
       val role = axiom.objectPropertyExpressionsInSignature(0)
       if (this.confl(role).contains(role)) {
         Set(
-          RSA.internal("v0_" ++ RSA.hashed(axiom)),
-          RSA.internal("v1_" ++ RSA.hashed(axiom))
+          RSA.rsa("v0_" ++ RSA.hashed(axiom)),
+          RSA.rsa("v1_" ++ RSA.hashed(axiom))
         )
       } else {
         Set()
@@ -308,9 +308,9 @@ trait RSAOntology {
     //     if conflR.contains(roleS)
     //     individual =
     //       if (axiom.hashCode < axiom1.hashCode) {
-    //         RSA.internal("v0_" ++ axiom1.hashCode.toString())
+    //         RSA.rsa("v0_" ++ axiom1.hashCode.toString())
     //       } else {
-    //         RSA.internal("v1_" ++ axiom1.hashCode.toString())
+    //         RSA.rsa("v1_" ++ axiom1.hashCode.toString())
     //       }
     //   } yield individual
     // }
@@ -347,11 +347,11 @@ trait RSAOntology {
         tripleDSC = RSA.hashed(classD, roleS, classC)
         individual =
           if (tripleARB > tripleDSC) {
-            RSA.internal("v1_" ++ tripleDSC)
+            RSA.rsa("v1_" ++ tripleDSC)
           } else {
             // Note that this is also the case for
             // `tripleARB == tripleDSC`
-            RSA.internal("v0_" ++ tripleDSC)
+            RSA.rsa("v0_" ++ tripleDSC)
           }
       } yield individual
     }
@@ -366,7 +366,7 @@ trait RSAOntology {
       val named: List[Rule] =
         individuals.map(a =>
           Rule.create(
-            TupleTableAtom.rdf(a, IRI.RDF_TYPE, RSA.internal("NAMED"))
+            TupleTableAtom.rdf(a, IRI.RDF_TYPE, RSA.rsa("NAMED"))
           )
         )
 
@@ -539,7 +539,7 @@ trait RSAOntology {
         private def rules1(axiom: OWLSubClassOfAxiom): List[Rule] = {
           val unfold = ontology.unfold(axiom).toList
           // Fresh Variables
-          val v0 = RSA.internal("v0_" ++ RSA.hashed(axiom))
+          val v0 = RSA.rsa("v0_" ++ RSA.hashed(axiom))
           val varX = Variable.create("X")
           // Predicates
           val atomA: TupleTableAtom = {
@@ -549,8 +549,8 @@ trait RSAOntology {
           def in(t: Term): TupleTableAtom = {
             TupleTableAtom.rdf(
               t,
-              RSA.internal("IN"),
-              RSA.internal(unfold.hashCode.toString)
+              RSA.rsa("IN"),
+              RSA.rsa(unfold.hashCode.toString)
             )
           }
           def notIn(t: Term): Negation = Negation.create(in(t))
@@ -590,9 +590,9 @@ trait RSAOntology {
               .getProperty
           if (ontology.confl(roleR) contains roleR) {
             // Fresh Variables
-            val v0 = RSA.internal("v0_" ++ RSA.hashed(axiom))
-            val v1 = RSA.internal("v1_" ++ RSA.hashed(axiom))
-            val v2 = RSA.internal("v2_" ++ RSA.hashed(axiom))
+            val v0 = RSA.rsa("v0_" ++ RSA.hashed(axiom))
+            val v1 = RSA.rsa("v1_" ++ RSA.hashed(axiom))
+            val v2 = RSA.rsa("v2_" ++ RSA.hashed(axiom))
             // Predicates
             def atomA(t: Term): TupleTableAtom = {
               val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
@@ -630,7 +630,7 @@ trait RSAOntology {
               .asInstanceOf[OWLObjectSomeValuesFrom]
               .getProperty
           // Fresh Variables
-          val v1 = RSA.internal("v1_" ++ RSA.hashed(axiom))
+          val v1 = RSA.rsa("v1_" ++ RSA.hashed(axiom))
           // Predicates
           def atomA(t: Term): TupleTableAtom = {
             val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI

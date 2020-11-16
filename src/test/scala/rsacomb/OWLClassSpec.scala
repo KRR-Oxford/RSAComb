@@ -49,9 +49,9 @@ object OWLClassSpec {
   // RDFox Terms
   val term_x = Variable.create("x")
   val term_y = Variable.create("y")
-  val term_c1 = Literal.create("internal:c_1", Datatype.IRI_REFERENCE)
-  val term_c2 = Literal.create("internal:c_2", Datatype.IRI_REFERENCE)
-  val term_alice = Literal.create("univ:alice", Datatype.IRI_REFERENCE)
+  val term_c1 = RSA.rsa("c_1")
+  val term_c2 = RSA.rsa("c_2")
+  val term_alice = RDFIRI.create("univ:alice")
 
   // RDFox Predicates
   val pred_sameAs = TupleTableName.create("owl:sameAs")

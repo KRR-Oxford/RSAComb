@@ -110,8 +110,8 @@ class RDFoxClassExprConverter(
         if (unsafe.contains(prop))
           (
             List(
-              TupleTableAtom.rdf(term, RSA.internal("PE"), c),
-              TupleTableAtom.rdf(c, IRI.RDF_TYPE, RSA.internal("U"))
+              TupleTableAtom.rdf(term, RSA.rsa("PE"), c),
+              TupleTableAtom.rdf(c, IRI.RDF_TYPE, RSA.rsa("U"))
             ),
             List(),
             c

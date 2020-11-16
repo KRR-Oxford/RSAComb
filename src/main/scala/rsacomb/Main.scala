@@ -91,7 +91,7 @@ object RSAComb extends App {
         // Step 2. Computing the canonical model
         val nis = {
           val query =
-            "SELECT ?Y WHERE { ?X internal:EquivTo ?Y ; a internal:NAMED . }"
+            "SELECT ?Y WHERE { ?X rsa:EquivTo ?Y ; a rsa:NAMED . }"
           val cursor =
             data.createCursor(
               RSA.Prefixes,
@@ -126,7 +126,7 @@ object RSAComb extends App {
           }
           query ++= " WHERE {"
           for (i <- 0 until arity) {
-            query ++= s" ?S internal:${pred}_$i ?X$i ."
+            query ++= s" ?S rsa:${pred}_$i ?X$i ."
           }
           query ++= " }"
           // Collect answers
@@ -159,7 +159,7 @@ object RSAComb extends App {
         RDFoxUtil.submitQuery(
           data,
           RSA.Prefixes,
-          "SELECT ?X { ?X a internal:NAMED }",
+          "SELECT ?X { ?X a rsa:NAMED }",
           1
         )
 
@@ -167,7 +167,7 @@ object RSAComb extends App {
         RDFoxUtil.submitQuery(
           data,
           RSA.Prefixes,
-          "SELECT ?X { ?X a internal:NI }",
+          "SELECT ?X { ?X a rsa:NI }",
           1
         )
 
@@ -179,7 +179,7 @@ object RSAComb extends App {
         RDFoxUtil.submitQuery(
           data,
           RSA.Prefixes,
-          "SELECT ?X ?Y { ?X internal:EquivTo ?Y }",
+          "SELECT ?X ?Y { ?X rsa:EquivTo ?Y }",
           2
         )
 
@@ -199,6 +199,17 @@ object RSAComb extends App {
         // Spurious answers
         println("\nSpurious answers")
         retrieveInstances("SP", filter.variables.length)
+
+        {
+          val cursor = data.createCursor(
+            RSA.Prefixes,
+            "ASK { :a a :D }",
+            new HashMap[String, String]()
+          );
+          var mul = cursor.open()
+          println(s"Answer: ${mul > 0}")
+          cursor.close();
+        }
 
         // Close connection to RDFox
         RDFoxUtil.closeConnection(server, data)

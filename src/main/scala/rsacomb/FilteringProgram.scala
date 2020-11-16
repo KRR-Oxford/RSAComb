@@ -62,7 +62,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
     this.generateFilteringProgram().map(reifyRule) ++ facts
 
   private def predNI(t: Term): TupleTableAtom =
-    TupleTableAtom.rdf(t, IRI.RDF_TYPE, RSA.internal("NI"))
+    TupleTableAtom.rdf(t, IRI.RDF_TYPE, RSA.rsa("NI"))
 
   /* NOTE: we are restricting to queries that contain conjunctions of
    * atoms for the time being. This might need to be reviewed in the
@@ -92,39 +92,39 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
     def not(atom: TupleTableAtom): BodyFormula = Negation.create(atom)
     val predQM =
       TupleTableAtom.create(
-        TupleTableName.create(RSA.internal("QM").getIRI),
+        TupleTableName.create(RSA.rsa("QM").getIRI),
         (answer ++ bounded): _*
       )
     def predID(t1: Term, t2: Term) =
       TupleTableAtom.create(
-        TupleTableName.create(RSA.internal("ID").getIRI),
+        TupleTableName.create(RSA.rsa("ID").getIRI),
         (answer ++ bounded).appended(t1).appended(t2): _*
       )
     def predNAMED(t1: Term): TupleTableAtom =
-      TupleTableAtom.rdf(t1, IRI.RDF_TYPE, RSA.internal("NAMED"))
+      TupleTableAtom.rdf(t1, IRI.RDF_TYPE, RSA.rsa("NAMED"))
     def predTQ(sx: String, t1: Term, t2: Term) =
       TupleTableAtom.create(
-        TupleTableName.create(RSA.internal(s"TQ_$sx").getIRI),
+        TupleTableName.create(RSA.rsa(s"TQ_$sx").getIRI),
         (answer ++ bounded).appended(t1).appended(t2): _*
       )
     def predAQ(sx: String, t1: Term, t2: Term) =
       TupleTableAtom.create(
-        TupleTableName.create(RSA.internal(s"AQ_$sx").getIRI),
+        TupleTableName.create(RSA.rsa(s"AQ_$sx").getIRI),
         (answer ++ bounded).appended(t1).appended(t2): _*
       )
     val predFK =
       TupleTableAtom.create(
-        TupleTableName.create(RSA.internal("FK").getIRI),
+        TupleTableName.create(RSA.rsa("FK").getIRI),
         (answer ++ bounded): _*
       )
     val predSP =
       TupleTableAtom.create(
-        TupleTableName.create(RSA.internal("SP").getIRI),
+        TupleTableName.create(RSA.rsa("SP").getIRI),
         (answer ++ bounded): _*
       )
     val predANS =
       TupleTableAtom.create(
-        TupleTableName.create(RSA.internal("ANS").getIRI),
+        TupleTableName.create(RSA.rsa("ANS").getIRI),
         answer: _*
       )
 
@@ -135,7 +135,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
     val r3a =
       for ((v, i) <- bounded.zipWithIndex)
         yield Rule.create(
-          predID(RSA.internal(i), RSA.internal(i)),
+          predID(RSA.rsa(i), RSA.rsa(i)),
           predQM,
           not(predNI(v))
         )
@@ -160,8 +160,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       role1 suffix "f",
       role2 suffix "f",
       predID(
-        RSA.internal(bounded.indexOf(role1.getArguments.get(2))),
-        RSA.internal(bounded.indexOf(role2.getArguments.get(2)))
+        RSA.rsa(bounded.indexOf(role1.getArguments.get(2))),
+        RSA.rsa(bounded.indexOf(role2.getArguments.get(2)))
       ),
       not(
         TupleTableAtom.rdf(
@@ -181,8 +181,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       role1 suffix "f",
       role2 suffix "b",
       predID(
-        RSA.internal(bounded.indexOf(role1.getArguments.get(2))),
-        RSA.internal(bounded.indexOf(role2.getArguments.get(0)))
+        RSA.rsa(bounded.indexOf(role1.getArguments.get(2))),
+        RSA.rsa(bounded.indexOf(role2.getArguments.get(0)))
       ),
       not(
         TupleTableAtom.rdf(
@@ -202,8 +202,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       role1 suffix "b",
       role2 suffix "b",
       predID(
-        RSA.internal(bounded.indexOf(role1.getArguments.get(0))),
-        RSA.internal(bounded.indexOf(role2.getArguments.get(0)))
+        RSA.rsa(bounded.indexOf(role1.getArguments.get(0))),
+        RSA.rsa(bounded.indexOf(role2.getArguments.get(0)))
       ),
       not(
         TupleTableAtom.rdf(
@@ -228,14 +228,14 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       if bounded contains role2arg2
     } yield Rule.create(
       predID(
-        RSA.internal(bounded indexOf role1arg0),
-        RSA.internal(bounded indexOf role2arg0)
+        RSA.rsa(bounded indexOf role1arg0),
+        RSA.rsa(bounded indexOf role2arg0)
       ),
       role1 suffix "f",
       role2 suffix "f",
       predID(
-        RSA.internal(bounded indexOf role1arg2),
-        RSA.internal(bounded indexOf role2arg2)
+        RSA.rsa(bounded indexOf role1arg2),
+        RSA.rsa(bounded indexOf role2arg2)
       ),
       TupleTableAtom.rdf(role1arg0, RSA.EquivTo, role2arg0),
       not(predNI(role1arg0))
@@ -253,14 +253,14 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       if bounded contains role2arg2
     } yield Rule.create(
       predID(
-        RSA.internal(bounded indexOf role1arg0),
-        RSA.internal(bounded indexOf role2arg2)
+        RSA.rsa(bounded indexOf role1arg0),
+        RSA.rsa(bounded indexOf role2arg2)
       ),
       role1 suffix "f",
       role2 suffix "b",
       predID(
-        RSA.internal(bounded indexOf role1arg2),
-        RSA.internal(bounded indexOf role2arg0)
+        RSA.rsa(bounded indexOf role1arg2),
+        RSA.rsa(bounded indexOf role2arg0)
       ),
       TupleTableAtom.rdf(role1arg0, RSA.EquivTo, role2arg2),
       not(predNI(role1arg0))
@@ -278,14 +278,14 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       if bounded contains role2arg2
     } yield Rule.create(
       predID(
-        RSA.internal(bounded indexOf role1arg2),
-        RSA.internal(bounded indexOf role2arg2)
+        RSA.rsa(bounded indexOf role1arg2),
+        RSA.rsa(bounded indexOf role2arg2)
       ),
       role1 suffix "b",
       role2 suffix "b",
       predID(
-        RSA.internal(bounded indexOf role1arg0),
-        RSA.internal(bounded indexOf role2arg0)
+        RSA.rsa(bounded indexOf role1arg0),
+        RSA.rsa(bounded indexOf role2arg0)
       ),
       TupleTableAtom.rdf(role1arg2, RSA.EquivTo, role2arg2),
       not(predNI(role1arg2))
@@ -303,11 +303,11 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       predAQ(sx, Variable.create("V"), Variable.create("W")),
       role suffix sx,
       predID(
-        RSA.internal(bounded indexOf arg0),
+        RSA.rsa(bounded indexOf arg0),
         Variable.create("V")
       ),
       predID(
-        RSA.internal(bounded indexOf arg2),
+        RSA.rsa(bounded indexOf arg2),
         Variable.create("W")
       )
     )
