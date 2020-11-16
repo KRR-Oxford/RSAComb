@@ -31,13 +31,15 @@ import rsacomb.RDFoxRuleShards
 import org.semanticweb.owlapi.model.OWLObjectPropertyExpression
 import org.semanticweb.owlapi.model.OWLObjectProperty
 
+import suffix.{RSASuffix, Empty}
+
 object RDFoxClassExprConverter {
 
   def apply(
       term: Term,
       unsafe: List[OWLObjectPropertyExpression] = List(),
       skolem: SkolemStrategy = SkolemStrategy.None,
-      suffix: RSASuffix = RSASuffix.None
+      suffix: RSASuffix = Empty
   ): RDFoxClassExprConverter =
     new RDFoxClassExprConverter(term, unsafe, skolem, suffix)
 

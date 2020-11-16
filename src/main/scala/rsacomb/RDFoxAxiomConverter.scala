@@ -29,13 +29,15 @@ import org.semanticweb.owlapi.model.OWLSubObjectPropertyOfAxiom
 import org.semanticweb.owlapi.model.OWLObjectProperty
 import org.semanticweb.owlapi.model.OWLClassAssertionAxiom
 
+import suffix.{RSASuffix, Empty}
+
 object RDFoxAxiomConverter {
 
   def apply(
       term: Term,
       unsafe: List[OWLObjectPropertyExpression],
       skolem: SkolemStrategy = SkolemStrategy.None,
-      suffix: RSASuffix = RSASuffix.None
+      suffix: RSASuffix = Empty
   ): RDFoxAxiomConverter =
     new RDFoxAxiomConverter(term, unsafe, skolem, suffix)
 

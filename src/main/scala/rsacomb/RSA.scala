@@ -14,7 +14,6 @@ import org.semanticweb.owlapi.model.{
   OWLClass,
   OWLObjectPropertyExpression
 }
-import rsacomb.RSAOntology
 
 // Debug only
 import scala.collection.JavaConverters._

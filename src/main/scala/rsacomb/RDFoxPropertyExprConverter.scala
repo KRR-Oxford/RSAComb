@@ -8,6 +8,8 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{Term, IRI, Literal}
 
 import org.semanticweb.owlapi.model.OWLObjectInverseOf
 
+import suffix.{RSASuffix, Inverse}
+
 class RDFoxPropertyExprConverter(
     term1: Term,
     term2: Term,
@@ -18,14 +20,14 @@ class RDFoxPropertyExprConverter(
   import RDFoxUtil.owlapi2rdfox;
 
   override def visit(expr: OWLObjectProperty): List[TupleTableAtom] = {
-    val pred = IRI.create(expr.getIRI.getIRIString ++ suffix.getSuffix)
+    //val pred = IRI.create(expr.getIRI.getIRIString ++ suffix.getSuffix)
+    val pred = IRI.create(expr :: suffix)
     List(TupleTableAtom.rdf(term1, pred, term2))
   }
 
   override def visit(expr: OWLObjectInverseOf): List[TupleTableAtom] = {
-    val pred = IRI.create(
-      expr.getInverse.getNamedProperty.getIRI.getIRIString ++ suffix.getSuffix ++ "_inv"
-    )
+    //expr.getInverse.getNamedProperty.getIRI.getIRIString ++ suffix.getSuffix ++ "_inv"
+    val pred = IRI.create(expr :: suffix + Inverse)
     List(TupleTableAtom.rdf(term1, pred, term2))
   }
 

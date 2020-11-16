@@ -44,6 +44,8 @@ import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
 import tech.oxfordsemantic.jrdfox.logic._
 import org.semanticweb.owlapi.model.OWLObjectInverseOf
 
+import suffix.{Empty, Forward, Backward, Inverse}
+
 object RSAOntology {}
 /* Wrapper trait for the implicit class `RSAOntology`.
  */
@@ -127,7 +129,7 @@ trait RSAOntology {
           RSA.getFreshVariable(),
           unsafe,
           SkolemStrategy.ConstantRSA(axiom.toString),
-          RSASuffix.None
+          Empty
         )
         rule <- axiom.accept(visitor)
       } yield rule
@@ -381,7 +383,7 @@ trait RSAOntology {
               TupleTableAtom
                 .rdf(
                   varX,
-                  IRI.create(pred ++ RSASuffix.Forward.getSuffix),
+                  IRI.create(pred :: Forward),
                   varY
                 )
             ),
@@ -390,7 +392,7 @@ trait RSAOntology {
               TupleTableAtom
                 .rdf(
                   varX,
-                  IRI.create(pred ++ RSASuffix.Backward.getSuffix),
+                  IRI.create(pred :: Backward),
                   varY
                 )
             ),
@@ -399,7 +401,7 @@ trait RSAOntology {
               TupleTableAtom
                 .rdf(
                   varX,
-                  IRI.create(pred ++ RSASuffix.Forward.getSuffix ++ "_inv"),
+                  IRI.create(pred :: Forward + Inverse),
                   varY
                 )
             ),
@@ -408,57 +410,57 @@ trait RSAOntology {
               TupleTableAtom
                 .rdf(
                   varX,
-                  IRI.create(pred ++ RSASuffix.Backward.getSuffix ++ "_inv"),
+                  IRI.create(pred :: Backward + Inverse),
                   varY
                 )
             ),
             Rule.create(
               TupleTableAtom.rdf(
                 varY,
-                IRI.create(pred ++ RSASuffix.Backward.getSuffix ++ "_inv"),
+                IRI.create(pred :: Backward + Inverse),
                 varX
               ),
               TupleTableAtom
                 .rdf(
                   varX,
-                  IRI.create(pred ++ RSASuffix.Forward.getSuffix),
+                  IRI.create(pred :: Forward),
                   varY
                 )
             ),
             Rule.create(
               TupleTableAtom.rdf(
                 varY,
-                IRI.create(pred ++ RSASuffix.Forward.getSuffix ++ "_inv"),
+                IRI.create(pred :: Forward + Inverse),
                 varX
               ),
               TupleTableAtom.rdf(
                 varX,
-                IRI.create(pred ++ RSASuffix.Backward.getSuffix),
+                IRI.create(pred :: Backward),
                 varY
               )
             ),
             Rule.create(
               TupleTableAtom.rdf(
                 varY,
-                IRI.create(pred ++ RSASuffix.Backward.getSuffix),
+                IRI.create(pred :: Backward),
                 varX
               ),
               TupleTableAtom
                 .rdf(
                   varX,
-                  IRI.create(pred ++ RSASuffix.Forward.getSuffix ++ "_inv"),
+                  IRI.create(pred :: Forward + Inverse),
                   varY
                 )
             ),
             Rule.create(
               TupleTableAtom.rdf(
                 varY,
-                IRI.create(pred ++ RSASuffix.Forward.getSuffix),
+                IRI.create(pred :: Forward),
                 varX
               ),
               TupleTableAtom.rdf(
                 varX,
-                IRI.create(pred ++ RSASuffix.Backward.getSuffix ++ "_inv"),
+                IRI.create(pred :: Backward + Inverse),
                 varY
               )
             )
@@ -533,7 +535,7 @@ trait RSAOntology {
             Variable.create("X"),
             unsafeRoles,
             SkolemStrategy.None,
-            RSASuffix.None
+            Empty
           ) {
 
         private def rules1(axiom: OWLSubClassOfAxiom): List[Rule] = {
@@ -556,7 +558,7 @@ trait RSAOntology {
           def notIn(t: Term): Negation = Negation.create(in(t))
           val roleRf: TupleTableAtom = {
             val visitor =
-              new RDFoxPropertyExprConverter(varX, v0, RSASuffix.Forward)
+              new RDFoxPropertyExprConverter(varX, v0, Forward)
             axiom.getSuperClass
               .asInstanceOf[OWLObjectSomeValuesFrom]
               .getProperty
@@ -600,7 +602,7 @@ trait RSAOntology {
             }
             def roleRf(t1: Term, t2: Term): TupleTableAtom = {
               val visitor =
-                new RDFoxPropertyExprConverter(t1, t2, RSASuffix.Forward)
+                new RDFoxPropertyExprConverter(t1, t2, Forward)
               roleR.accept(visitor).head
             }
             def atomB(t: Term): TupleTableAtom = {
@@ -638,7 +640,7 @@ trait RSAOntology {
           }
           def roleRf(t: Term): TupleTableAtom = {
             val visitor =
-              new RDFoxPropertyExprConverter(t, v1, RSASuffix.Forward)
+              new RDFoxPropertyExprConverter(t, v1, Forward)
             roleR.accept(visitor).head
           }
           val atomB: TupleTableAtom = {
@@ -668,7 +670,7 @@ trait RSAOntology {
                   Variable.create("X"),
                   ontology.unsafeRoles,
                   SkolemStrategy.Standard(axiom.toString),
-                  RSASuffix.Forward
+                  Forward
                 )
               axiom.accept(visitor)
             } else {
@@ -687,13 +689,13 @@ trait RSAOntology {
             Variable.create("X"),
             ontology.unsafeRoles,
             SkolemStrategy.None,
-            RSASuffix.Forward
+            Forward
           )
           val visitorB = new RDFoxAxiomConverter(
             Variable.create("X"),
             ontology.unsafeRoles,
             SkolemStrategy.None,
-            RSASuffix.Backward
+            Backward
           )
           axiom.accept(visitorB) ++ axiom.accept(visitorF)
         }
