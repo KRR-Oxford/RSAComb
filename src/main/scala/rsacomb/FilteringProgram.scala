@@ -27,8 +27,11 @@ import tech.oxfordsemantic.jrdfox.logic.sparql.pattern.{
 
 import scala.collection.JavaConverters._
 
+import implicits.RSAAtom
+import suffix.{RSASuffix, Forward, Backward}
+
 class FilteringProgram(query: SelectQuery, constants: List[Term])
-    extends RDFTriple {
+    extends RSAAtom {
 
   /* Makes mplicit conversion OWLAPI IRI <-> RDFox IRI available */
   import RDFoxUtil._
@@ -86,6 +89,10 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
     }
 
   private def generateFilteringProgram(): List[Rule] = {
+    // General purpose variables
+    val varU = Variable.create("U")
+    val varV = Variable.create("V")
+    val varW = Variable.create("W")
     // Query formula as a rule body
     val body = queryToBody(query.getQueryBody.getWherePattern)
     // Auxiliar predicates/helpers
@@ -102,14 +109,14 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       )
     def predNAMED(t1: Term): TupleTableAtom =
       TupleTableAtom.rdf(t1, IRI.RDF_TYPE, RSA.rsa("NAMED"))
-    def predTQ(sx: String, t1: Term, t2: Term) =
+    def predTQ(t1: Term, t2: Term, sx: RSASuffix) =
       TupleTableAtom.create(
-        TupleTableName.create(RSA.rsa(s"TQ_$sx").getIRI),
+        TupleTableName.create(RSA.rsa("TQ" :: sx).getIRI),
         (answer ++ bounded).appended(t1).appended(t2): _*
       )
-    def predAQ(sx: String, t1: Term, t2: Term) =
+    def predAQ(t1: Term, t2: Term, sx: RSASuffix) =
       TupleTableAtom.create(
-        TupleTableName.create(RSA.rsa(s"AQ_$sx").getIRI),
+        TupleTableName.create(RSA.rsa("AQ" :: sx).getIRI),
         (answer ++ bounded).appended(t1).appended(t2): _*
       )
     val predFK =
@@ -140,13 +147,13 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
           not(predNI(v))
         )
     val r3b = Rule.create(
-      predID(Variable.create("V"), Variable.create("U")),
-      predID(Variable.create("U"), Variable.create("V"))
+      predID(varV, varU),
+      predID(varU, varV)
     )
     val r3c = Rule.create(
-      predID(Variable.create("U"), Variable.create("W")),
-      predID(Variable.create("U"), Variable.create("V")),
-      predID(Variable.create("V"), Variable.create("W"))
+      predID(varU, varW),
+      predID(varU, varV),
+      predID(varV, varW)
     )
 
     /* Rules 4x */
@@ -157,8 +164,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       if bounded contains (role2.getArguments.get(2))
     } yield Rule.create(
       predFK,
-      role1 suffix "f",
-      role2 suffix "f",
+      role1 << Forward,
+      role2 << Forward,
       predID(
         RSA.rsa(bounded.indexOf(role1.getArguments.get(2))),
         RSA.rsa(bounded.indexOf(role2.getArguments.get(2)))
@@ -178,8 +185,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       if bounded contains (role2.getArguments.get(0))
     } yield Rule.create(
       predFK,
-      role1 suffix "f",
-      role2 suffix "b",
+      role1 << Forward,
+      role2 << Backward,
       predID(
         RSA.rsa(bounded.indexOf(role1.getArguments.get(2))),
         RSA.rsa(bounded.indexOf(role2.getArguments.get(0)))
@@ -199,8 +206,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
       if bounded contains (role2.getArguments.get(0))
     } yield Rule.create(
       predFK,
-      role1 suffix "b",
-      role2 suffix "b",
+      role1 << Backward,
+      role2 << Backward,
       predID(
         RSA.rsa(bounded.indexOf(role1.getArguments.get(0))),
         RSA.rsa(bounded.indexOf(role2.getArguments.get(0)))
@@ -231,8 +238,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA.rsa(bounded indexOf role1arg0),
         RSA.rsa(bounded indexOf role2arg0)
       ),
-      role1 suffix "f",
-      role2 suffix "f",
+      role1 << Forward,
+      role2 << Forward,
       predID(
         RSA.rsa(bounded indexOf role1arg2),
         RSA.rsa(bounded indexOf role2arg2)
@@ -256,8 +263,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA.rsa(bounded indexOf role1arg0),
         RSA.rsa(bounded indexOf role2arg2)
       ),
-      role1 suffix "f",
-      role2 suffix "b",
+      role1 << Forward,
+      role2 << Backward,
       predID(
         RSA.rsa(bounded indexOf role1arg2),
         RSA.rsa(bounded indexOf role2arg0)
@@ -281,8 +288,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA.rsa(bounded indexOf role1arg2),
         RSA.rsa(bounded indexOf role2arg2)
       ),
-      role1 suffix "b",
-      role2 suffix "b",
+      role1 << Backward,
+      role2 << Backward,
       predID(
         RSA.rsa(bounded indexOf role1arg0),
         RSA.rsa(bounded indexOf role2arg0)
@@ -292,40 +299,38 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
     )
 
     /* Rules 6 */
-    val r6 = for {
-      role <- body.filter(_.isRoleAssertion)
-      arg0 = role.getArguments.get(0)
-      arg2 = role.getArguments.get(2)
-      if bounded contains arg0
-      if bounded contains arg2
-      sx <- List("f", "b")
-    } yield Rule.create(
-      predAQ(sx, Variable.create("V"), Variable.create("W")),
-      role suffix sx,
-      predID(
-        RSA.rsa(bounded indexOf arg0),
-        Variable.create("V")
-      ),
-      predID(
-        RSA.rsa(bounded indexOf arg2),
-        Variable.create("W")
+    val r6 = {
+      for {
+        role <- body.filter(_.isRoleAssertion)
+        arg0 = role.getArguments.get(0)
+        arg2 = role.getArguments.get(2)
+        if bounded contains arg0
+        if bounded contains arg2
+        suffix <- Seq(Forward, Backward)
+      } yield Rule.create(
+        predAQ(varV, varW, suffix),
+        role << suffix,
+        predID(RSA.rsa(bounded indexOf arg0), varV),
+        predID(RSA.rsa(bounded indexOf arg2), varW)
       )
-    )
+    }
 
     /* Rules 7x */
-    val r7a =
-      for (sx <- List("f", "b"))
+    val r7a = {
+      for (suffix <- List(Forward, Backward))
         yield Rule.create(
-          predTQ(sx, Variable.create("U"), Variable.create("V")),
-          predAQ(sx, Variable.create("U"), Variable.create("V"))
+          predTQ(varU, varV, suffix),
+          predAQ(varU, varV, suffix)
         )
-    val r7b =
-      for (r <- List("f", "b"))
+    }
+    val r7b = {
+      for (suffix <- List(Forward, Backward))
         yield Rule.create(
-          predTQ(r, Variable.create("U"), Variable.create("W")),
-          predAQ(r, Variable.create("U"), Variable.create("V")),
-          predTQ(r, Variable.create("V"), Variable.create("W"))
+          predTQ(varU, varW, suffix),
+          predAQ(varU, varV, suffix),
+          predTQ(varV, varW, suffix)
         )
+    }
 
     /* Rules 8x */
     val r8a =
@@ -333,65 +338,75 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
     val r8b =
       Rule.create(predSP, predFK)
     val r8c =
-      for (sx <- List("f", "b"))
+      for (suffix <- List(Forward, Backward))
         yield Rule.create(
           predSP,
-          predTQ(sx, Variable.create("V"), Variable.create("V"))
+          predTQ(varV, varV, suffix)
         )
 
     /* Rule 9 */
     val r9 = Rule.create(predANS, predQM, not(predSP))
 
-    List.empty
-      .prepended(r9)
-      .prependedAll(r8c)
-      .prepended(r8b)
-      .prependedAll(r8a)
-      .prependedAll(r7b)
-      .prependedAll(r7a)
-      .prependedAll(r6)
-      .prependedAll(r5c)
-      .prependedAll(r5b)
-      .prependedAll(r5a)
-      .prependedAll(r4c)
-      .prependedAll(r4b)
-      .prependedAll(r4a)
-      .prepended(r3c)
-      .prepended(r3b)
-      .prependedAll(r3a)
-      .prepended(r1)
+    // List.empty
+    //   .prepended(r9)
+    //   .prependedAll(r8c)
+    //   .prepended(r8b)
+    //   .prependedAll(r8a)
+    //   .prependedAll(r7b)
+    //   .prependedAll(r7a)
+    //   .prependedAll(r6)
+    //   .prependedAll(r5c)
+    //   .prependedAll(r5b)
+    //   .prependedAll(r5a)
+    //   .prependedAll(r4c)
+    //   .prependedAll(r4b)
+    //   .prependedAll(r4a)
+    //   .prepended(r3c)
+    //   .prepended(r3b)
+    //   .prependedAll(r3a)
+    //   .prepended(r1)
+
+    r1 ::
+      r3a ::: r3b :: r3c ::
+      r4c ::: r4b ::: r4a :::
+      r5c ::: r5b ::: r5a :::
+      r6 :::
+      r7b ::: r7a :::
+      r8a ::: r8b :: r8c :::
+      r9 ::
+      List()
   }
 
-  private def reifyTupleTableAtom(
-      atom: TupleTableAtom
-  ): (Option[BindAtom], List[TupleTableAtom]) = {
-    if (!atom.isRdfTriple) {
-      // Compute binding atom
-      val bvar = RSA.getFreshVariable()
-      val name =
-        Literal.create(atom.getTupleTableName.toString(), Datatype.XSD_STRING)
-      val args = atom.getArguments.asScala.toList.prepended(name)
-      val bind = BindAtom.create(FunctionCall.create("SKOLEM", args: _*), bvar)
-      // Compute reified atom
-      def reifiedIRI(i: Int) = atom.getTupleTableName.getName ++ s"_$i"
-      val atoms = atom.getArguments.asScala.toList.zipWithIndex
-        .map { case (t, i) => TupleTableAtom.rdf(bvar, reifiedIRI(i), t) }
-      (Some(bind), atoms)
-    } else {
-      (None, List(atom))
-    }
-  }
+  // private def reifyTupleTableAtom(
+  //     atom: TupleTableAtom
+  // ): (Option[BindAtom], List[TupleTableAtom]) = {
+  //   if (!atom.isRDF) {
+  //     // Compute binding atom
+  //     val bvar = RSA.getFreshVariable()
+  //     val name =
+  //       Literal.create(atom.getTupleTableName.toString(), Datatype.XSD_STRING)
+  //     val args = atom.getArguments.asScala.toList.prepended(name)
+  //     val bind = BindAtom.create(FunctionCall.create("SKOLEM", args: _*), bvar)
+  //     // Compute reified atom
+  //     def reifiedIRI(i: Int) = atom.getTupleTableName.getName ++ s"_$i"
+  //     val atoms = atom.getArguments.asScala.toList.zipWithIndex
+  //       .map { case (t, i) => TupleTableAtom.rdf(bvar, reifiedIRI(i), t) }
+  //     (Some(bind), atoms)
+  //   } else {
+  //     (None, List(atom))
+  //   }
+  // }
 
   private def reifyAtom(atom: Atom): (Option[BindAtom], List[Atom]) = {
     atom match {
-      case tta: TupleTableAtom => reifyTupleTableAtom(tta)
-      case other               => (None, List(other))
+      case atom: TupleTableAtom => atom.reified
+      case other                => (None, List(other))
     }
   }
 
   private def reifyBodyFormula(formula: BodyFormula): List[BodyFormula] = {
     formula match {
-      case atom: TupleTableAtom => reifyTupleTableAtom(atom)._2
+      case atom: TupleTableAtom => atom.reified._2
       case neg: Negation => {
         val (bs, as) = neg.getNegatedAtoms.asScala.toList.map(reifyAtom).unzip
         val bind = bs.flatten.map(_.getBoundVariable).asJava
@@ -403,7 +418,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
   }
 
   private def reifyRule(rule: Rule): Rule = {
-    val (bs, hs) = rule.getHead.asScala.toList.map(reifyTupleTableAtom).unzip
+    val (bs, hs) = rule.getHead.asScala.toList.map(_.reified).unzip
     val head: List[TupleTableAtom] = hs.flatten
     val bind: List[BodyFormula] = bs.flatten
     val body: List[BodyFormula] =

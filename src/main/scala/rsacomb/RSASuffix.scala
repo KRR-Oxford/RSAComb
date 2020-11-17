@@ -6,22 +6,25 @@ import org.semanticweb.owlapi.model.{
   OWLObjectProperty
 }
 
-class RSASuffix(val suffix: String => String) {
+import tech.oxfordsemantic.jrdfox.logic.expression.{IRI}
+import tech.oxfordsemantic.jrdfox.logic.datalog.{TupleTableAtom, TupleTableName}
 
-  def +(other: RSASuffix): RSASuffix =
-    new RSASuffix((s: String) => other suffix (this suffix s))
+object RSASuffix {
 
-  def ::(str: String): String = this suffix str
-
-  def ::(expr: OWLPropertyExpression): String =
-    expr match {
-      case e: OWLObjectProperty  => e.getIRI.getIRIString :: this
-      case e: OWLObjectInverseOf => e.getInverse :: this
-    }
+  def apply(suffix: String => String): RSASuffix = new RSASuffix(suffix)
 
 }
 
-case object Empty extends RSASuffix((x) => x)
+class RSASuffix(val suffix: String => String) {
+
+  def +(that: RSASuffix): RSASuffix =
+    new RSASuffix(this.suffix andThen that.suffix)
+
+  def ::(str: String): String = this suffix str
+
+}
+
+case object Empty extends RSASuffix(identity)
 case object Forward extends RSASuffix((s) => s"${s}_f")
 case object Backward extends RSASuffix((s) => s"${s}_b")
 case object Inverse extends RSASuffix((s) => s"${s}_inv")

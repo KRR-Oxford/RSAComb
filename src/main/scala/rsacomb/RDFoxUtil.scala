@@ -25,7 +25,7 @@ object RDFoxUtil {
     RDFox_IRI.create(iri.getIRIString())
   }
 
-  implicit def owlapi2rdfox(iri: String): RDFox_IRI = {
+  implicit def stringToRDFoxIRI(iri: String): RDFox_IRI = {
     RDFox_IRI.create(iri)
   }
 
