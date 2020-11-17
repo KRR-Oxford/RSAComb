@@ -15,6 +15,8 @@ import tech.oxfordsemantic.jrdfox.formats.SPARQLParser
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI => RDFox_IRI}
 import org.semanticweb.owlapi.model.{IRI => OWL_IRI}
 
+import scala.collection.JavaConverters._
+
 object RDFoxUtil {
 
   implicit def rdfox2owlapi(iri: RDFox_IRI): OWL_IRI = {
@@ -27,6 +29,14 @@ object RDFoxUtil {
 
   implicit def stringToRDFoxIRI(iri: String): RDFox_IRI = {
     RDFox_IRI.create(iri)
+  }
+
+  implicit def javaToScalaList[A](list: java.util.List[A]): List[A] = {
+    list.asScala.toList
+  }
+
+  implicit def scalaToJavaList[A](list: List[A]): java.util.List[A] = {
+    list.asJava
   }
 
   def openConnection(

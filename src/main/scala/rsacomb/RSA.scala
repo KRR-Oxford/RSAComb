@@ -1,13 +1,11 @@
 package rsacomb
 
 /* Java imports */
-import java.io.File
 import java.util.Map
 
 import tech.oxfordsemantic.jrdfox.formats.SPARQLParser
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.logic.expression.{Variable, IRI}
-import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model.OWLOntology
 import org.semanticweb.owlapi.model.{
   OWLAxiom,
@@ -18,7 +16,7 @@ import org.semanticweb.owlapi.model.{
 // Debug only
 import scala.collection.JavaConverters._
 
-object RSA extends RSAOntology with RSAAxiom {
+object RSA extends RSAAxiom {
 
   val Prefixes: Prefixes = new Prefixes()
   Prefixes.declarePrefix(":", "http://example.com/rsa_example.owl#")
@@ -28,6 +26,7 @@ object RSA extends RSAOntology with RSAAxiom {
   Prefixes.declarePrefix("owl:", "http://www.w3.org/2002/07/owl#")
 
   val EquivTo: IRI = this.rsa("EquivTo")
+  val Named: IRI = this.rsa("NAMED")
 
   // Counter used to implement a simple fresh variable generator
   private var counter = -1;
@@ -59,12 +58,6 @@ object RSA extends RSAOntology with RSAAxiom {
   def hashed(axiom: OWLAxiom): String = {
     val (cls1, prop, cls2) = axiom.toTriple.get
     this.hashed(cls1, prop, cls2)
-  }
-
-  // TODO: move this somewhere else... maybe an OntoUtils class or something.
-  def loadOntology(onto: File): OWLOntology = {
-    val manager = OWLManager.createOWLOntologyManager()
-    manager.loadOntologyFromOntologyDocument(onto)
   }
 
 } // object RSA

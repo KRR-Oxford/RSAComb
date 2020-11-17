@@ -52,7 +52,7 @@ object RSAComb extends App {
    * case.
    */
 
-  val ontology: RSAOntology = RSA.loadOntology(ontoPath)
+  val ontology = RSAOntology(ontoPath)
   if (ontology.isRSA) {
 
     /* Load query */
