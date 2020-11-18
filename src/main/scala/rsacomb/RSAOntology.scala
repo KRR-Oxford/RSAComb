@@ -164,7 +164,7 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
     data.importData(
       UpdateType.ADDITION,
       RSA.Prefixes,
-      "<http://127.0.0.1/E>[?X,?Y] :- <http://127.0.0.1/PE>[?X,?Y], <http://127.0.0.1/U>[?X], <http://127.0.0.1/U>[?Y] ."
+      "rsa:E[?X,?Y] :- rsa:PE[?X,?Y], rsa:U[?X], rsa:U[?Y] ."
     )
 
     /* Add built-in rules
@@ -252,13 +252,9 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
       data: DataStoreConnection
   ): Graph[Resource, UnDiEdge] = {
     val query = "SELECT ?X ?Y WHERE { ?X rsa:E ?Y }"
-    val cursor =
-      data.createCursor(RSA.Prefixes, query, new HashMap[String, String]());
-    var mul = cursor.open()
-    var edges: List[UnDiEdge[Resource]] = List()
-    while (mul > 0) {
-      edges = UnDiEdge(cursor.getResource(0), cursor.getResource(1)) :: edges
-      mul = cursor.advance()
+    val answers = RDFoxHelpers.submitSelectQuery(data, query, RSA.Prefixes)
+    var edges: List[UnDiEdge[Resource]] = answers.map {
+      case n1 :: n2 :: _ => UnDiEdge(n1, n2)
     }
     Graph(edges: _*)
   }

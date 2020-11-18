@@ -26,7 +26,7 @@ import scala.collection.JavaConverters._
 object RSA {
 
   val Prefixes: Prefixes = new Prefixes()
-  Prefixes.declarePrefix("rsa:", "http://127.0.0.1/")
+  Prefixes.declarePrefix("rsa:", "http://www.cs.ox.ac.uk/isg/rsa/")
 
   private def atom(name: IRI, vars: List[Term]) =
     TupleTableAtom.create(TupleTableName.create(name.getIRI), vars: _*)
