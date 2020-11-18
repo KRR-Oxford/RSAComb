@@ -1,4 +1,4 @@
-package rsacomb
+package uk.ac.ox.cs.rsacomb
 
 /* Java imports */
 import java.io.File

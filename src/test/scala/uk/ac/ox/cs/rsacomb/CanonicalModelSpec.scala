@@ -14,7 +14,8 @@ import tech.oxfordsemantic.jrdfox.logic.expression.Variable
 
 import scala.collection.JavaConverters._
 
-import rsacomb.util.{RDFoxHelpers, RSA}
+import uk.ac.ox.cs.rsacomb.RSAOntology
+import uk.ac.ox.cs.rsacomb.util.{RDFoxHelpers, RSA}
 
 object Ontology1_CanonicalModelSpec {
 

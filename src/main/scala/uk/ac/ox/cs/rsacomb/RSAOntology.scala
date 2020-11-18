@@ -1,4 +1,4 @@
-package rsacomb
+package uk.ac.ox.cs.rsacomb
 
 /* Java imports */
 import java.util.HashMap
@@ -46,8 +46,10 @@ import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
 import tech.oxfordsemantic.jrdfox.logic._
 import org.semanticweb.owlapi.model.OWLObjectInverseOf
 
-import suffix.{Empty, Forward, Backward, Inverse}
-import util.{RDFoxHelpers, RSA}
+import uk.ac.ox.cs.rsacomb.converter.{RDFoxAxiomConverter, SkolemStrategy}
+import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom
+import uk.ac.ox.cs.rsacomb.suffix.{Empty, Forward, Backward, Inverse}
+import uk.ac.ox.cs.rsacomb.util.{RDFoxHelpers, RSA}
 
 object RSAOntology {
 

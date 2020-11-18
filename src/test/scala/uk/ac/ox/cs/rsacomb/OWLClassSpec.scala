@@ -33,8 +33,12 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
   Literal
 }
 
-import rsacomb.RDFoxRuleShards
-import rsacomb.util.RSA
+import uk.ac.ox.cs.rsacomb.converter.{
+  RDFoxRuleShards,
+  RDFoxClassExprConverter,
+  SkolemStrategy
+}
+import uk.ac.ox.cs.rsacomb.util.RSA
 
 object OWLClassSpec {
 

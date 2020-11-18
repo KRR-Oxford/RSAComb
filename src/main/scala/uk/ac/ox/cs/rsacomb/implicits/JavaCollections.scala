@@ -1,4 +1,4 @@
-package rsacomb.implicits
+package uk.ac.ox.cs.rsacomb.implicits
 
 import scala.collection.JavaConverters._
 

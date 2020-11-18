@@ -1,4 +1,4 @@
-package rsacomb
+package uk.ac.ox.cs.rsacomb
 
 import tech.oxfordsemantic.jrdfox.logic.Datatype
 import tech.oxfordsemantic.jrdfox.logic.expression.{
@@ -27,9 +27,9 @@ import tech.oxfordsemantic.jrdfox.logic.sparql.pattern.{
 
 import scala.collection.JavaConverters._
 
-import implicits.RSAAtom
-import suffix.{RSASuffix, Forward, Backward}
-import util.RSA
+import uk.ac.ox.cs.rsacomb.implicits.RSAAtom
+import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Forward, Backward}
+import uk.ac.ox.cs.rsacomb.util.RSA
 
 class FilteringProgram(query: SelectQuery, constants: List[Term])
     extends RSAAtom {

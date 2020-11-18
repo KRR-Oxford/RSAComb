@@ -14,7 +14,8 @@ import tech.oxfordsemantic.jrdfox.Prefixes
 
 import scala.collection.JavaConverters._
 
-import rsacomb.util.RDFoxHelpers
+import uk.ac.ox.cs.rsacomb.FilteringProgram
+import uk.ac.ox.cs.rsacomb.util.RDFoxHelpers
 
 object FilteringProgramSpec {
 

@@ -1,4 +1,4 @@
-package rsacomb.suffix
+package uk.ac.ox.cs.rsacomb.suffix
 
 import org.semanticweb.owlapi.model.{
   OWLPropertyExpression,

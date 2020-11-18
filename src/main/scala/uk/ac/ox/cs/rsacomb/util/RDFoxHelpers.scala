@@ -1,4 +1,4 @@
-package rsacomb.util
+package uk.ac.ox.cs.rsacomb.util
 
 import java.util.{Map => JMap, HashMap => JHashMap}
 import java.io.StringReader
@@ -12,7 +12,7 @@ import tech.oxfordsemantic.jrdfox.formats.SPARQLParser
 import tech.oxfordsemantic.jrdfox.logic.expression.Resource
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 
-import rsacomb.suffix.Nth
+import uk.ac.ox.cs.rsacomb.suffix.Nth
 
 object RDFoxHelpers {
 

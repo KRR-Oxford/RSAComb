@@ -1,4 +1,4 @@
-package rsacomb
+package uk.ac.ox.cs.rsacomb.converter
 
 import tech.oxfordsemantic.jrdfox.logic.datalog.{TupleTableAtom, BodyFormula}
 

@@ -1,4 +1,4 @@
-package rsacomb
+package uk.ac.ox.cs.rsacomb.implicits
 
 /* Java imports */
 import org.semanticweb.owlapi.model.{

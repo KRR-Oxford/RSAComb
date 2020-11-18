@@ -1,4 +1,4 @@
-package rsacomb.implicits
+package uk.ac.ox.cs.rsacomb.implicits
 
 import tech.oxfordsemantic.jrdfox.logic.Datatype
 import tech.oxfordsemantic.jrdfox.logic.expression.{Literal, FunctionCall}
@@ -10,8 +10,8 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI}
 import scala.collection.JavaConverters._
 
-import rsacomb.suffix.{RSASuffix, Nth}
-import rsacomb.RSAOntology
+import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Nth}
+import uk.ac.ox.cs.rsacomb.RSAOntology
 
 /* Is this the best way to determine if an atom is an RDF triple?
  * Note that we can't use `getNumberOfArguments()` because is not

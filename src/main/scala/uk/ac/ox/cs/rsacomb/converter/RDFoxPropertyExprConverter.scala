@@ -1,4 +1,4 @@
-package rsacomb
+package uk.ac.ox.cs.rsacomb.converter
 
 import org.semanticweb.owlapi.model.{OWLPropertyExpression, OWLObjectProperty}
 import org.semanticweb.owlapi.model.OWLPropertyExpressionVisitorEx
@@ -8,7 +8,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{Term, IRI, Literal}
 
 import org.semanticweb.owlapi.model.OWLObjectInverseOf
 
-import suffix.{RSASuffix, Inverse}
+import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Inverse}
 
 class RDFoxPropertyExprConverter(
     term1: Term,
@@ -17,7 +17,7 @@ class RDFoxPropertyExprConverter(
 ) extends OWLPropertyExpressionVisitorEx[List[TupleTableAtom]] {
 
   // Automatically converts OWLAPI types into RDFox equivalent types.
-  import implicits.RDFox._
+  import uk.ac.ox.cs.rsacomb.implicits.RDFox._
 
   override def visit(expr: OWLObjectProperty): List[TupleTableAtom] = {
     val base = expr.getIRI.getIRIString

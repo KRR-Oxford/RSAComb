@@ -1,4 +1,4 @@
-package rsacomb.util
+package uk.ac.ox.cs.rsacomb.util
 
 /* Java imports */
 import java.util.Map
@@ -18,7 +18,7 @@ import org.semanticweb.owlapi.model.{
   OWLObjectPropertyExpression
 }
 
-import rsacomb.suffix.RSASuffix
+import uk.ac.ox.cs.rsacomb.suffix.RSASuffix
 
 // Debug only
 import scala.collection.JavaConverters._

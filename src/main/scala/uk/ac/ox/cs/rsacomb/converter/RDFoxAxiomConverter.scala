@@ -1,4 +1,4 @@
-package rsacomb
+package uk.ac.ox.cs.rsacomb.converter
 
 import org.semanticweb.owlapi.model.{
   OWLAxiom,
@@ -23,13 +23,12 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
 
 import scala.collection.JavaConverters._
 
-import rsacomb.SkolemStrategy
-import rsacomb.RDFoxRuleShards
 import org.semanticweb.owlapi.model.OWLSubObjectPropertyOfAxiom
 import org.semanticweb.owlapi.model.OWLObjectProperty
 import org.semanticweb.owlapi.model.OWLClassAssertionAxiom
 
-import suffix.{RSASuffix, Empty}
+import uk.ac.ox.cs.rsacomb.RSAOntology
+import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Empty}
 
 object RDFoxAxiomConverter {
 

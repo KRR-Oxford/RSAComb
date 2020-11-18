@@ -36,7 +36,8 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
 import org.semanticweb.owlapi.model.{IRI => OWLIRI}
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI => RDFIRI}
 
-import rsacomb.util.RSA
+import uk.ac.ox.cs.rsacomb.converter.{RDFoxAxiomConverter, SkolemStrategy}
+import uk.ac.ox.cs.rsacomb.util.RSA
 
 object OWLAxiomSpec {
 
@@ -183,7 +184,7 @@ class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
   // Import required data
   import OWLAxiomSpec._
   // Implicit convertion from IRI in OWLAPI to IRI in JRDFox
-  import rsacomb.implicits.RDFox._
+  import uk.ac.ox.cs.rsacomb.implicits.RDFox._
 
   // OWLSubClassOfAxiom #1
   axiom_OWLSubClassOf1.toString should "be converted into a singleton List[Rule]" in {

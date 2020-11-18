@@ -1,4 +1,4 @@
-package rsacomb
+package uk.ac.ox.cs.rsacomb
 
 import org.semanticweb.owlapi.model.{OWLObjectInverseOf, OWLObjectProperty}
 import org.semanticweb.owlapi.model.{
@@ -23,8 +23,14 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
   IRI
 }
 
-import suffix.{Empty, Forward, Backward, Inverse}
-import util.RSA
+import uk.ac.ox.cs.rsacomb.converter.{
+  SkolemStrategy,
+  RDFoxAxiomConverter,
+  RDFoxPropertyExprConverter
+}
+import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom
+import uk.ac.ox.cs.rsacomb.suffix.{Empty, Forward, Backward, Inverse}
+import uk.ac.ox.cs.rsacomb.util.RSA
 
 class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
 

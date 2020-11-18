@@ -1,4 +1,4 @@
-package rsacomb.implicits
+package uk.ac.ox.cs.rsacomb.implicits
 
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI => RDFoxIRI}
 import org.semanticweb.owlapi.model.{IRI => OWLIRI}

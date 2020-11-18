@@ -1,4 +1,4 @@
-package rsacomb
+package uk.ac.ox.cs.rsacomb.converter
 
 import scala.collection.JavaConverters._
 import java.util.stream.{Stream, Collectors}
@@ -29,8 +29,9 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
 import org.semanticweb.owlapi.model.OWLObjectPropertyExpression
 import org.semanticweb.owlapi.model.OWLObjectProperty
 
-import suffix.{RSASuffix, Empty}
-import util.RSA
+import uk.ac.ox.cs.rsacomb.RSAOntology
+import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Empty}
+import uk.ac.ox.cs.rsacomb.util.RSA
 
 object RDFoxClassExprConverter {
 
@@ -60,7 +61,7 @@ class RDFoxClassExprConverter(
     suffix: RSASuffix
 ) extends OWLClassExpressionVisitorEx[RDFoxRuleShards] {
 
-  import implicits.RDFox._
+  import uk.ac.ox.cs.rsacomb.implicits.RDFox._
 
   // OWLClass
   override def visit(expr: OWLClass): RDFoxRuleShards = {
