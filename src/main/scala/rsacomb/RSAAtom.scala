@@ -11,7 +11,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{IRI}
 import scala.collection.JavaConverters._
 
 import rsacomb.suffix.{RSASuffix, Nth}
-import rsacomb.RSA
+import rsacomb.RSAOntology
 
 /* Is this the best way to determine if an atom is an RDF triple?
  * Note that we can't use `getNumberOfArguments()` because is not
@@ -32,7 +32,7 @@ trait RSAAtom {
 
   implicit class RSAAtom(val atom: TupleTableAtom) {
 
-    import rsacomb.RDFoxUtil.stringToRDFoxIRI
+    import RDFox._
 
     val name: String = atom.getTupleTableName.getName
 
@@ -74,7 +74,7 @@ trait RSAAtom {
       if (isRDF) {
         (None, List(atom))
       } else {
-        val bvar = RSA.getFreshVariable()
+        val bvar = RSAOntology.genFreshVariable()
         val str = Literal.create(name, Datatype.XSD_STRING)
         val args = atom.getArguments.asScala.toList
         val skolem = FunctionCall.create("SKOLEM", str :: args: _*)

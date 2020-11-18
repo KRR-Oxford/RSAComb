@@ -24,16 +24,15 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
 }
 
 import suffix.{Empty, Forward, Backward, Inverse}
+import util.RSA
 
 class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
 
-  // Makes working with IRIs less painful
-  import RDFoxUtil._
+  import implicits.RDFox._
+  import implicits.JavaCollections._
 
   val named: List[Rule] =
-    ontology.individuals.map(a =>
-      Rule.create(TupleTableAtom.rdf(a, IRI.RDF_TYPE, RSA.Named))
-    )
+    ontology.individuals.map(a => Rule.create(RSA.Named(a)))
 
   val rolesAdditionalRules: List[Rule] = {
     // Given a role (predicate) compute additional logic rules
@@ -69,7 +68,7 @@ class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
     val varY = Variable.create("Y")
     val concepts = ontology.concepts.map(c => {
       Rule.create(
-        TupleTableAtom.rdf(varX, IRI.RDF_TYPE, IRI.THING),
+        RSA.Thing(varX),
         TupleTableAtom.rdf(varX, IRI.RDF_TYPE, c.getIRI)
       )
     })
@@ -80,10 +79,7 @@ class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
           x.getInverse.getNamedProperty.getIRI.getIRIString :: Inverse
       }
       Rule.create(
-        List(
-          TupleTableAtom.rdf(varX, IRI.RDF_TYPE, IRI.THING),
-          TupleTableAtom.rdf(varY, IRI.RDF_TYPE, IRI.THING)
-        ),
+        List(RSA.Thing(varX), RSA.Thing(varY)),
         List(TupleTableAtom.rdf(varX, name, varY))
       )
     })
@@ -95,18 +91,15 @@ class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
     val varY = Variable.create("Y")
     val varZ = Variable.create("Z")
     List(
+      // Reflexivity
+      Rule.create(RSA.EquivTo(varX, varX), RSA.Thing(varX)),
+      // Simmetry
+      Rule.create(RSA.EquivTo(varY, varX), RSA.EquivTo(varX, varY)),
+      // Transitivity
       Rule.create(
-        TupleTableAtom.rdf(varX, RSA.EquivTo, varX),
-        TupleTableAtom.rdf(varX, IRI.RDF_TYPE, IRI.THING)
-      ),
-      Rule.create(
-        TupleTableAtom.rdf(varY, RSA.EquivTo, varX),
-        TupleTableAtom.rdf(varX, RSA.EquivTo, varY)
-      ),
-      Rule.create(
-        TupleTableAtom.rdf(varX, RSA.EquivTo, varZ),
-        TupleTableAtom.rdf(varX, RSA.EquivTo, varY),
-        TupleTableAtom.rdf(varY, RSA.EquivTo, varZ)
+        RSA.EquivTo(varX, varZ),
+        RSA.EquivTo(varX, varY),
+        RSA.EquivTo(varY, varZ)
       )
     )
   }
@@ -129,21 +122,14 @@ class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
     private def rules1(axiom: OWLSubClassOfAxiom): List[Rule] = {
       val unfold = ontology.unfold(axiom).toList
       // Fresh Variables
-      val v0 = RSA.rsa("v0_" ++ RSA.hashed(axiom))
+      val v0 = RSA("v0_" ++ axiom.hashed)
       val varX = Variable.create("X")
-      // Predicates
+      implicit val unfoldTerm = RSA(unfold.hashCode.toString)
+      // TODO: use axiom.toTriple instead
       val atomA: TupleTableAtom = {
         val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
         TupleTableAtom.rdf(varX, IRI.RDF_TYPE, cls)
       }
-      def predIN(t: Term): TupleTableAtom = {
-        TupleTableAtom.rdf(
-          t,
-          RSA.rsa("IN"),
-          RSA.rsa(unfold.hashCode.toString)
-        )
-      }
-      def notIn(t: Term): Negation = Negation.create(predIN(t))
       val roleRf: TupleTableAtom = {
         val visitor =
           new RDFoxPropertyExprConverter(varX, v0, Forward)
@@ -165,10 +151,10 @@ class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
       // returning facts as `Rule`s with true body. While this is correct
       // there is an easier way to import facts into RDFox. Are we able to
       // do that?
-      val facts = unfold.map(x => Rule.create(predIN(x)))
+      val facts = unfold.map(x => Rule.create(RSA.In(x)))
       val rules = List(
-        Rule.create(roleRf, atomA, notIn(varX)),
-        Rule.create(atomB, atomA, notIn(varX))
+        Rule.create(roleRf, atomA, RSA.notIn(varX)),
+        Rule.create(atomB, atomA, RSA.notIn(varX))
       )
       facts ++ rules
     }
@@ -180,9 +166,9 @@ class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
           .getProperty
       if (ontology.confl(roleR) contains roleR) {
         // Fresh Variables
-        val v0 = RSA.rsa("v0_" ++ RSA.hashed(axiom))
-        val v1 = RSA.rsa("v1_" ++ RSA.hashed(axiom))
-        val v2 = RSA.rsa("v2_" ++ RSA.hashed(axiom))
+        val v0 = RSA("v0_" ++ axiom.hashed)
+        val v1 = RSA("v1_" ++ axiom.hashed)
+        val v2 = RSA("v2_" ++ axiom.hashed)
         // Predicates
         def atomA(t: Term): TupleTableAtom = {
           val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
@@ -220,7 +206,7 @@ class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
           .asInstanceOf[OWLObjectSomeValuesFrom]
           .getProperty
       // Fresh Variables
-      val v1 = RSA.rsa("v1_" ++ RSA.hashed(axiom))
+      val v1 = RSA("v1_" ++ axiom.hashed)
       // Predicates
       def atomA(t: Term): TupleTableAtom = {
         val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI

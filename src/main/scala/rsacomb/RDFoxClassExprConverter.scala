@@ -26,12 +26,11 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
   IRI
 }
 
-import rsacomb.SkolemStrategy
-import rsacomb.RDFoxRuleShards
 import org.semanticweb.owlapi.model.OWLObjectPropertyExpression
 import org.semanticweb.owlapi.model.OWLObjectProperty
 
 import suffix.{RSASuffix, Empty}
+import util.RSA
 
 object RDFoxClassExprConverter {
 
@@ -61,7 +60,7 @@ class RDFoxClassExprConverter(
     suffix: RSASuffix
 ) extends OWLClassExpressionVisitorEx[RDFoxRuleShards] {
 
-  import RDFoxUtil.owlapi2rdfox;
+  import implicits.RDFox._
 
   // OWLClass
   override def visit(expr: OWLClass): RDFoxRuleShards = {
@@ -99,7 +98,7 @@ class RDFoxClassExprConverter(
 
   // OWLObjectSomeValuesFrom
   override def visit(expr: OWLObjectSomeValuesFrom): RDFoxRuleShards = {
-    val y = RSA.getFreshVariable()
+    val y = RSAOntology.genFreshVariable()
     // Here we are assuming a role name
     val prop = expr.getProperty()
     // Computes the result of rule skolemization. Depending on the used
@@ -110,14 +109,7 @@ class RDFoxClassExprConverter(
       case SkolemStrategy.Constant(c) => (List(), List(), c)
       case SkolemStrategy.ConstantRSA(c) => {
         if (unsafe.contains(prop))
-          (
-            List(
-              TupleTableAtom.rdf(term, RSA.rsa("PE"), c),
-              TupleTableAtom.rdf(c, IRI.RDF_TYPE, RSA.rsa("U"))
-            ),
-            List(),
-            c
-          )
+          (List(RSA.PE(term, c), RSA.U(c)), List(), c)
         else
           (List(), List(), c)
       }
@@ -143,7 +135,8 @@ class RDFoxClassExprConverter(
   // OWLObjectMaxCardinality
   override def visit(expr: OWLObjectMaxCardinality): RDFoxRuleShards = {
     // TODO: again, no hardcoded variables
-    val vars = List(RSA.getFreshVariable(), RSA.getFreshVariable())
+    val vars =
+      List(RSAOntology.genFreshVariable(), RSAOntology.genFreshVariable())
     val classResult = RDFoxClassExprConverter.merge(
       vars
         .map(new RDFoxClassExprConverter(_, unsafe, skolem, suffix))

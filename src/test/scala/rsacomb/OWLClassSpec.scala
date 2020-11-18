@@ -34,6 +34,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
 }
 
 import rsacomb.RDFoxRuleShards
+import rsacomb.util.RSA
 
 object OWLClassSpec {
 
@@ -49,8 +50,8 @@ object OWLClassSpec {
   // RDFox Terms
   val term_x = Variable.create("x")
   val term_y = Variable.create("y")
-  val term_c1 = RSA.rsa("c_1")
-  val term_c2 = RSA.rsa("c_2")
+  val term_c1 = RSA("c_1")
+  val term_c2 = RSA("c_2")
   val term_alice = RDFIRI.create("univ:alice")
 
   // RDFox Predicates

@@ -10,7 +10,7 @@ import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Term}
 
 /* Local imports */
-import rsacomb.RSA._
+import util.{RDFoxHelpers, RSA}
 
 object RSAComb extends App {
 
@@ -56,8 +56,10 @@ object RSAComb extends App {
   if (ontology.isRSA) {
 
     /* Load query */
-    val query = RDFoxUtil.parseQuery(
+    val query = RDFoxHelpers.parseSelectQuery(
       """
+        PREFIX  :  <http://example.com/rsa_example.owl#>
+
         SELECT ?X
         WHERE {
           ?X a  :D ;
@@ -71,8 +73,11 @@ object RSAComb extends App {
     /* Compute answers to query */
     query match {
       case Some(query) => {
+
+        import implicits.JavaCollections._
+
         // Open connection to RDFox
-        val (server, data) = RDFoxUtil.openConnection("AnswerComputation")
+        val (server, data) = RDFoxHelpers.openConnection("AnswerComputation")
 
         {
           println("\nQuery")
@@ -81,7 +86,7 @@ object RSAComb extends App {
 
         // Step 1. Computing the canonical model
         val canon = ontology.canonicalModel
-        data.addRules(canon.rules.asJava)
+        data.addRules(canon.rules)
 
         {
           println("\nCanonical Model rules:")
@@ -90,129 +95,136 @@ object RSAComb extends App {
 
         // Step 2. Computing the canonical model
         val nis = {
-          val query =
-            "SELECT ?Y WHERE { ?X rsa:EquivTo ?Y ; a rsa:NAMED . }"
-          val cursor =
-            data.createCursor(
-              RSA.Prefixes,
-              query,
-              new HashMap[String, String]()
-            );
-          var mul = cursor.open()
-          var iris: List[IRI] = List()
-          while (mul > 0) {
-            println(cursor.getResource(0))
-            iris = cursor.getResource(0) match {
-              case iri: IRI => iri :: iris
-              case _        => iris
-            }
-            mul = cursor.advance()
-          }
-          iris
+          val query = "SELECT ?Y WHERE { ?X rsa:EquivTo ?Y ; a rsa:Named . }"
+          RDFoxHelpers.submitSelectQuery(data, query, RSA.Prefixes).flatten
         }
         val filter = ontology.filteringProgram(query, nis)
-        data.addRules(filter.rules.asJava)
+        data.addRules(filter.rules)
 
         {
           println("\nFiltering rules")
           filter.rules.foreach(println)
         }
 
-        def retrieveInstances(pred: String, arity: Int): Unit = {
-          // Build query
-          var query = "SELECT"
-          for (i <- 0 until arity) {
-            query ++= s" ?X$i"
-          }
-          query ++= " WHERE {"
-          for (i <- 0 until arity) {
-            query ++= s" ?S rsa:${pred}_$i ?X$i ."
-          }
-          query ++= " }"
-          // Collect answers
-          RDFoxUtil.submitQuery(
-            data,
-            RSA.Prefixes,
-            query,
-            arity
-          )
-        }
-
         // Retrieve answers
         println("\nAnswers:")
-        retrieveInstances("ANS", filter.answer.length)
+        val ans =
+          RDFoxHelpers.queryInternalPredicate(data, "Ans", filter.answer.length)
+        println(ans)
 
         /* DEBUG: adding additional checks
          */
-        println("\nIndividuals:")
-        ontology.individuals.foreach(println)
-
-        println("\nThings:")
-        RDFoxUtil.submitQuery(
-          data,
-          RSA.Prefixes,
-          "SELECT ?X { ?X a owl:Thing }",
-          1
-        )
-
-        println("\nNAMEDs:")
-        RDFoxUtil.submitQuery(
-          data,
-          RSA.Prefixes,
-          "SELECT ?X { ?X a rsa:NAMED }",
-          1
-        )
-
-        println("\nNIs:")
-        RDFoxUtil.submitQuery(
-          data,
-          RSA.Prefixes,
-          "SELECT ?X { ?X a rsa:NI }",
-          1
-        )
-
-        // ID instances
-        println("\nID instances:")
-        retrieveInstances("ID", filter.variables.length + 2)
-
-        println("\nSameAs instances:")
-        RDFoxUtil.submitQuery(
-          data,
-          RSA.Prefixes,
-          "SELECT ?X ?Y { ?X rsa:EquivTo ?Y }",
-          2
-        )
-
-        // Unfiltered answers
-        println("\nPossible answers:")
-        retrieveInstances("QM", filter.variables.length)
-
-        // Cycle detected
-        println("\nCycle detection:")
-        retrieveInstances("AQ_f", filter.variables.length + 2)
-        retrieveInstances("AQ_b", filter.variables.length + 2)
-
-        // Forks detected
-        println("\nForks:")
-        retrieveInstances("FK", filter.variables.length)
-
-        // Spurious answers
-        println("\nSpurious answers")
-        retrieveInstances("SP", filter.variables.length)
-
         {
-          val cursor = data.createCursor(
-            RSA.Prefixes,
-            "ASK { :a a :D }",
-            new HashMap[String, String]()
-          );
-          var mul = cursor.open()
-          println(s"Answer: ${mul > 0}")
-          cursor.close();
+          import suffix.{Forward, Backward}
+
+          val arity = filter.answer.length + filter.bounded.length
+
+          println("\nIndividuals:")
+          ontology.individuals.foreach(println)
+
+          println("\nThings:")
+          val things = RDFoxHelpers.submitSelectQuery(
+            data,
+            """
+             PREFIX  owl:  <http://www.w3.org/2002/07/owl#>
+
+             SELECT ?X {
+               ?X a owl:Thing
+             }
+             """
+          )
+          println(things)
+
+          println("\nNAMEDs:")
+          val named = RDFoxHelpers.submitSelectQuery(
+            data,
+            """
+             SELECT ?X {
+               ?X a rsa:Named
+             }
+             """,
+            RSA.Prefixes
+          )
+          println(named)
+
+          println("\nNIs:")
+          val nis = RDFoxHelpers.submitSelectQuery(
+            data,
+            """
+             SELECT ?X {
+               ?X a rsa:NI
+             }
+             """,
+            RSA.Prefixes
+          )
+          println(nis)
+
+          // ID instances
+          println("\nIDs:")
+          val ids = RDFoxHelpers.queryInternalPredicate(
+            data,
+            "ID",
+            arity + 2
+          )
+          println(ids)
+
+          println("\nEquivTo:")
+          val equivs = RDFoxHelpers.submitSelectQuery(
+            data,
+            """
+              SELECT ?X ?Y {
+                ?X rsa:EquivTo ?Y
+              }
+            """,
+            RSA.Prefixes
+          )
+          println(equivs)
+
+          // Unfiltered answers
+          println("\nPossible answers:")
+          val qms = RDFoxHelpers.queryInternalPredicate(
+            data,
+            "QM",
+            arity
+          )
+          println(qms)
+
+          // Cycle detected
+          println("\nCycle detection:")
+          val aqf = RDFoxHelpers.queryInternalPredicate(
+            data,
+            "AQ" :: Forward,
+            arity + 2
+          )
+          val aqb = RDFoxHelpers.queryInternalPredicate(
+            data,
+            "AQ" :: Backward,
+            arity + 2
+          )
+          println(aqf)
+          println(aqb)
+
+          // Forks detected
+          println("\nForks:")
+          val fk = RDFoxHelpers.queryInternalPredicate(
+            data,
+            "FK",
+            arity
+          )
+          println(fk)
+
+          // Spurious answers
+          println("\nSpurious answers")
+          val sp = RDFoxHelpers.queryInternalPredicate(
+            data,
+            "SP",
+            arity
+          )
+          println(sp)
         }
 
         // Close connection to RDFox
-        RDFoxUtil.closeConnection(server, data)
+        RDFoxHelpers.closeConnection(server, data)
       }
       case None => {}
     }

@@ -78,7 +78,7 @@ class RDFoxAxiomConverter(
   }
 
   override def visit(axiom: OWLSubObjectPropertyOfAxiom): List[Rule] = {
-    val term1 = RSA.getFreshVariable()
+    val term1 = RSAOntology.genFreshVariable()
     val subVisitor =
       new RDFoxPropertyExprConverter(term, term1, suffix)
     val superVisitor = new RDFoxPropertyExprConverter(term, term1, suffix)

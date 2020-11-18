@@ -36,6 +36,8 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
 import org.semanticweb.owlapi.model.{IRI => OWLIRI}
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI => RDFIRI}
 
+import rsacomb.util.RSA
+
 object OWLAxiomSpec {
 
   // IRI
@@ -53,8 +55,8 @@ object OWLAxiomSpec {
   val term_x = Variable.create("x")
   val term_y = Variable.create("y")
   val term_z = Variable.create("z")
-  val term_c1 = RSA.rsa("c_1")
-  val term_c2 = RSA.rsa("c_2")
+  val term_c1 = RSA("c_1")
+  val term_c2 = RSA("c_2")
   val term_alice = RDFIRI.create("univ:alice")
 
   // RDFox Predicates
@@ -181,7 +183,7 @@ class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
   // Import required data
   import OWLAxiomSpec._
   // Implicit convertion from IRI in OWLAPI to IRI in JRDFox
-  import RDFoxUtil._
+  import rsacomb.implicits.RDFox._
 
   // OWLSubClassOfAxiom #1
   axiom_OWLSubClassOf1.toString should "be converted into a singleton List[Rule]" in {

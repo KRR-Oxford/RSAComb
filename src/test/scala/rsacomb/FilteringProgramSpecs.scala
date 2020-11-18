@@ -14,7 +14,7 @@ import tech.oxfordsemantic.jrdfox.Prefixes
 
 import scala.collection.JavaConverters._
 
-import rsacomb.RDFoxUtil._
+import rsacomb.util.RDFoxHelpers
 
 object FilteringProgramSpec {
 
@@ -33,12 +33,14 @@ object FilteringProgramSpec {
 
   // QUERY 0
 
-  val query0 = parseQuery("""
-    SELECT  ?subj
-    WHERE {
-      ?subj  ?pred  ?obj
-    }
-  """, prefixes).get
+  val query0 = RDFoxHelpers
+    .parseSelectQuery("""
+      SELECT  ?subj
+      WHERE {
+        ?subj  ?pred  ?obj
+      }
+    """, prefixes)
+    .get
 
   // val query0 = Query.create(
   //   QueryType.SELECT,
@@ -49,12 +51,14 @@ object FilteringProgramSpec {
 
   // QUERY 1
 
-  val query1 = parseQuery("""
+  val query1 = RDFoxHelpers
+    .parseSelectQuery("""
     SELECT  *
     WHERE {
       ?w  a  :Wellbore
     }
-  """, prefixes).get
+  """, prefixes)
+    .get
 
   // val query1 = Query.create(
   //   QueryType.SELECT,
@@ -65,8 +69,9 @@ object FilteringProgramSpec {
 
   // QUERY 2
 
-  val query2 = parseQuery(
-    """
+  val query2 = RDFoxHelpers
+    .parseSelectQuery(
+      """
     SELECT  *
     WHERE {
       ?w    a                     :Wellbore ;
@@ -74,8 +79,9 @@ object FilteringProgramSpec {
       ?doc  :hasURL               ?document_hyperlink
     }
   """,
-    prefixes
-  ).get
+      prefixes
+    )
+    .get
 
   // val query2 = Query.create(
   //   QueryType.SELECT,
@@ -90,8 +96,9 @@ object FilteringProgramSpec {
 
   // QUERY 3
 
-  val query3 = parseQuery(
-    """
+  val query3 = RDFoxHelpers
+    .parseSelectQuery(
+      """
     SELECT  ?wellbore ?formation_pressure
     WHERE {
       ?w   a                      :Wellbore ;
@@ -100,8 +107,9 @@ object FilteringProgramSpec {
       ?fp  :valueInStandardUnit   ?formation_pressure
     }
     """,
-    prefixes
-  ).get
+      prefixes
+    )
+    .get
 
   // val query3 = Query.create(
   //   QueryType.SELECT,
@@ -117,8 +125,9 @@ object FilteringProgramSpec {
 
   // QUERY 4
 
-  val query4 = parseQuery(
-    """
+  val query4 = RDFoxHelpers
+    .parseSelectQuery(
+      """
     SELECT  *
     WHERE {
       ?w            a                           :Wellbore ;
@@ -129,8 +138,9 @@ object FilteringProgramSpec {
                     :peakAmount                 ?peak_amount
     }
     """,
-    prefixes
-  ).get
+      prefixes
+    )
+    .get
 
   // val query4 = Query.create(
   //   QueryType.SELECT,
@@ -155,8 +165,9 @@ object FilteringProgramSpec {
 
   // QUERY 5
 
-  val query5 = parseQuery(
-    """
+  val query5 = RDFoxHelpers
+    .parseSelectQuery(
+      """
     SELECT  ?wellbore ?unit_name ?discovery
     WHERE {
       ?w       a                     :Wellbore ;
@@ -170,8 +181,9 @@ object FilteringProgramSpec {
                :overlapsWellboreInterval  ?c_int
     }
   """,
-    prefixes
-  ).get
+      prefixes
+    )
+    .get
 
   // val query5 = Query.create(
   //   QueryType.SELECT,
@@ -192,8 +204,9 @@ object FilteringProgramSpec {
 
   // QUERY 6
 
-  val query6 = parseQuery(
-    """
+  val query6 = RDFoxHelpers
+    .parseSelectQuery(
+      """
     SELECT DISTINCT ?wellbore ?content
     WHERE {
       ?w    a                     :Wellbore ;
@@ -203,8 +216,9 @@ object FilteringProgramSpec {
             :fluidZoneContent     ?content
     }
   """,
-    prefixes
-  ).get
+      prefixes
+    )
+    .get
 
   // val query6 = Query.create(
   //   QueryType.SELECT,
@@ -221,8 +235,9 @@ object FilteringProgramSpec {
 
   // QUERY 7
 
-  val query7 = parseQuery(
-    """
+  val query7 = RDFoxHelpers
+    .parseSelectQuery(
+      """
     SELECT  ?wName ?sample ?porosity ?top_depth_md ?bot_depth_md
     WHERE {
       ?w        a                     :Wellbore ;
@@ -246,8 +261,9 @@ object FilteringProgramSpec {
                 :valueInStandardUnit  ?bot_depth_md
    }
   """,
-    prefixes
-  ).get
+      prefixes
+    )
+    .get
 
   // val query7 = Query.create(
   //   QueryType.SELECT,

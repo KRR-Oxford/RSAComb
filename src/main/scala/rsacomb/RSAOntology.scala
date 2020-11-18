@@ -47,13 +47,22 @@ import tech.oxfordsemantic.jrdfox.logic._
 import org.semanticweb.owlapi.model.OWLObjectInverseOf
 
 import suffix.{Empty, Forward, Backward, Inverse}
+import util.{RDFoxHelpers, RSA}
 
 object RSAOntology {
+
+  // Counter used to implement a simple fresh variable generator
+  private var counter = -1;
 
   def apply(ontology: OWLOntology): RSAOntology = new RSAOntology(ontology)
 
   def apply(ontology: File): RSAOntology =
     new RSAOntology(loadOntology(ontology))
+
+  def genFreshVariable(): Variable = {
+    counter += 1
+    Variable.create(f"I$counter%03d")
+  }
 
   private def loadOntology(onto: File): OWLOntology = {
     val manager = OWLManager.createOWLOntologyManager()
@@ -94,7 +103,7 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
       .getIndividualsInSignature()
       .asScala
       .map(_.getIRI)
-      .map(RDFoxUtil.owlapi2rdfox)
+      .map(implicits.RDFox.owlapiToRdfoxIri)
       .toList
 
   val concepts: List[OWLClass] =
@@ -133,7 +142,7 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
     val datalog = for {
       axiom <- axioms
       visitor = new RDFoxAxiomConverter(
-        RSA.getFreshVariable(),
+        RSAOntology.genFreshVariable(),
         unsafe,
         SkolemStrategy.ConstantRSA(axiom.toString),
         Empty
@@ -146,9 +155,9 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
     //datalog.foreach(println)
 
     // Open connection with RDFox
-    val (server, data) = RDFoxUtil.openConnection("RSACheck")
+    val (server, data) = RDFoxHelpers.openConnection("RSACheck")
     // Add Data (hardcoded for now)
-    data.importData(UpdateType.ADDITION, RSA.Prefixes, ":a a :A .")
+    //data.importData(UpdateType.ADDITION, RSA.Prefixes, ":a a :A .")
 
     /* Add built-in rules
      */
@@ -176,7 +185,7 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
     //println(graph)
 
     // Close connection to RDFox
-    RDFoxUtil.closeConnection(server, data)
+    RDFoxHelpers.closeConnection(server, data)
 
     /* To check if the graph is tree-like we check for acyclicity in a
      * undirected graph.
@@ -291,8 +300,8 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
     val role = axiom.objectPropertyExpressionsInSignature(0)
     if (this.confl(role).contains(role)) {
       Set(
-        RSA.rsa("v0_" ++ RSA.hashed(axiom)),
-        RSA.rsa("v1_" ++ RSA.hashed(axiom))
+        RSA("v0_" ++ axiom.hashed),
+        RSA("v1_" ++ axiom.hashed)
       )
     } else {
       Set()
@@ -354,15 +363,15 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
       classC <- classes
       // Keeping this check for now
       if !unsafeRoles.contains(roleS)
-      tripleARB = RSA.hashed(classA, roleR, classB)
-      tripleDSC = RSA.hashed(classD, roleS, classC)
+      tripleARB = RSAAxiom.hashed(classA, roleR, classB)
+      tripleDSC = RSAAxiom.hashed(classD, roleS, classC)
       individual =
         if (tripleARB > tripleDSC) {
-          RSA.rsa("v1_" ++ tripleDSC)
+          RSA("v1_" ++ tripleDSC)
         } else {
           // Note that this is also the case for
           // `tripleARB == tripleDSC`
-          RSA.rsa("v0_" ++ tripleDSC)
+          RSA("v0_" ++ tripleDSC)
         }
     } yield individual
   }

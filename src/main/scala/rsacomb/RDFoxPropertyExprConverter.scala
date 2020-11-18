@@ -17,7 +17,7 @@ class RDFoxPropertyExprConverter(
 ) extends OWLPropertyExpressionVisitorEx[List[TupleTableAtom]] {
 
   // Automatically converts OWLAPI types into RDFox equivalent types.
-  import RDFoxUtil.owlapi2rdfox;
+  import implicits.RDFox._
 
   override def visit(expr: OWLObjectProperty): List[TupleTableAtom] = {
     val base = expr.getIRI.getIRIString

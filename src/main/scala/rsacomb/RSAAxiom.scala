@@ -38,6 +38,17 @@ trait RSAAxiom {
     case object T5 extends RSAAxiomType // A ⊑ ∃R.B
   }
 
+  object RSAAxiom {
+
+    def hashed(
+        cls1: OWLClass,
+        prop: OWLObjectPropertyExpression,
+        cls2: OWLClass
+    ): String =
+      (cls1, prop, cls2).hashCode.toString
+
+  }
+
   /* Implements additional features on top of `OWLAxiom` from
    * the OWLAPI.
    */
@@ -137,6 +148,8 @@ trait RSAAxiom {
         }
         cls2 <- Some(someValues.getFiller) collect { case a: OWLClass => a }
       } yield (cls1, prop, cls2)
+
+    lazy val hashed: String = (RSAAxiom.hashed _) tupled toTriple.get
   }
 
 } // trait RSAAxiom

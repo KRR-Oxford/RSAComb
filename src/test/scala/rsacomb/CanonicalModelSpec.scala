@@ -14,61 +14,63 @@ import tech.oxfordsemantic.jrdfox.logic.expression.Variable
 
 import scala.collection.JavaConverters._
 
-import rsacomb.RSA._
-import rsacomb.RDFoxUtil._
+import rsacomb.util.{RDFoxHelpers, RSA}
 
 object Ontology1_CanonicalModelSpec {
 
   /* Renderer to display OWL Axioms with DL syntax*/
   val renderer = new DLSyntaxObjectRenderer()
 
+  def base(str: String): IRI =
+    IRI.create("http://example.com/rsa_example.owl#" + str)
+
   val ontology_path: File = new File("examples/example1.ttl")
   val ontology = RSAOntology(ontology_path)
   val program = ontology.canonicalModel
 
-  val roleR = new OWLObjectPropertyImpl(RSA.base("R"))
-  val roleS = new OWLObjectPropertyImpl(RSA.base("S"))
-  val roleT = new OWLObjectPropertyImpl(RSA.base("T"))
+  val roleR = new OWLObjectPropertyImpl(base("R"))
+  val roleS = new OWLObjectPropertyImpl(base("S"))
+  val roleT = new OWLObjectPropertyImpl(base("T"))
   val roleR_inv = roleR.getInverseProperty()
   val roleS_inv = roleS.getInverseProperty()
   val roleT_inv = roleT.getInverseProperty()
 
   val AsubClassOfD = new OWLSubClassOfAxiomImpl(
-    new OWLClassImpl(RSA.base("A")),
-    new OWLClassImpl(RSA.base("D")),
+    new OWLClassImpl(base("A")),
+    new OWLClassImpl(base("D")),
     Seq().asJava
   )
 
   val DsomeValuesFromRB = new OWLSubClassOfAxiomImpl(
-    new OWLClassImpl(RSA.base("D")),
+    new OWLClassImpl(base("D")),
     new OWLObjectSomeValuesFromImpl(
       roleR,
-      new OWLClassImpl(RSA.base("B"))
+      new OWLClassImpl(base("B"))
     ),
     Seq().asJava
   )
 
   val BsomeValuesFromSD = new OWLSubClassOfAxiomImpl(
-    new OWLClassImpl(RSA.base("B")),
+    new OWLClassImpl(base("B")),
     new OWLObjectSomeValuesFromImpl(
       roleS,
-      new OWLClassImpl(RSA.base("D"))
+      new OWLClassImpl(base("D"))
     ),
     Seq().asJava
   )
 
   val AsomeValuesFromSiC = new OWLSubClassOfAxiomImpl(
-    new OWLClassImpl(RSA.base("A")),
+    new OWLClassImpl(base("A")),
     new OWLObjectSomeValuesFromImpl(
       roleS_inv,
-      new OWLClassImpl(RSA.base("C"))
+      new OWLClassImpl(base("C"))
     ),
     Seq().asJava
   )
 
   val SsubPropertyOfT = new OWLSubObjectPropertyOfAxiomImpl(
-    new OWLObjectPropertyImpl(RSA.base("S")),
-    new OWLObjectPropertyImpl(RSA.base("T")),
+    new OWLObjectPropertyImpl(base("S")),
+    new OWLObjectPropertyImpl(base("T")),
     Seq().asJava
   )
 
@@ -219,51 +221,54 @@ object Ontology2_CanonicalModelSpec {
   /* Renderer to display OWL Axioms with DL syntax*/
   val renderer = new DLSyntaxObjectRenderer()
 
+  def base(str: String): IRI =
+    IRI.create("http://example.com/rsa_example.owl#" + str)
+
   val ontology_path: File = new File("examples/example2.owl")
   val ontology = RSAOntology(ontology_path)
   val program = ontology.canonicalModel
 
-  val roleR = new OWLObjectPropertyImpl(RSA.base("R"))
-  val roleS = new OWLObjectPropertyImpl(RSA.base("S"))
-  val roleT = new OWLObjectPropertyImpl(RSA.base("T"))
-  val roleP = new OWLObjectPropertyImpl(RSA.base("P"))
+  val roleR = new OWLObjectPropertyImpl(base("R"))
+  val roleS = new OWLObjectPropertyImpl(base("S"))
+  val roleT = new OWLObjectPropertyImpl(base("T"))
+  val roleP = new OWLObjectPropertyImpl(base("P"))
   val roleR_inv = roleR.getInverseProperty()
   val roleS_inv = roleS.getInverseProperty()
   val roleT_inv = roleT.getInverseProperty()
   val roleP_inv = roleP.getInverseProperty()
 
   val AsomeValuesFromRB = new OWLSubClassOfAxiomImpl(
-    new OWLClassImpl(RSA.base("A")),
+    new OWLClassImpl(base("A")),
     new OWLObjectSomeValuesFromImpl(
       roleR,
-      new OWLClassImpl(RSA.base("B"))
+      new OWLClassImpl(base("B"))
     ),
     Seq().asJava
   )
 
   val BsomeValuesFromSC = new OWLSubClassOfAxiomImpl(
-    new OWLClassImpl(RSA.base("B")),
+    new OWLClassImpl(base("B")),
     new OWLObjectSomeValuesFromImpl(
       roleS,
-      new OWLClassImpl(RSA.base("C"))
+      new OWLClassImpl(base("C"))
     ),
     Seq().asJava
   )
 
   val CsomeValuesFromTD = new OWLSubClassOfAxiomImpl(
-    new OWLClassImpl(RSA.base("C")),
+    new OWLClassImpl(base("C")),
     new OWLObjectSomeValuesFromImpl(
       roleT,
-      new OWLClassImpl(RSA.base("D"))
+      new OWLClassImpl(base("D"))
     ),
     Seq().asJava
   )
 
   val DsomeValuesFromPA = new OWLSubClassOfAxiomImpl(
-    new OWLClassImpl(RSA.base("D")),
+    new OWLClassImpl(base("D")),
     new OWLObjectSomeValuesFromImpl(
       roleP,
-      new OWLClassImpl(RSA.base("A"))
+      new OWLClassImpl(base("A"))
     ),
     Seq().asJava
   )
