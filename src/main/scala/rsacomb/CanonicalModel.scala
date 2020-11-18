@@ -92,14 +92,14 @@ class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
     val varZ = Variable.create("Z")
     List(
       // Reflexivity
-      Rule.create(RSA.EquivTo(varX, varX), RSA.Thing(varX)),
+      Rule.create(RSA.congruent(varX, varX), RSA.Thing(varX)),
       // Simmetry
-      Rule.create(RSA.EquivTo(varY, varX), RSA.EquivTo(varX, varY)),
+      Rule.create(RSA.congruent(varY, varX), RSA.congruent(varX, varY)),
       // Transitivity
       Rule.create(
-        RSA.EquivTo(varX, varZ),
-        RSA.EquivTo(varX, varY),
-        RSA.EquivTo(varY, varZ)
+        RSA.congruent(varX, varZ),
+        RSA.congruent(varX, varY),
+        RSA.congruent(varY, varZ)
       )
     )
   }

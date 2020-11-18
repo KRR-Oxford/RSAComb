@@ -159,7 +159,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA(bounded.indexOf(role1.getArguments.get(2))),
         RSA(bounded.indexOf(role2.getArguments.get(2)))
       ),
-      not(RSA.EquivTo(role1.getArguments.get(0), role2.getArguments.get(0)))
+      not(RSA.congruent(role1.getArguments.get(0), role2.getArguments.get(0)))
     )
     val r4b = for {
       role1 <- body.filter(_.isRoleAssertion)
@@ -174,7 +174,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA(bounded.indexOf(role1.getArguments.get(2))),
         RSA(bounded.indexOf(role2.getArguments.get(0)))
       ),
-      not(RSA.EquivTo(role1.getArguments.get(0), role2.getArguments.get(2)))
+      not(RSA.congruent(role1.getArguments.get(0), role2.getArguments.get(2)))
     )
     val r4c = for {
       role1 <- body.filter(_.isRoleAssertion)
@@ -189,7 +189,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA(bounded.indexOf(role1.getArguments.get(0))),
         RSA(bounded.indexOf(role2.getArguments.get(0)))
       ),
-      not(RSA.EquivTo(role1.getArguments.get(2), role2.getArguments.get(2)))
+      not(RSA.congruent(role1.getArguments.get(2), role2.getArguments.get(2)))
     )
 
     /* Rules 5x */
@@ -215,7 +215,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA(bounded indexOf role1arg2),
         RSA(bounded indexOf role2arg2)
       ),
-      RSA.EquivTo(role1arg0, role2arg0),
+      RSA.congruent(role1arg0, role2arg0),
       not(RSA.NI(role1arg0))
     )
     val r5b = for {
@@ -240,7 +240,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA(bounded indexOf role1arg2),
         RSA(bounded indexOf role2arg0)
       ),
-      RSA.EquivTo(role1arg0, role2arg2),
+      RSA.congruent(role1arg0, role2arg2),
       not(RSA.NI(role1arg0))
     )
     val r5c = for {
@@ -265,7 +265,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA(bounded indexOf role1arg0),
         RSA(bounded indexOf role2arg0)
       ),
-      RSA.EquivTo(role1arg2, role2arg2),
+      RSA.congruent(role1arg2, role2arg2),
       not(RSA.NI(role1arg2))
     )
 
