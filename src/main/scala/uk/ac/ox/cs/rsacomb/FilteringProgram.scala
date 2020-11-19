@@ -31,6 +31,13 @@ import uk.ac.ox.cs.rsacomb.implicits.RSAAtom
 import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Forward, Backward}
 import uk.ac.ox.cs.rsacomb.util.RSA
 
+object FilteringProgram {
+
+  def apply(query: SelectQuery, constants: List[Term]): FilteringProgram =
+    new FilteringProgram(query, constants)
+
+} // object FilteringProgram
+
 class FilteringProgram(query: SelectQuery, constants: List[Term])
     extends RSAAtom {
 
@@ -62,9 +69,17 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
 
   val (answer, bounded) = variables
 
-  val facts: List[Rule] = constants.map(c => Rule.create(RSA.NI(c)))
+  val named: List[Rule] =
+    constants.map(a => Rule.create(RSA.Named(a)))
+
+  val nis: Rule = {
+    val varX = Variable.create("X")
+    val varY = Variable.create("Y")
+    Rule.create(RSA.NI(varX), RSA.Congruent(varX, varY), RSA.Named(varY))
+  }
+
   val rules: List[Rule] =
-    this.generateFilteringProgram().map(reifyRule) ++ facts
+    nis :: named ::: this.generateFilteringProgram().map(reifyRule)
 
   /* NOTE: we are restricting to queries that contain conjunctions of
    * atoms for the time being. This might need to be reviewed in the
@@ -159,7 +174,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA(bounded.indexOf(role1.getArguments.get(2))),
         RSA(bounded.indexOf(role2.getArguments.get(2)))
       ),
-      not(RSA.congruent(role1.getArguments.get(0), role2.getArguments.get(0)))
+      not(RSA.Congruent(role1.getArguments.get(0), role2.getArguments.get(0)))
     )
     val r4b = for {
       role1 <- body.filter(_.isRoleAssertion)
@@ -174,7 +189,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA(bounded.indexOf(role1.getArguments.get(2))),
         RSA(bounded.indexOf(role2.getArguments.get(0)))
       ),
-      not(RSA.congruent(role1.getArguments.get(0), role2.getArguments.get(2)))
+      not(RSA.Congruent(role1.getArguments.get(0), role2.getArguments.get(2)))
     )
     val r4c = for {
       role1 <- body.filter(_.isRoleAssertion)
@@ -189,7 +204,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA(bounded.indexOf(role1.getArguments.get(0))),
         RSA(bounded.indexOf(role2.getArguments.get(0)))
       ),
-      not(RSA.congruent(role1.getArguments.get(2), role2.getArguments.get(2)))
+      not(RSA.Congruent(role1.getArguments.get(2), role2.getArguments.get(2)))
     )
 
     /* Rules 5x */
@@ -215,7 +230,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA(bounded indexOf role1arg2),
         RSA(bounded indexOf role2arg2)
       ),
-      RSA.congruent(role1arg0, role2arg0),
+      RSA.Congruent(role1arg0, role2arg0),
       not(RSA.NI(role1arg0))
     )
     val r5b = for {
@@ -240,7 +255,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA(bounded indexOf role1arg2),
         RSA(bounded indexOf role2arg0)
       ),
-      RSA.congruent(role1arg0, role2arg2),
+      RSA.Congruent(role1arg0, role2arg2),
       not(RSA.NI(role1arg0))
     )
     val r5c = for {
@@ -265,7 +280,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
         RSA(bounded indexOf role1arg0),
         RSA(bounded indexOf role2arg0)
       ),
-      RSA.congruent(role1arg2, role2arg2),
+      RSA.Congruent(role1arg2, role2arg2),
       not(RSA.NI(role1arg2))
     )
 
@@ -359,8 +374,3 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
   }
 
 } // class FilteringProgram
-
-object FilteringProgram {
-  def apply(query: SelectQuery, constants: List[Term]): FilteringProgram =
-    new FilteringProgram(query, constants)
-} // object FilteringProgram

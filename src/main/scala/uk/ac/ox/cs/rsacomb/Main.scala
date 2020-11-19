@@ -84,24 +84,14 @@ object RSAComb extends App {
           println(query)
         }
 
-        // Step 1. Computing the canonical model
         val canon = ontology.canonicalModel
         data.addRules(canon.rules)
+        val filter = ontology.filteringProgram(query)
+        data.addRules(filter.rules)
 
         {
           println("\nCanonical Model rules:")
           canon.rules.foreach(println)
-        }
-
-        // Step 2. Computing the canonical model
-        val nis = {
-          val query = "SELECT ?Y WHERE { ?X rsa:EquivTo ?Y ; a rsa:Named . }"
-          RDFoxHelpers.submitSelectQuery(data, query, RSA.Prefixes).flatten
-        }
-        val filter = ontology.filteringProgram(query, nis)
-        data.addRules(filter.rules)
-
-        {
           println("\nFiltering rules")
           filter.rules.foreach(println)
         }
@@ -168,12 +158,12 @@ object RSAComb extends App {
           )
           println(ids)
 
-          println("\nEquivTo:")
+          println("\nCongruent:")
           val equivs = RDFoxHelpers.submitSelectQuery(
             data,
             """
               SELECT ?X ?Y {
-                ?X rsa:EquivTo ?Y
+                ?X rsa:congruent ?Y
               }
             """,
             RSA.Prefixes

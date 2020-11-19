@@ -261,11 +261,8 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
     Graph(edges: _*)
   }
 
-  def filteringProgram(
-      query: SelectQuery,
-      nis: List[Term]
-  ): FilteringProgram =
-    new FilteringProgram(query, nis)
+  def filteringProgram(query: SelectQuery): FilteringProgram =
+    new FilteringProgram(query, individuals)
 
   lazy val canonicalModel = new CanonicalModel(this)
 

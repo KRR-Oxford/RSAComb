@@ -40,9 +40,9 @@ object RSA {
   def In(t: Term)(implicit set: Term) =
     TupleTableAtom.rdf(t, RSA("In"), set)
 
-  def notIn(t: Term)(implicit set: Term) = Negation.create(In(t)(set))
+  def NotIn(t: Term)(implicit set: Term) = Negation.create(In(t)(set))
 
-  def congruent(t1: Term, t2: Term) =
+  def Congruent(t1: Term, t2: Term) =
     TupleTableAtom.rdf(t1, RSA("congruent"), t2)
 
   def QM(implicit variables: (List[Term], List[Term])) = {

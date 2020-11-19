@@ -37,9 +37,6 @@ class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
   import implicits.RDFox._
   import implicits.JavaCollections._
 
-  val named: List[Rule] =
-    ontology.individuals.map(a => Rule.create(RSA.Named(a)))
-
   val rolesAdditionalRules: List[Rule] = {
     // Given a role (predicate) compute additional logic rules
     def additional(pred: String): Seq[Rule] = {
@@ -98,14 +95,14 @@ class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
     val varZ = Variable.create("Z")
     List(
       // Reflexivity
-      Rule.create(RSA.congruent(varX, varX), RSA.Thing(varX)),
+      Rule.create(RSA.Congruent(varX, varX), RSA.Thing(varX)),
       // Simmetry
-      Rule.create(RSA.congruent(varY, varX), RSA.congruent(varX, varY)),
+      Rule.create(RSA.Congruent(varY, varX), RSA.Congruent(varX, varY)),
       // Transitivity
       Rule.create(
-        RSA.congruent(varX, varZ),
-        RSA.congruent(varX, varY),
-        RSA.congruent(varY, varZ)
+        RSA.Congruent(varX, varZ),
+        RSA.Congruent(varX, varY),
+        RSA.Congruent(varY, varZ)
       )
     )
   }
@@ -114,7 +111,7 @@ class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
     // Compute rules from ontology axioms
     val rules = ontology.axioms.flatMap(_.accept(RuleGenerator))
     // Return full set of rules
-    rules ::: rolesAdditionalRules ::: topAxioms ::: equalityAxioms ::: named
+    rules ::: rolesAdditionalRules ::: topAxioms ::: equalityAxioms
   }
 
   object RuleGenerator
@@ -159,8 +156,8 @@ class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
       // do that?
       val facts = unfold.map(x => Rule.create(RSA.In(x)))
       val rules = List(
-        Rule.create(roleRf, atomA, RSA.notIn(varX)),
-        Rule.create(atomB, atomA, RSA.notIn(varX))
+        Rule.create(roleRf, atomA, RSA.NotIn(varX)),
+        Rule.create(atomB, atomA, RSA.NotIn(varX))
       )
       facts ++ rules
     }
