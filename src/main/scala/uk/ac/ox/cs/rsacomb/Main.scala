@@ -11,6 +11,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Term}
 
 /* Local imports */
 import util.{RDFoxHelpers, RSA}
+import sparql.ConjunctiveQuery
 
 object RSAComb extends App {
 
@@ -56,8 +57,7 @@ object RSAComb extends App {
   if (ontology.isRSA) {
 
     /* Load query */
-    val query = RDFoxHelpers.parseSelectQuery(
-      """
+    val query = """
         PREFIX  :  <http://example.com/rsa_example.owl#>
 
         SELECT ?X
@@ -67,11 +67,10 @@ object RSAComb extends App {
           ?Y :S ?Z .
           ?Z a  :D .
         }
-      """
-    )
+    """
 
     /* Compute answers to query */
-    query match {
+    ConjunctiveQuery(query) match {
       case Some(query) => {
 
         import implicits.JavaCollections._

@@ -30,44 +30,24 @@ import scala.collection.JavaConverters._
 import uk.ac.ox.cs.rsacomb.implicits.RSAAtom
 import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Forward, Backward}
 import uk.ac.ox.cs.rsacomb.util.RSA
+import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 
 object FilteringProgram {
 
-  def apply(query: SelectQuery, constants: List[Term]): FilteringProgram =
+  def apply(query: ConjunctiveQuery, constants: List[Term]): FilteringProgram =
     new FilteringProgram(query, constants)
 
 } // object FilteringProgram
 
-class FilteringProgram(query: SelectQuery, constants: List[Term])
+class FilteringProgram(query: ConjunctiveQuery, constants: List[Term])
     extends RSAAtom {
 
   /* Makes mplicit conversion OWLAPI IRI <-> RDFox IRI available */
   // import implicits.RDFox._
 
-  implicit val variables: (List[Term], List[Term]) = {
-    val all: Set[Variable] = query.getQueryBody.getWherePattern match {
-      case b: ConjunctionPattern => {
-        b.getConjuncts.asScala.toSet.flatMap { conj: QueryPattern =>
-          conj match {
-            case c: TriplePattern =>
-              Set(c.getSubject, c.getPredicate, c.getObject).collect {
-                case v: Variable => v
-              }
-            case _ => Set()
-          }
-        }
-      }
-      case _ => Set()
-    }
-    if (query.getAllPossibleVariables) {
-      (all.toList, List())
-    } else {
-      val answer = query.getSelection.asScala.map(_.getVariable).toSet
-      (answer.toList, (all &~ answer).toList)
-    }
-  }
-
-  val (answer, bounded) = variables
+  val answer: List[Term] = query.answer.toList
+  val bounded: List[Term] = query.bounded.toList
+  implicit val variables = (answer, bounded)
 
   val named: List[Rule] =
     constants.map(a => Rule.create(RSA.Named(a)))
@@ -108,7 +88,7 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
     val varV = Variable.create("V")
     val varW = Variable.create("W")
     // Query formula as a rule body
-    val body = queryToBody(query.getQueryBody.getWherePattern)
+    val body = queryToBody(query.where)
     // Auxiliar predicates/helpers
     def not(atom: TupleTableAtom): BodyFormula = Negation.create(atom)
     // val predQM =
@@ -320,7 +300,8 @@ class FilteringProgram(query: SelectQuery, constants: List[Term])
 
     /* Rules 8x */
     val r8a =
-      for (v <- answer) yield Rule.create(RSA.SP, RSA.QM, not(RSA.Named(v)))
+      for (v <- answer)
+        yield Rule.create(RSA.SP, RSA.QM, not(RSA.Named(v)))
     val r8b =
       Rule.create(RSA.SP, RSA.FK)
     val r8c =

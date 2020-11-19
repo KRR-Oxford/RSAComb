@@ -49,6 +49,7 @@ import org.semanticweb.owlapi.model.OWLObjectInverseOf
 import uk.ac.ox.cs.rsacomb.converter.{RDFoxAxiomConverter, SkolemStrategy}
 import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom
 import uk.ac.ox.cs.rsacomb.suffix.{Empty, Forward, Backward, Inverse}
+import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 import uk.ac.ox.cs.rsacomb.util.{RDFoxHelpers, RSA}
 
 object RSAOntology {
@@ -261,7 +262,7 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
     Graph(edges: _*)
   }
 
-  def filteringProgram(query: SelectQuery): FilteringProgram =
+  def filteringProgram(query: ConjunctiveQuery): FilteringProgram =
     new FilteringProgram(query, individuals)
 
   lazy val canonicalModel = new CanonicalModel(this)
