@@ -37,6 +37,9 @@ The following is a summary of fixes (🔧), changes (🔄) and improvements (⚡
 
 + 🔄 [RDFox](https://www.oxfordsemantic.tech/product) is used instead of DLV as the underlying LP engine.
 
++ 🔄 While the system is described as a two-step process (computing the canonical model and applying the filtering program), the adoption of RDFox allows us to abstract from the underlying engine implementation.
+    Materialisation is handled by RDFox, possibly computing answers in one go, without splitting the process in two separate steps.
+
 + 🔧 In Def.4, the definition of built-in predicate `notIn` is wrong and should reflect the implicit semantics implied by the name, i.e.,
 
     > let [...] `notIn` be a built-in predicate which holds when the first argument is **not** an element of the set given as second argument
@@ -67,9 +70,6 @@ The following is a summary of fixes (🔧), changes (🔄) and improvements (⚡
     rsa:NI[?X] :- rsa:congruent[?X, ?Y], rsa:named[?Y] .
   ```
   where `rsa:named` is an internal predicate keeping track of all constants in the original ontology.
-
-+ 🔄 While the system is described as a two-step process (computing the canonical model and applying the filtering program), the adoption of RDFox allows us to abstract from the underlying engine implementation.
-    Materialisation is handled by RDFox, possibly computing answers in one go, without splitting the process in two separate steps.
 
 ## References
 
