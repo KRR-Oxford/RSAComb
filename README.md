@@ -35,11 +35,38 @@ We tried to implement the system as close as possible to the theoretical descrip
 Regardless, we had to deal with the fact that we where using different tools to carry out reasoning tasks and we where probably using a different language to implement the system.
 The following is a summary of fixes (🔧), changes (🔄) and improvements (⚡), we introduced along the way:
 
-+ 🔧 FIX
++ 🔄 [RDFox](https://www.oxfordsemantic.tech/product) is used instead of DLV as the underlying LP engine.
 
-+ 🔄 CHANGE
++ 🔧 In [[1](#references) - Def.4], the definition of built-in predicate `notIn` is wrong and should reflect the implicit semantics implied by the name, i.e., "let [...] `notIn` be a built-in predicate which holds when the first argument is **not** an element of the set given as second argument".
+    This has been fixed by (1) introducing a built-in predicate `In` (note that instances of `In` can be computed beforehand since they only depend on the input ontology), and (2) implement `notIn` as the negation of `In` using RDFox NaF built-in support.
 
-+ ⚡ IMPROVEMENT
++ 🔄 Top (`owl:Thing`) axiomatisation is performed introducing rules as follows.
+    Given *p* predicate (arity *n*) *in the original ontology*, the following rule is introduced:
+    ```
+        owl:Thing[?X1], *...*, owl:Thing[?Xn] :- *p*(?X1, *...*, ?Xn) .
+    ```
+    Note that by definition arity can be either 1 or 2.
+
++ 🔄 Equality axiomatisation is performed introducing the following rules:
+    ```
+        rsa:congruent[?X, ?X] :- owl:Thing[?X] .
+        rsa:congruent[?Y, ?X] :- rsa:congruent[?X, ?Y] .
+        rsa:congruent[?X, ?Z] :- rsa:congruent[?X, ?Y], rsa:congruent[?Y, ?Z] .
+    ```
+    defining equivalence as a congruence relation over terms in the ontology.
+    *Substitution rules have not been entroduced yet.*
+
++ 🔧 In [[1](#references) - Def. 4], the definition of built-in predicate `NI` is not consistent with its use in [[1](#references) - Table 3] and related description in [[1](#references) - Sec. 4.2].
+  We redefined `NI` as the set of all constants that are *equal* to a constant in the original ontology (according to the internal equality predicate `rsa:congruent`).
+  Note that, in this scenario, there is no need to introduce `NI` instances as facts in the system;
+  instead we can add a rule to populate the new predicate:
+  ```
+    NI[?X] :- rsa:congruent[?X, ?Y], rsa:named[?Y] .
+  ```
+  where `rsa:named` is an internal predicate keeping track of all constants in the original ontology.
+
++ 🔄 While the system is described as a two-step process (computing the canonical model and applying the filtering program), the adoption of RDFox allows us to abstract from the underlying engine implementation.
+    Materialisation is handled by RDFox, possibly computing answers in one go, without splitting the process in two separate steps.
 
 ## References
 
