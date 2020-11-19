@@ -9,5 +9,4 @@ object JavaCollections {
 
   implicit def scalaToJavaList[A](list: List[A]): java.util.List[A] =
     list.asJava
-
 }

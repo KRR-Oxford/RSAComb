@@ -113,7 +113,7 @@ object RSAComb extends App {
           ontology.individuals.foreach(println)
 
           println("\nThings:")
-          val things = RDFoxHelpers.submitSelectQuery(
+          val things = RDFoxHelpers.submitQuery(
             data,
             """
              PREFIX  owl:  <http://www.w3.org/2002/07/owl#>
@@ -126,7 +126,7 @@ object RSAComb extends App {
           println(things)
 
           println("\nNAMEDs:")
-          val named = RDFoxHelpers.submitSelectQuery(
+          val named = RDFoxHelpers.submitQuery(
             data,
             """
              SELECT ?X {
@@ -138,7 +138,7 @@ object RSAComb extends App {
           println(named)
 
           println("\nNIs:")
-          val nis = RDFoxHelpers.submitSelectQuery(
+          val nis = RDFoxHelpers.submitQuery(
             data,
             """
              SELECT ?X {
@@ -159,7 +159,7 @@ object RSAComb extends App {
           println(ids)
 
           println("\nCongruent:")
-          val equivs = RDFoxHelpers.submitSelectQuery(
+          val equivs = RDFoxHelpers.submitQuery(
             data,
             """
               SELECT ?X ?Y {

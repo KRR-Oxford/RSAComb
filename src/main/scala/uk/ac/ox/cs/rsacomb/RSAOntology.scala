@@ -254,7 +254,7 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
       data: DataStoreConnection
   ): Graph[Resource, UnDiEdge] = {
     val query = "SELECT ?X ?Y WHERE { ?X rsa:E ?Y }"
-    val answers = RDFoxHelpers.submitSelectQuery(data, query, RSA.Prefixes)
+    val answers = RDFoxHelpers.submitQuery(data, query, RSA.Prefixes).get
     var edges: List[UnDiEdge[Resource]] = answers.map {
       case n1 :: n2 :: _ => UnDiEdge(n1, n2)
     }

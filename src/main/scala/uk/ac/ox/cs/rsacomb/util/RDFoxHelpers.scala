@@ -54,11 +54,10 @@ object RDFoxHelpers {
 
   def submitSelectQuery(
       data: DataStoreConnection,
-      query: String,
-      prefixes: Prefixes = new Prefixes(),
+      query: SelectQuery,
       opts: JMap[String, String] = new JHashMap[String, String]()
   ): List[List[Resource]] = {
-    val cursor = data.createCursor(prefixes, query, opts)
+    val cursor = data.createCursor(query, opts)
     var answers: List[List[Resource]] = List()
     var mul = cursor.open()
     while (mul > 0) {
@@ -70,6 +69,14 @@ object RDFoxHelpers {
     cursor.close();
     answers
   }
+
+  def submitQuery(
+      data: DataStoreConnection,
+      query: String,
+      prefixes: Prefixes = new Prefixes(),
+      opts: JMap[String, String] = new JHashMap[String, String]()
+  ): Option[List[List[Resource]]] =
+    parseSelectQuery(query, prefixes).map(submitSelectQuery(data, _, opts))
 
   def queryInternalPredicate(
       data: DataStoreConnection,
@@ -86,7 +93,7 @@ object RDFoxHelpers {
       query ++= s" ?S rsa:${pred :: Nth(i)} ?X$i ."
     }
     query ++= " }"
-    submitSelectQuery(data, query, RSA.Prefixes, opts)
+    submitQuery(data, query, RSA.Prefixes, opts).get
   }
 
   def closeConnection(
