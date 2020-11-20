@@ -1,0 +1,9 @@
+PREFIX  :  <http://example.com/rsa_example.owl#>
+
+SELECT ?X
+WHERE {
+  ?X a  :D ;
+     :R ?Y .
+  ?Y :S ?Z .
+  ?Z a  :D .
+}

@@ -46,9 +46,7 @@ object RSAComb extends App {
     sys.exit;
   }
 
-  /* Create RSA object from generic OWLOntology
-   *
-   * TODO: It might be required to check if the ontology in input is
+  /* TODO: It might be required to check if the ontology in input is
    * Horn-ALCHOIQ. At the moment we are assuming this is always the
    * case.
    */
@@ -56,183 +54,13 @@ object RSAComb extends App {
   val ontology = RSAOntology(ontoPath)
   if (ontology.isRSA) {
 
-    /* Load query */
-    val query = """
-        PREFIX  :  <http://example.com/rsa_example.owl#>
-
-        SELECT ?X
-        WHERE {
-          ?X a  :D ;
-             :R ?Y .
-          ?Y :S ?Z .
-          ?Z a  :D .
-        }
-    """
+    /** Read SPARQL query from file */
+    val source = io.Source.fromFile(queryPath.getAbsoluteFile)
+    val query = source.getLines mkString "\n"
+    source.close()
 
     /* Compute answers to query */
-    ConjunctiveQuery(query) match {
-      case Some(query) => {
-
-        import implicits.JavaCollections._
-
-        // Open connection to RDFox
-        val (server, data) = RDFoxHelpers.openConnection("AnswerComputation")
-
-        {
-          println("\nQuery")
-          println(query)
-        }
-
-        val canon = ontology.canonicalModel
-        data.addRules(canon.rules)
-        val filter = ontology.filteringProgram(query)
-        data.addRules(filter.rules)
-
-        {
-          println("\nCanonical Model rules:")
-          canon.rules.foreach(println)
-          println("\nFiltering rules")
-          filter.rules.foreach(println)
-        }
-
-        // Retrieve answers
-        println("\nAnswers:")
-        val ans =
-          RDFoxHelpers.queryInternalPredicate(data, "Ans", filter.answer.length)
-        println(ans)
-
-        /* DEBUG: adding additional checks
-         */
-        {
-          import suffix.{Forward, Backward}
-
-          val arity = filter.answer.length + filter.bounded.length
-
-          println("\nIndividuals:")
-          ontology.individuals.foreach(println)
-
-          println("\nThings:")
-          val things = RDFoxHelpers.submitQuery(
-            data,
-            """
-             PREFIX  owl:  <http://www.w3.org/2002/07/owl#>
-
-             SELECT ?X {
-               ?X a owl:Thing
-             }
-             """
-          )
-          println(things)
-
-          println("\nNAMEDs:")
-          val named = RDFoxHelpers.submitQuery(
-            data,
-            """
-             SELECT ?X {
-               ?X a rsa:Named
-             }
-             """,
-            RSA.Prefixes
-          )
-          println(named)
-
-          println("\nNIs:")
-          val nis = RDFoxHelpers.submitQuery(
-            data,
-            """
-             SELECT ?X {
-               ?X a rsa:NI
-             }
-             """,
-            RSA.Prefixes
-          )
-          println(nis)
-
-          // ID instances
-          println("\nIDs:")
-          val ids = RDFoxHelpers.queryInternalPredicate(
-            data,
-            "ID",
-            arity + 2
-          )
-          println(ids)
-
-          println("\nCongruent:")
-          val equivs = RDFoxHelpers.submitQuery(
-            data,
-            """
-              SELECT ?X ?Y {
-                ?X rsa:congruent ?Y
-              }
-            """,
-            RSA.Prefixes
-          )
-          println(equivs)
-
-          // Unfiltered answers
-          println("\nPossible answers:")
-          val qms = RDFoxHelpers.queryInternalPredicate(
-            data,
-            "QM",
-            arity
-          )
-          println(qms)
-
-          // Cycle detected
-          println("\nCycle detection:")
-          val aqf = RDFoxHelpers.queryInternalPredicate(
-            data,
-            "AQ" :: Forward,
-            arity + 2
-          )
-          val aqb = RDFoxHelpers.queryInternalPredicate(
-            data,
-            "AQ" :: Backward,
-            arity + 2
-          )
-          println(aqf)
-          println(aqb)
-
-          // Forks detected
-          println("\nForks:")
-          val fk = RDFoxHelpers.queryInternalPredicate(
-            data,
-            "FK",
-            arity
-          )
-          println(fk)
-
-          // Spurious answers
-          println("\nSpurious answers")
-          val sp = RDFoxHelpers.queryInternalPredicate(
-            data,
-            "SP",
-            arity
-          )
-          println(sp)
-        }
-
-        // Close connection to RDFox
-        RDFoxHelpers.closeConnection(server, data)
-      }
-      case None => {}
-    }
+    val answers = ConjunctiveQuery(query).map(ontology ask _)
+    answers map (_.toString) foreach println
   }
 }
-
-/* Notes:
- *
- * To establish a connection with a local RDFox instance, do the
- * following:
- *
- * ```
- * val serverConnection : ServerConnection = ConnectionFactory.newServerConnection("rdfox:local", "", "")
- * serverConnection.createDataStore("test","seq",new HashMap())
- * val dataStoreConnection : DataStoreConnection = serverConnection.newDataStoreConnection("test")
- * dataStoreConnection.importData(
- *    UpdateType.ADDITION,
- *    Prefixes.s_emptyPrefixes,
- *    new File("./path/to/file")
- * )
- * ```
- */

@@ -1,6 +1,7 @@
 package uk.ac.ox.cs.rsacomb
 
 /* Java imports */
+import java.{util => ju}
 import java.util.HashMap
 import java.util.stream.{Collectors, Stream}
 import java.io.File
@@ -48,8 +49,8 @@ import org.semanticweb.owlapi.model.OWLObjectInverseOf
 
 import uk.ac.ox.cs.rsacomb.converter.{RDFoxAxiomConverter, SkolemStrategy}
 import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom
-import uk.ac.ox.cs.rsacomb.suffix.{Empty, Forward, Backward, Inverse}
-import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
+import uk.ac.ox.cs.rsacomb.suffix._
+import uk.ac.ox.cs.rsacomb.sparql._
 import uk.ac.ox.cs.rsacomb.util.{RDFoxHelpers, RSA}
 
 object RSAOntology {
@@ -256,8 +257,8 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
   ): Graph[Resource, UnDiEdge] = {
     val query = "SELECT ?X ?Y WHERE { ?X rsa:E ?Y }"
     val answers = RDFoxHelpers.submitQuery(data, query, RSA.Prefixes).get
-    var edges: List[UnDiEdge[Resource]] = answers.map {
-      case n1 :: n2 :: _ => UnDiEdge(n1, n2)
+    var edges: Seq[UnDiEdge[Resource]] = answers.map {
+      case Seq(n1, n2) => UnDiEdge(n1, n2)
     }
     Graph(edges: _*)
   }
@@ -289,6 +290,52 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
       )
       .filterNot(_.isOWLBottomObjectProperty())
       .filterNot(_.getInverseProperty.isOWLTopObjectProperty())
+  }
+
+  /** Returns the answers to a query
+    *
+    *  @param query query to execute
+    *  @return a collection of answers
+    */
+  def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = {
+    import implicits.JavaCollections._
+    val (server, data) = RDFoxHelpers.openConnection("AnswerComputation")
+    data.addRules(this.canonicalModel.rules)
+    data.addRules(this.filteringProgram(query).rules)
+    new ConjunctiveQueryAnswers(
+      query.boolean,
+      queryInternalPredicate(data, "Ans", query.answer.size)
+    )
+  }
+
+  /** Returns instances of a reified predicate
+    *
+    * Predicated with arity higher than 2 are internally reified to be
+    * compatible with RDFox engine. This helper queries for predicate
+    * instances and returns a set of un-reified answers.
+    *
+    * @param data open datastore connection to RDFox
+    * @param pred name of the predicate
+    * @param arity arity of the predicate
+    * @param opts additional options to RDFox
+    * @return a collection of instances of the given predicate
+    */
+  private def queryInternalPredicate(
+      data: DataStoreConnection,
+      pred: String,
+      arity: Int,
+      opts: ju.Map[String, String] = new ju.HashMap[String, String]()
+  ): Seq[Seq[Resource]] = {
+    val query =
+      if (arity > 0) {
+        (0 until arity).mkString("SELECT ?X", " ?X", "\n") +
+          (0 until arity)
+            .map(i => s"?S rsa:${pred :: Nth(i)} ?X$i .")
+            .mkString("WHERE {\n", "\n", "\n}")
+      } else {
+        s"ASK { ?X a rsa:$pred }"
+      }
+    RDFoxHelpers.submitQuery(data, query, RSA.Prefixes).get
   }
 
   def self(axiom: OWLSubClassOfAxiom): Set[Term] = {
