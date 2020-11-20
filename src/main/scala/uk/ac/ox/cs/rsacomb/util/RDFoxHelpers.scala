@@ -10,6 +10,7 @@ import tech.oxfordsemantic.jrdfox.client.{
 import tech.oxfordsemantic.jrdfox.formats.SPARQLParser
 import tech.oxfordsemantic.jrdfox.logic.expression.Resource
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
+import uk.ac.ox.cs.rsacomb.suffix.Nth
 
 /** A collection of helper methods for RDFox */
 object RDFoxHelpers {
@@ -115,6 +116,30 @@ object RDFoxHelpers {
       opts: RDFoxOpts = RDFoxOpts()
   ): Option[QueryAnswers] =
     parseSelectQuery(query, prefixes).map(submitSelectQuery(data, _, opts))
+
+  /** Returns a query describing an internal predicate.
+    *
+    * In the RSA combined approach internal predicates are reified to be
+    * compatible with RDFox engine. This helper allows to build a query
+    * to gather all instances of an internal predicate
+    *
+    * @param pred name of the predicate to describe.
+    * @param arity arity of the predicate.
+    * @return a string containing a SPARQL query.
+    */
+  def buildDescriptionQuery(
+      pred: String,
+      arity: Int
+  ): String = {
+    if (arity > 0) {
+      (0 until arity).mkString("SELECT ?X", " ?X", "\n") +
+        (0 until arity)
+          .map(i => s"?S rsa:${pred :: Nth(i)} ?X$i .")
+          .mkString("WHERE {\n", "\n", "\n}")
+    } else {
+      s"ASK { ?X a rsa:$pred }"
+    }
+  }
 
   /** Close an open connection to RDFox.
     *

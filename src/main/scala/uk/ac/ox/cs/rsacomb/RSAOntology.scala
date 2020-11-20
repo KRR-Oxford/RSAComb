@@ -22,6 +22,7 @@ import org.semanticweb.owlapi.model.{IRI => OWLIRI}
 import uk.ac.manchester.cs.owl.owlapi.OWLObjectPropertyImpl
 
 import tech.oxfordsemantic.jrdfox.client.{UpdateType, DataStoreConnection}
+import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.logic.datalog.{
   Rule,
   TupleTableAtom,
@@ -302,40 +303,47 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
     val (server, data) = RDFoxHelpers.openConnection("AnswerComputation")
     data.addRules(this.canonicalModel.rules)
     data.addRules(this.filteringProgram(query).rules)
-    new ConjunctiveQueryAnswers(
-      query.boolean,
-      queryInternalPredicate(data, "Ans", query.answer.size)
-    )
+    val answers = RDFoxHelpers
+      .submitQuery(
+        data,
+        RDFoxHelpers.buildDescriptionQuery("Ans", query.answer.size),
+        RSA.Prefixes
+      )
+      .map(
+        new ConjunctiveQueryAnswers(query.boolean, _)
+      )
+      .get
+    RDFoxHelpers.closeConnection(server, data)
+    answers
   }
 
-  /** Returns instances of a reified predicate
+  /** Query the logic program used to compute answers to a given CQ.
     *
-    * Predicated with arity higher than 2 are internally reified to be
-    * compatible with RDFox engine. This helper queries for predicate
-    * instances and returns a set of un-reified answers.
+    * This method has been introduced mostly for debugging purposes.
     *
-    * @param data open datastore connection to RDFox
-    * @param pred name of the predicate
-    * @param arity arity of the predicate
-    * @param opts additional options to RDFox
-    * @return a collection of instances of the given predicate
+    * @param cq a CQ used to compute the environment.
+    * @param query query to be executed against the environment
+    * @param prefixes additional prefixes for the query. It defaults to
+    * an empty set.
+    * @param opts additional options to RDFox.
+    * @return a collection of answers to the input query.
+    *
+    * @todo this function currently fails because RDFox reports a
+    * datastore duplication.
     */
-  private def queryInternalPredicate(
-      data: DataStoreConnection,
-      pred: String,
-      arity: Int,
+  def queryEnvironment(
+      cq: ConjunctiveQuery,
+      query: String,
+      prefixes: Prefixes = new Prefixes(),
       opts: ju.Map[String, String] = new ju.HashMap[String, String]()
-  ): Seq[Seq[Resource]] = {
-    val query =
-      if (arity > 0) {
-        (0 until arity).mkString("SELECT ?X", " ?X", "\n") +
-          (0 until arity)
-            .map(i => s"?S rsa:${pred :: Nth(i)} ?X$i .")
-            .mkString("WHERE {\n", "\n", "\n}")
-      } else {
-        s"ASK { ?X a rsa:$pred }"
-      }
-    RDFoxHelpers.submitQuery(data, query, RSA.Prefixes).get
+  ): Option[Seq[Seq[Resource]]] = {
+    import implicits.JavaCollections._
+    val (server, data) = RDFoxHelpers.openConnection("AnswerComputation")
+    data.addRules(this.canonicalModel.rules)
+    data.addRules(this.filteringProgram(cq).rules)
+    val answers = RDFoxHelpers.submitQuery(data, query, prefixes, opts)
+    RDFoxHelpers.closeConnection(server, data)
+    answers
   }
 
   def self(axiom: OWLSubClassOfAxiom): Set[Term] = {
