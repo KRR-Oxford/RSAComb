@@ -59,6 +59,9 @@ object RSAOntology {
   // Counter used to implement a simple fresh variable generator
   private var counter = -1;
 
+  /** Name of the RDFox data store used for CQ answering */
+  private val DataStore = "answer_computation"
+
   def apply(ontology: OWLOntology): RSAOntology = new RSAOntology(ontology)
 
   def apply(ontology: File): RSAOntology =
@@ -119,7 +122,10 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
       .flatMap(_.objectPropertyExpressionsInSignature)
       .distinct
 
-  // OWLAPI reasoner for same easier tasks
+  /** OWLAPI reasoner
+    *
+    * Used to carry out some preliminary reasoning task.
+    */
   private val reasoner =
     (new StructuralReasonerFactory()).createReasoner(ontology)
 
@@ -300,7 +306,7 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
     */
   def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = {
     import implicits.JavaCollections._
-    val (server, data) = RDFoxHelpers.openConnection("AnswerComputation")
+    val (server, data) = RDFoxHelpers.openConnection(RSAOntology.DataStore)
     data.addRules(this.canonicalModel.rules)
     data.addRules(this.filteringProgram(query).rules)
     val answers = RDFoxHelpers
@@ -317,9 +323,12 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
     answers
   }
 
-  /** Query the logic program used to compute answers to a given CQ.
+  /** Query the RDFox data store used for query answering.
     *
-    * This method has been introduced mostly for debugging purposes.
+    * @note This method does not add any facts or rules to the data
+    * store. It is most useful after the execution of a query using
+    * [[uk.ac.ox.cs.rsacomb.RSAOntology.ask RSAOntology.ask]].
+    * @note This method has been introduced mostly for debugging purposes.
     *
     * @param cq a CQ used to compute the environment.
     * @param query query to be executed against the environment
@@ -327,20 +336,14 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
     * an empty set.
     * @param opts additional options to RDFox.
     * @return a collection of answers to the input query.
-    *
-    * @todo this function currently fails because RDFox reports a
-    * datastore duplication.
     */
-  def queryEnvironment(
+  def queryDataStore(
       cq: ConjunctiveQuery,
       query: String,
       prefixes: Prefixes = new Prefixes(),
       opts: ju.Map[String, String] = new ju.HashMap[String, String]()
   ): Option[Seq[Seq[Resource]]] = {
-    import implicits.JavaCollections._
-    val (server, data) = RDFoxHelpers.openConnection("AnswerComputation")
-    data.addRules(this.canonicalModel.rules)
-    data.addRules(this.filteringProgram(cq).rules)
+    val (server, data) = RDFoxHelpers.openConnection(RSAOntology.DataStore)
     val answers = RDFoxHelpers.submitQuery(data, query, prefixes, opts)
     RDFoxHelpers.closeConnection(server, data)
     answers

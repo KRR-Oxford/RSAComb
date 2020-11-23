@@ -37,7 +37,7 @@ object RDFoxHelpers {
     * details on how to close an open connection.
     */
   def openConnection(
-      dataStore: String,
+      datastore: String,
       opts: RDFoxOpts = RDFoxOpts()
   ): (ServerConnection, DataStoreConnection) = {
     val serverUrl = "rdfox:local"
@@ -45,8 +45,9 @@ object RDFoxHelpers {
     val password = ""
     val server =
       ConnectionFactory.newServerConnection(serverUrl, role, password)
-    server.createDataStore(dataStore, "par-complex-nn", opts)
-    val data = server.newDataStoreConnection(dataStore)
+    if (!server.containsDataStore(datastore))
+      server.createDataStore(datastore, "par-complex-nn", opts)
+    val data = server.newDataStoreConnection(datastore)
     (server, data)
   }
 
@@ -153,8 +154,8 @@ object RDFoxHelpers {
       server: ServerConnection,
       data: DataStoreConnection
   ): Unit = {
-    server.close();
     data.close();
+    server.close();
   }
 
 }

@@ -104,21 +104,5 @@ class ConjunctiveQuery(
   /** Returns the collection of bounded (existential) variables in the query. */
   val bounded: Set[Variable] = variables &~ answer
 
-  /** Returns the answers to a query
-    *
-    * @param data data store against which the query is executed
-    * @param opts additional options passed to RDFox
-    * @return a new [[ConjunctiveQueryAnswers]] instance containing the
-    *         collection of answers.
-    */
-  def answers(
-      data: DataStoreConnection,
-      opts: JMap[String, String] = new JHashMap[String, String]()
-  ): ConjunctiveQueryAnswers =
-    new ConjunctiveQueryAnswers(
-      bcq,
-      RDFoxHelpers.submitSelectQuery(data, query, opts)
-    )
-
   override def toString(): String = query.toString
 }
