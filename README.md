@@ -78,6 +78,14 @@ The following is a summary of fixes (🔧), changes (🔄) and improvements (⚡
     In Proceedings of the Twenty-Fourth International Joint Conference on Artificial Intelligence, IJCAI 2015, Buenos Aires, Argentina, July 25-31, 2015, 2971–2977, 2015.
     http://ijcai.org/Abstract/15/420.
 
+## Acknowledgements
+
+TODO
+
+## Credits
+
+TODO
+
 ## License
 
 TODO
