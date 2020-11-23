@@ -310,7 +310,7 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
         RSA.Prefixes
       )
       .map(
-        new ConjunctiveQueryAnswers(query.boolean, _)
+        new ConjunctiveQueryAnswers(query.bcq, _)
       )
       .get
     RDFoxHelpers.closeConnection(server, data)

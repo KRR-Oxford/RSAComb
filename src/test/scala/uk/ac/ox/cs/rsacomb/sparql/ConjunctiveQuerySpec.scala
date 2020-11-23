@@ -150,15 +150,15 @@ class ConjunctiveQuerySpec
   }
 
   "A query with proper SELECT defined" should "not be a BCQ" in {
-    ConjunctiveQuery(cq0).value should not be 'boolean
+    ConjunctiveQuery(cq0).value should not be 'bcq
   }
 
   "A query with a \"*\" SELECT" should "not be a BCQ" in {
-    ConjunctiveQuery(cq1).value should not be 'boolean
+    ConjunctiveQuery(cq1).value should not be 'bcq
   }
 
   "An ASK query" should "not be a BCQ" in {
-    ConjunctiveQuery(bcq0).value shouldBe 'boolean
+    ConjunctiveQuery(bcq0).value shouldBe 'bcq
   }
 
   "Queries" should "have distinct answer and bounded variables" in {

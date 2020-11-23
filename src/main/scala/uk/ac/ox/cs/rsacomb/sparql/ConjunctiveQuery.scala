@@ -75,7 +75,7 @@ class ConjunctiveQuery(
     * query selects '''all''' variables with `*`, `select` is empty as
     * well.
     */
-  val boolean: Boolean = select.isEmpty && !query.getAllPossibleVariables
+  val bcq: Boolean = select.isEmpty && !query.getAllPossibleVariables
 
   /** Returns the full set of variables involved in the query. */
   val variables: Set[Variable] =
@@ -116,7 +116,7 @@ class ConjunctiveQuery(
       opts: JMap[String, String] = new JHashMap[String, String]()
   ): ConjunctiveQueryAnswers =
     new ConjunctiveQueryAnswers(
-      boolean,
+      bcq,
       RDFoxHelpers.submitSelectQuery(data, query, opts)
     )
 
