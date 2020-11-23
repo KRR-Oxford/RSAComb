@@ -3,6 +3,7 @@ package uk.ac.ox.cs.rsacomb.sparql
 import java.util.{Map => JMap, HashMap => JHashMap}
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.client.DataStoreConnection
+import tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom
 import tech.oxfordsemantic.jrdfox.logic.expression.Variable
 import tech.oxfordsemantic.jrdfox.logic.sparql.pattern.{
   ConjunctionPattern,
@@ -77,32 +78,48 @@ class ConjunctiveQuery(
     */
   val bcq: Boolean = select.isEmpty && !query.getAllPossibleVariables
 
-  /** Returns the full set of variables involved in the query. */
-  val variables: Set[Variable] =
+  /** Returns the query body as a sequence of atoms (triples). */
+  val atoms: List[TupleTableAtom] =
     where match {
       case b: ConjunctionPattern => {
-        b.getConjuncts.toSet.flatMap { conj: QueryPattern =>
+        b.getConjuncts.toList.flatMap { conj: QueryPattern =>
           conj match {
             case c: TriplePattern =>
-              Set(c.getSubject, c.getPredicate, c.getObject).collect {
-                case v: Variable => v
-              }
-            case _ => Set()
+              Seq(
+                TupleTableAtom.rdf(c.getSubject, c.getPredicate, c.getObject)
+              )
+            case _ => List()
           }
         }
       }
-      case _ => Set()
+      case _ => List()
     }
 
+  /** Returns the full collection of variables involved in the query. */
+  val variables: List[Variable] = (where match {
+    case b: ConjunctionPattern => {
+      b.getConjuncts.toList.flatMap { conj: QueryPattern =>
+        conj match {
+          case c: TriplePattern =>
+            Set(c.getSubject, c.getPredicate, c.getObject).collect {
+              case v: Variable => v
+            }
+          case _ => List()
+        }
+      }
+    }
+    case _ => List()
+  }).distinct
+
   /** Returns the collection of answer variables in the query. */
-  val answer: Set[Variable] =
+  val answer: List[Variable] =
     if (query.getAllPossibleVariables)
       variables
     else
-      select.map(_.getVariable).toSet
+      select.map(_.getVariable).toList.distinct
 
   /** Returns the collection of bounded (existential) variables in the query. */
-  val bounded: Set[Variable] = variables &~ answer
+  val bounded: List[Variable] = variables diff answer
 
   override def toString(): String = query.toString
 }

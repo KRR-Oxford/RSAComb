@@ -18,6 +18,7 @@ import org.semanticweb.owlapi.model.{
   OWLObjectPropertyExpression
 }
 
+import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 import uk.ac.ox.cs.rsacomb.suffix.RSASuffix
 
 // Debug only
@@ -28,7 +29,7 @@ object RSA {
   val Prefixes: Prefixes = new Prefixes()
   Prefixes.declarePrefix("rsa:", "http://www.cs.ox.ac.uk/isg/rsa/")
 
-  private def atom(name: IRI, vars: List[Term]) =
+  private def atom(name: IRI, vars: List[Term]): TupleTableAtom =
     TupleTableAtom.create(TupleTableName.create(name.getIRI), vars: _*)
 
   def PE(t1: Term, t2: Term) =
@@ -45,14 +46,11 @@ object RSA {
   def Congruent(t1: Term, t2: Term) =
     TupleTableAtom.rdf(t1, RSA("congruent"), t2)
 
-  def QM(implicit variables: (List[Term], List[Term])) = {
-    val (answer, bounded) = variables
-    atom(RSA("QM"), answer ::: bounded)
-  }
+  def QM(implicit q: ConjunctiveQuery) =
+    atom(RSA("QM"), q.answer ::: q.bounded)
 
-  def ID(t1: Term, t2: Term)(implicit variables: (List[Term], List[Term])) = {
-    val (answer, bounded) = variables
-    atom(RSA("ID"), (answer ::: bounded) :+ t1 :+ t2)
+  def ID(t1: Term, t2: Term)(implicit q: ConjunctiveQuery) = {
+    atom(RSA("ID"), (q.answer ::: q.bounded) :+ t1 :+ t2)
   }
 
   def Named(t: Term) =
@@ -64,33 +62,23 @@ object RSA {
   def NI(t: Term) =
     TupleTableAtom.rdf(t, IRI.RDF_TYPE, RSA("NI"))
 
-  def TQ(t1: Term, t2: Term, sx: RSASuffix)(implicit
-      variables: (List[Term], List[Term])
-  ) = {
-    val (answer, bounded) = variables
-    atom(RSA("TQ" :: sx), (answer ::: bounded) :+ t1 :+ t2)
-  }
+  def TQ(t1: Term, t2: Term, sx: RSASuffix)(implicit q: ConjunctiveQuery) =
+    atom(RSA("TQ" :: sx), (q.answer ::: q.bounded) :+ t1 :+ t2)
 
-  def AQ(t1: Term, t2: Term, sx: RSASuffix)(implicit
-      variables: (List[Term], List[Term])
-  ) = {
-    val (answer, bounded) = variables
-    atom(RSA("AQ" :: sx), (answer ::: bounded) :+ t1 :+ t2)
-  }
+  def AQ(t1: Term, t2: Term, sx: RSASuffix)(implicit q: ConjunctiveQuery) =
+    atom(RSA("AQ" :: sx), (q.answer ::: q.bounded) :+ t1 :+ t2)
 
-  def FK(implicit variables: (List[Term], List[Term])) = {
-    val (answer, bounded) = variables
-    atom(RSA("FK"), answer ::: bounded)
-  }
+  def FK(implicit q: ConjunctiveQuery) =
+    atom(RSA("FK"), q.answer ::: q.bounded)
 
-  def SP(implicit variables: (List[Term], List[Term])) = {
-    val (answer, bounded) = variables
-    atom(RSA("SP"), answer ::: bounded)
-  }
+  def SP(implicit q: ConjunctiveQuery) =
+    atom(RSA("SP"), q.answer ::: q.bounded)
 
-  def Ans(implicit variables: (List[Term], List[Term])) = {
-    val (answer, _) = variables
-    atom(RSA("Ans"), answer)
+  def Ans(implicit q: ConjunctiveQuery) = {
+    if (q.bcq)
+      TupleTableAtom.rdf(RSA("blank"), IRI.RDF_TYPE, RSA("Ans"))
+    else
+      atom(RSA("Ans"), q.answer)
   }
 
   def apply(name: Any): IRI =
