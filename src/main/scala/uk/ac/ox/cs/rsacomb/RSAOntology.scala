@@ -49,7 +49,6 @@ import tech.oxfordsemantic.jrdfox.logic._
 import org.semanticweb.owlapi.model.OWLObjectInverseOf
 
 import uk.ac.ox.cs.rsacomb.converter.{RDFoxAxiomConverter, SkolemStrategy}
-import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom
 import uk.ac.ox.cs.rsacomb.suffix._
 import uk.ac.ox.cs.rsacomb.sparql._
 import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
@@ -78,7 +77,9 @@ object RSAOntology {
   }
 }
 
-class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
+class RSAOntology(val ontology: OWLOntology) {
+
+  import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom._
 
   // Gather TBox/RBox/ABox from original ontology
   val tbox: List[OWLAxiom] =

@@ -18,10 +18,9 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
 import tech.oxfordsemantic.jrdfox.logic.expression.{Resource}
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 import uk.ac.ox.cs.rsacomb.suffix.Nth
-import uk.ac.ox.cs.rsacomb.implicits.RSAAtom
 
 /** A collection of helper methods for RDFox */
-object RDFoxUtil extends RSAAtom {
+object RDFoxUtil {
 
   /** Simplify conversion between Java and Scala `List`s */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
@@ -29,7 +28,7 @@ object RDFoxUtil extends RSAAtom {
   /** Extends capabilities of
     *  [[tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom TupleTableAtom]].
     */
-  //import uk.ac.ox.cs.rsacomb.implicits.RSAAtom._
+  import uk.ac.ox.cs.rsacomb.implicits.RSAAtom._
 
   /** Type alias for a collection of answers to a
     * [[tech.oxfordsemantic.jrdfox.logic.sparql.statement.Query]].

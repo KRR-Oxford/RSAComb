@@ -24,7 +24,7 @@ import scala.collection.JavaConverters._
 
 /* Wrapper trait for the implicit class `RSAAxiom`.
  */
-trait RSAAxiom {
+object RSAAxiom {
 
   /* Identifies some of the axiom types in a Horn-ALCHOIQ ontology
    * in normal form. Refer to the paper for more details on the

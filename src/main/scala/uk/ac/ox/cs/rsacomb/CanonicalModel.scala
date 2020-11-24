@@ -28,14 +28,14 @@ import uk.ac.ox.cs.rsacomb.converter.{
   RDFoxAxiomConverter,
   RDFoxPropertyExprConverter
 }
-import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom
 import uk.ac.ox.cs.rsacomb.suffix.{Empty, Forward, Backward, Inverse}
 import uk.ac.ox.cs.rsacomb.util.RSA
 
-class CanonicalModel(val ontology: RSAOntology) extends RSAAxiom {
+class CanonicalModel(val ontology: RSAOntology) {
 
   import implicits.RDFox._
   import implicits.JavaCollections._
+  import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom._
 
   val rolesAdditionalRules: List[Rule] = {
     // Given a role (predicate) compute additional logic rules

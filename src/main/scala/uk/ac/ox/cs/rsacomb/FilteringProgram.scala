@@ -9,7 +9,6 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
   Negation
 }
 import tech.oxfordsemantic.jrdfox.logic.expression.{Term, Variable}
-import uk.ac.ox.cs.rsacomb.implicits.RSAAtom
 import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 import uk.ac.ox.cs.rsacomb.suffix.{Forward, Backward}
 import uk.ac.ox.cs.rsacomb.util.{RSA, RDFoxUtil}
@@ -35,8 +34,12 @@ object FilteringProgram {
   *
   * Instances can be created using the companion object.
   */
-class FilteringProgram(query: ConjunctiveQuery, constants: List[Term])
-    extends RSAAtom {
+class FilteringProgram(query: ConjunctiveQuery, constants: List[Term]) {
+
+  /** Extends capabilities of
+    * [[tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom TupleTableAtom]]
+    */
+  import uk.ac.ox.cs.rsacomb.implicits.RSAAtom._
 
   /** Implicit parameter used in RSA internal predicates.
     *

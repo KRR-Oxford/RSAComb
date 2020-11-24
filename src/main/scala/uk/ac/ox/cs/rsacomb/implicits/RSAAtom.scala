@@ -28,7 +28,7 @@ import uk.ac.ox.cs.rsacomb.RSAOntology
  * ```
  */
 
-trait RSAAtom {
+object RSAAtom {
 
   implicit class RSAAtom(val atom: TupleTableAtom) {
 
