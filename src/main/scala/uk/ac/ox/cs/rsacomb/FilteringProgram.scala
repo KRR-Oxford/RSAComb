@@ -12,7 +12,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{Term, Variable}
 import uk.ac.ox.cs.rsacomb.implicits.RSAAtom
 import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 import uk.ac.ox.cs.rsacomb.suffix.{Forward, Backward}
-import uk.ac.ox.cs.rsacomb.util.{RSA, RDFoxHelpers}
+import uk.ac.ox.cs.rsacomb.util.{RSA, RDFoxUtil}
 
 /** Factory for [[uk.ac.ox.cs.rsacomb.FilteringProgram FilteringProgram]] */
 object FilteringProgram {
@@ -310,7 +310,7 @@ class FilteringProgram(query: ConjunctiveQuery, constants: List[Term])
         r5a ::: r5b ::: r5c :::
         r6 ::: r7b ::: r7a :::
         r8a ::: r8b :: r8c :::
-        r9 :: List()) map RDFoxHelpers.reify
+        r9 :: List()) map RDFoxUtil.reify
     }
 
   /** Pretty-print filtering rule */

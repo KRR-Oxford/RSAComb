@@ -10,7 +10,7 @@ import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Term}
 
 /* Local imports */
-import util.{RDFoxHelpers, RSA}
+import util.{RDFoxUtil, RSA}
 import sparql.ConjunctiveQuery
 
 object RSAComb extends App {

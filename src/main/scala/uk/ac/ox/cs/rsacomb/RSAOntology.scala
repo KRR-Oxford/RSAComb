@@ -52,7 +52,7 @@ import uk.ac.ox.cs.rsacomb.converter.{RDFoxAxiomConverter, SkolemStrategy}
 import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom
 import uk.ac.ox.cs.rsacomb.suffix._
 import uk.ac.ox.cs.rsacomb.sparql._
-import uk.ac.ox.cs.rsacomb.util.{RDFoxHelpers, RSA}
+import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
 
 object RSAOntology {
 
@@ -166,7 +166,7 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
     //datalog.foreach(println)
 
     // Open connection with RDFox
-    val (server, data) = RDFoxHelpers.openConnection("RSACheck")
+    val (server, data) = RDFoxUtil.openConnection("RSACheck")
     // Add Data (hardcoded for now)
     //data.importData(UpdateType.ADDITION, RSA.Prefixes, ":a a :A .")
 
@@ -196,7 +196,7 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
     //println(graph)
 
     // Close connection to RDFox
-    RDFoxHelpers.closeConnection(server, data)
+    RDFoxUtil.closeConnection(server, data)
 
     /* To check if the graph is tree-like we check for acyclicity in a
      * undirected graph.
@@ -263,7 +263,7 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
       data: DataStoreConnection
   ): Graph[Resource, UnDiEdge] = {
     val query = "SELECT ?X ?Y WHERE { ?X rsa:E ?Y }"
-    val answers = RDFoxHelpers.submitQuery(data, query, RSA.Prefixes).get
+    val answers = RDFoxUtil.submitQuery(data, query, RSA.Prefixes).get
     var edges: Seq[UnDiEdge[Resource]] = answers.map {
       case Seq(n1, n2) => UnDiEdge(n1, n2)
     }
@@ -306,20 +306,20 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
     */
   def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = {
     import implicits.JavaCollections._
-    val (server, data) = RDFoxHelpers.openConnection(RSAOntology.DataStore)
+    val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
     data.addRules(this.canonicalModel.rules)
     data.addRules(this.filteringProgram(query).rules)
-    val answers = RDFoxHelpers
+    val answers = RDFoxUtil
       .submitQuery(
         data,
-        RDFoxHelpers.buildDescriptionQuery("Ans", query.answer.size),
+        RDFoxUtil.buildDescriptionQuery("Ans", query.answer.size),
         RSA.Prefixes
       )
       .map(
         new ConjunctiveQueryAnswers(query.bcq, _)
       )
       .get
-    RDFoxHelpers.closeConnection(server, data)
+    RDFoxUtil.closeConnection(server, data)
     answers
   }
 
@@ -343,9 +343,9 @@ class RSAOntology(val ontology: OWLOntology) extends RSAAxiom {
       prefixes: Prefixes = new Prefixes(),
       opts: ju.Map[String, String] = new ju.HashMap[String, String]()
   ): Option[Seq[Seq[Resource]]] = {
-    val (server, data) = RDFoxHelpers.openConnection(RSAOntology.DataStore)
-    val answers = RDFoxHelpers.submitQuery(data, query, prefixes, opts)
-    RDFoxHelpers.closeConnection(server, data)
+    val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
+    val answers = RDFoxUtil.submitQuery(data, query, prefixes, opts)
+    RDFoxUtil.closeConnection(server, data)
     answers
   }
 

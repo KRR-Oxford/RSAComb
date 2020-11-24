@@ -21,7 +21,7 @@ import uk.ac.ox.cs.rsacomb.suffix.Nth
 import uk.ac.ox.cs.rsacomb.implicits.RSAAtom
 
 /** A collection of helper methods for RDFox */
-object RDFoxHelpers extends RSAAtom {
+object RDFoxUtil extends RSAAtom {
 
   /** Simplify conversion between Java and Scala `List`s */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
@@ -48,8 +48,8 @@ object RDFoxHelpers extends RSAAtom {
     * @return a tuple with the newly opened server and data store
     * connections.
     *
-    * @see [[uk.ac.ox.cs.rsacomb.util.RDFoxHelpers.closeConnection
-    * RDFoxHelpers.closeConnection]] for
+    * @see [[uk.ac.ox.cs.rsacomb.util.RDFoxUtil.closeConnection
+    * RDFoxUtil.closeConnection]] for
     * details on how to close an open connection.
     */
   def openConnection(
@@ -205,7 +205,7 @@ object RDFoxHelpers extends RSAAtom {
     * @param server server connection
     * @param data data store connections
     *
-    * @see [[uk.ac.ox.cs.rsacomb.util.RDFoxHelpers.openConnection RDFoxHelpers.openConnection]]
+    * @see [[uk.ac.ox.cs.rsacomb.util.RDFoxUtil.openConnection RDFoxUtil.openConnection]]
     * for details on how to create a new connection with RDFox.
     */
   def closeConnection(

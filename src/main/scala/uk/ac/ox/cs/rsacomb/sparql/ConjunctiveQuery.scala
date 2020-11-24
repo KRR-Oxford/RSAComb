@@ -11,7 +11,7 @@ import tech.oxfordsemantic.jrdfox.logic.sparql.pattern.{
   TriplePattern
 }
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
-import uk.ac.ox.cs.rsacomb.util.RDFoxHelpers
+import uk.ac.ox.cs.rsacomb.util.RDFoxUtil
 
 /** Factory for [[uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery]]. */
 object ConjunctiveQuery {
@@ -35,7 +35,7 @@ object ConjunctiveQuery {
       query: String,
       prefixes: Prefixes = new Prefixes()
   ): Option[ConjunctiveQuery] =
-    RDFoxHelpers.parseSelectQuery(query, prefixes).map(ConjunctiveQuery(_))
+    RDFoxUtil.parseSelectQuery(query, prefixes).map(ConjunctiveQuery(_))
 
 }
 
