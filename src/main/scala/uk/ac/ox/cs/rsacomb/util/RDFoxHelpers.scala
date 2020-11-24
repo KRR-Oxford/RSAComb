@@ -8,12 +8,28 @@ import tech.oxfordsemantic.jrdfox.client.{
   DataStoreConnection
 }
 import tech.oxfordsemantic.jrdfox.formats.SPARQLParser
-import tech.oxfordsemantic.jrdfox.logic.expression.Resource
+import tech.oxfordsemantic.jrdfox.logic.datalog.{
+  Rule,
+  BodyFormula,
+  Negation,
+  TupleTableAtom,
+  TupleTableName
+}
+import tech.oxfordsemantic.jrdfox.logic.expression.{Resource}
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 import uk.ac.ox.cs.rsacomb.suffix.Nth
+import uk.ac.ox.cs.rsacomb.implicits.RSAAtom
 
 /** A collection of helper methods for RDFox */
-object RDFoxHelpers {
+object RDFoxHelpers extends RSAAtom {
+
+  /** Simplify conversion between Java and Scala `List`s */
+  import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
+
+  /** Extends capabilities of
+    *  [[tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom TupleTableAtom]].
+    */
+  //import uk.ac.ox.cs.rsacomb.implicits.RSAAtom._
 
   /** Type alias for a collection of answers to a
     * [[tech.oxfordsemantic.jrdfox.logic.sparql.statement.Query]].
@@ -139,6 +155,48 @@ object RDFoxHelpers {
           .mkString("WHERE {\n", "\n", "\n}")
     } else {
       s"ASK { ?X a rsa:$pred }"
+    }
+  }
+
+  /** Reify a [[tech.oxfordsemantic.jrdfox.logic.datalog.Rule Rule]].
+    *
+    * This is needed because RDFox supports only predicates of arity 1
+    * or 2, but the filtering program uses predicates with higher arity.
+    *
+    * @note we can perform a reification of the atoms thanks to the
+    * built-in `SKOLEM` funtion of RDFox.
+    */
+  def reify(rule: Rule): Rule = {
+    val (bs, as) = rule.getHead.map(_.reified).unzip
+    val head: List[TupleTableAtom] = as.flatten
+    val bind: List[BodyFormula] = bs.flatten
+    val body: List[BodyFormula] = rule.getBody.map(reify).flatten
+    Rule.create(head, bind ::: body)
+  }
+
+  /** Reify a [[tech.oxfordsemantic.jrdfox.logic.datalog.BodyFormula BodyFormula]].
+    *
+    * This is needed because RDFox supports only predicates of arity 1
+    * or 2, but the filtering program uses predicates with higher arity.
+    *
+    * @note we can perform a reification of the atoms thanks to the
+    * built-in `SKOLEM` funtion of RDFox.
+    */
+  private def reify(formula: BodyFormula): List[BodyFormula] = {
+    formula match {
+      case atom: TupleTableAtom => atom.reified._2
+      case neg: Negation => {
+        val (bs, as) = neg.getNegatedAtoms
+          .map({
+            case a: TupleTableAtom => a.reified
+            case a                 => (None, List(a))
+          })
+          .unzip
+        val bind = bs.flatten.map(_.getBoundVariable)
+        val atoms = as.flatten
+        List(Negation.create(bind, atoms))
+      }
+      case other => List(other)
     }
   }
 

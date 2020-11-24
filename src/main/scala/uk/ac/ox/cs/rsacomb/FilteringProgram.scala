@@ -1,36 +1,18 @@
 package uk.ac.ox.cs.rsacomb
 
+//import scala.collection.JavaConverters._
 import tech.oxfordsemantic.jrdfox.logic.Datatype
-import tech.oxfordsemantic.jrdfox.logic.expression.{
-  Term,
-  IRI,
-  Variable,
-  Literal,
-  FunctionCall
-}
 import tech.oxfordsemantic.jrdfox.logic.datalog.{
   Rule,
   TupleTableAtom,
-  BindAtom,
-  TupleTableName,
-  Atom,
   BodyFormula,
   Negation
 }
-import tech.oxfordsemantic.jrdfox.logic.sparql.statement.{SelectQuery}
-import tech.oxfordsemantic.jrdfox.logic.sparql.pattern.{
-  GroupGraphPattern,
-  ConjunctionPattern,
-  TriplePattern,
-  QueryPattern
-}
-
-import scala.collection.JavaConverters._
-
+import tech.oxfordsemantic.jrdfox.logic.expression.{Term, Variable}
 import uk.ac.ox.cs.rsacomb.implicits.RSAAtom
-import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Forward, Backward}
-import uk.ac.ox.cs.rsacomb.util.RSA
 import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
+import uk.ac.ox.cs.rsacomb.suffix.{Forward, Backward}
+import uk.ac.ox.cs.rsacomb.util.{RSA, RDFoxHelpers}
 
 /** Factory for [[uk.ac.ox.cs.rsacomb.FilteringProgram FilteringProgram]] */
 object FilteringProgram {
@@ -102,7 +84,7 @@ class FilteringProgram(query: ConjunctiveQuery, constants: List[Term])
         *
         * @note corresponds to rule 1 in Table 3 in the paper.
         */
-      val r1 = reifyRule(Rule.create(RSA.QM, query.atoms: _*))
+      val r1 = Rule.create(RSA.QM, query.atoms: _*)
 
       /** Initializes instances of `rsa:Named`.
         *
@@ -325,39 +307,13 @@ class FilteringProgram(query: ConjunctiveQuery, constants: List[Term])
       (r1 :: r2 :::
         r3a ::: r3b :: r3c ::
         r4a ::: r4b ::: r4c :::
-        // r5c ::: r5b ::: r5a :::
+        r5a ::: r5b ::: r5c :::
         r6 ::: r7b ::: r7a :::
         r8a ::: r8b :: r8c :::
-        r9 :: List()) map reifyRule
+        r9 :: List()) map RDFoxHelpers.reify
     }
 
-  private def reifyAtom(atom: Atom): (Option[BindAtom], List[Atom]) = {
-    atom match {
-      case atom: TupleTableAtom => atom.reified
-      case other                => (None, List(other))
-    }
-  }
+  /** Pretty-print filtering rule */
+  override def toString(): String = rules mkString "\n"
 
-  private def reifyBodyFormula(formula: BodyFormula): List[BodyFormula] = {
-    formula match {
-      case atom: TupleTableAtom => atom.reified._2
-      case neg: Negation => {
-        val (bs, as) = neg.getNegatedAtoms.asScala.toList.map(reifyAtom).unzip
-        val bind = bs.flatten.map(_.getBoundVariable).asJava
-        val atoms = as.flatten.asJava
-        List(Negation.create(bind, atoms))
-      }
-      case other => List(other)
-    }
-  }
-
-  private def reifyRule(rule: Rule): Rule = {
-    val (bs, hs) = rule.getHead.asScala.toList.map(_.reified).unzip
-    val head: List[TupleTableAtom] = hs.flatten
-    val bind: List[BodyFormula] = bs.flatten
-    val body: List[BodyFormula] =
-      rule.getBody.asScala.toList.map(reifyBodyFormula).flatten
-    Rule.create(head.asJava, (body ++ bind).asJava)
-  }
-
-} // class FilteringProgram
+}
