@@ -4,7 +4,12 @@ import org.semanticweb.owlapi.model.{
   OWLAxiom,
   OWLSubClassOfAxiom,
   OWLEquivalentClassesAxiom,
-  OWLObjectPropertyExpression
+  OWLObjectPropertyExpression,
+  OWLObjectPropertyDomainAxiom,
+  OWLObjectPropertyRangeAxiom,
+  OWLDataPropertyDomainAxiom,
+  OWLDataPropertyRangeAxiom,
+  OWLInverseObjectPropertiesAxiom
 }
 import org.semanticweb.owlapi.model.OWLAxiomVisitorEx
 
@@ -16,7 +21,7 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
 }
 import tech.oxfordsemantic.jrdfox.logic.expression.{
   Term,
-  IRI,
+  IRI => RDFoxIRI,
   Variable,
   Literal
 }
@@ -29,6 +34,10 @@ import org.semanticweb.owlapi.model.OWLClassAssertionAxiom
 
 import uk.ac.ox.cs.rsacomb.RSAOntology
 import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Empty}
+import uk.ac.manchester.cs.owl.owlapi.OWLSubClassOfAxiomImpl
+import uk.ac.manchester.cs.owl.owlapi.OWLObjectSomeValuesFromImpl
+import uk.ac.manchester.cs.owl.owlapi.OWLClassImpl
+import org.semanticweb.owlapi.model.IRI
 
 object RDFoxAxiomConverter {
 
@@ -48,6 +57,8 @@ class RDFoxAxiomConverter(
     skolem: SkolemStrategy,
     suffix: RSASuffix
 ) extends OWLAxiomVisitorEx[List[Rule]] {
+
+  import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
 
   override def visit(axiom: OWLSubClassOfAxiom): List[Rule] = {
     // Skolemization is needed only for the head of an axiom
@@ -86,10 +97,25 @@ class RDFoxAxiomConverter(
     List(Rule.create(head.asJava, body.asJava))
   }
 
+  override def visit(axiom: OWLObjectPropertyDomainAxiom): List[Rule] =
+    axiom.asOWLSubClassOfAxiom.accept(this)
+
+  override def visit(axiom: OWLObjectPropertyRangeAxiom): List[Rule] = {
+    val term1 = RSAOntology.genFreshVariable()
+    val rangeVisitor = new RDFoxClassExprConverter(term, unsafe, skolem, suffix)
+    val range = axiom.getRange.accept(rangeVisitor)
+    val propertyVisitor = new RDFoxPropertyExprConverter(term1, term, suffix)
+    val prop = axiom.getProperty.accept(propertyVisitor)
+    List(Rule.create(range.res, range.ext ::: prop))
+  }
+
+  override def visit(axiom: OWLInverseObjectPropertiesAxiom): List[Rule] =
+    axiom.asSubObjectPropertyOfAxioms.asScala.toList.flatMap(_.accept(this))
+
   override def visit(axiom: OWLClassAssertionAxiom): List[Rule] = {
     val ind = axiom.getIndividual
     if (ind.isNamed) {
-      val term = IRI.create(ind.asOWLNamedIndividual().getIRI.getIRIString)
+      val term = RDFoxIRI.create(ind.asOWLNamedIndividual().getIRI.getIRIString)
       val cls = axiom.getClassExpression
       val visitor =
         new RDFoxClassExprConverter(term, unsafe, SkolemStrategy.None, suffix)
