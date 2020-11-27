@@ -1,6 +1,10 @@
 package uk.ac.ox.cs.rsacomb.converter
 
-import org.semanticweb.owlapi.model.{OWLPropertyExpression, OWLObjectProperty}
+import org.semanticweb.owlapi.model.{
+  OWLPropertyExpression,
+  OWLObjectProperty,
+  OWLDataProperty
+}
 import org.semanticweb.owlapi.model.OWLPropertyExpressionVisitorEx
 
 import tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom
@@ -20,6 +24,12 @@ class RDFoxPropertyExprConverter(
   import uk.ac.ox.cs.rsacomb.implicits.RDFox._
 
   override def visit(expr: OWLObjectProperty): List[TupleTableAtom] = {
+    val base = expr.getIRI.getIRIString
+    val pred = IRI.create(base :: suffix)
+    List(TupleTableAtom.rdf(term1, pred, term2))
+  }
+
+  override def visit(expr: OWLDataProperty): List[TupleTableAtom] = {
     val base = expr.getIRI.getIRIString
     val pred = IRI.create(base :: suffix)
     List(TupleTableAtom.rdf(term1, pred, term2))

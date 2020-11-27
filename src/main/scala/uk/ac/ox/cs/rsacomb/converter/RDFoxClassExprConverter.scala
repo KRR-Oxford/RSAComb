@@ -7,6 +7,7 @@ import org.semanticweb.owlapi.model.{
   OWLClassExpression,
   OWLClass,
   OWLObjectSomeValuesFrom,
+  OWLDataSomeValuesFrom,
   OWLObjectIntersectionOf,
   OWLObjectOneOf,
   OWLObjectMaxCardinality
@@ -131,6 +132,46 @@ class RDFoxClassExprConverter(
       classResult.res ++ propertyResult ++ head,
       classResult.ext ++ body
     )
+  }
+
+  /** Converts a [[org.semanticweb.owlapi.model.OWLDataSomeValuesFrom OWLDataSomeValuesFrom]]
+    *
+    * @note we assume the expression is "simple", meaning that the
+    * property involved is a role name or the inverse of a role name.
+    * This assumption will be lifted when we will deal with the
+    * normalization of the input ontology.
+    *
+    * @todo the "filler" of this OWL expression is currently ignored. We
+    * need to find a way (if any) to handle
+    * [[org.semanticweb.owlapi.model.OWLDataRange OWLDataRange]]
+    * in RDFox.
+    */
+  override def visit(expr: OWLDataSomeValuesFrom): RDFoxRuleShards = {
+    val y = RSAOntology.genFreshVariable()
+    val prop = expr.getProperty()
+    // Computes the result of rule skolemization. Depending on the used
+    // technique it might involve the introduction of additional atoms,
+    // and/or fresh constants and variables.
+    val (head, body, term1) = skolem match {
+      case SkolemStrategy.None        => (List(), List(), y)
+      case SkolemStrategy.Constant(c) => (List(), List(), c)
+      case SkolemStrategy.ConstantRSA(c) => {
+        if (unsafe.contains(prop))
+          (List(RSA.PE(term, c), RSA.U(c)), List(), c)
+        else
+          (List(), List(), c)
+      }
+      case SkolemStrategy.Standard(f) => {
+        (
+          List(),
+          List(BindAtom.create(FunctionCall.create("SKOLEM", f, term), y)),
+          y
+        )
+      }
+    }
+    val propertyVisitor = new RDFoxPropertyExprConverter(term, term1, suffix)
+    val propertyResult = expr.getProperty.accept(propertyVisitor)
+    RDFoxRuleShards(head ::: propertyResult, body)
   }
 
   // OWLObjectMaxCardinality

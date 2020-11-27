@@ -324,67 +324,67 @@
 #################################################################
 
 
-####  http://swat.cse.lehigh.edu/onto/univ-bench.owl#age
-#
-#:age rdf:type owl:DatatypeProperty ;
-#     
-#     rdfs:label "is age" ;
-#     
-#     rdfs:domain :Person .
-#
-#
-#
-####  http://swat.cse.lehigh.edu/onto/univ-bench.owl#emailAddress
-#
-#:emailAddress rdf:type owl:DatatypeProperty ;
-#              
-#              rdfs:label "can be reached at" ;
-#              
-#              rdfs:domain :Person .
-#
-#
-#
-####  http://swat.cse.lehigh.edu/onto/univ-bench.owl#name
-#
-#:name rdf:type owl:DatatypeProperty ;
-#      
-#      rdfs:label "name" .
-#
-#
-#
-####  http://swat.cse.lehigh.edu/onto/univ-bench.owl#officeNumber
-#
-#:officeNumber rdf:type owl:DatatypeProperty ;
-#              
-#              rdfs:label "office room No." .
-#
-#
-#
-####  http://swat.cse.lehigh.edu/onto/univ-bench.owl#researchInterest
-#
-#:researchInterest rdf:type owl:DatatypeProperty ;
-#                  
-#                  rdfs:label "is researching" .
-#
-#
-#
-####  http://swat.cse.lehigh.edu/onto/univ-bench.owl#telephone
-#
-#:telephone rdf:type owl:DatatypeProperty ;
-#           
-#           rdfs:label "telephone number" ;
-#           
-#           rdfs:domain :Person .
-#
-#
-#
-####  http://swat.cse.lehigh.edu/onto/univ-bench.owl#title
-#
-#:title rdf:type owl:DatatypeProperty ;
-#       
-#       rdfs:label "title" ;
-#       
-#       rdfs:domain :Person .
+###  http://swat.cse.lehigh.edu/onto/univ-bench.owl#age
+
+:age rdf:type owl:DatatypeProperty ;
+     
+     rdfs:label "is age" ;
+     
+     rdfs:domain :Person .
+
+
+
+###  http://swat.cse.lehigh.edu/onto/univ-bench.owl#emailAddress
+
+:emailAddress rdf:type owl:DatatypeProperty ;
+              
+              rdfs:label "can be reached at" ;
+              
+              rdfs:domain :Person .
+
+
+
+###  http://swat.cse.lehigh.edu/onto/univ-bench.owl#name
+
+:name rdf:type owl:DatatypeProperty ;
+      
+      rdfs:label "name" .
+
+
+
+###  http://swat.cse.lehigh.edu/onto/univ-bench.owl#officeNumber
+
+:officeNumber rdf:type owl:DatatypeProperty ;
+              
+              rdfs:label "office room No." .
+
+
+
+###  http://swat.cse.lehigh.edu/onto/univ-bench.owl#researchInterest
+
+:researchInterest rdf:type owl:DatatypeProperty ;
+                  
+                  rdfs:label "is researching" .
+
+
+
+###  http://swat.cse.lehigh.edu/onto/univ-bench.owl#telephone
+
+:telephone rdf:type owl:DatatypeProperty ;
+           
+           rdfs:label "telephone number" ;
+           
+           rdfs:domain :Person .
+
+
+
+###  http://swat.cse.lehigh.edu/onto/univ-bench.owl#title
+
+:title rdf:type owl:DatatypeProperty ;
+       
+       rdfs:label "title" ;
+       
+       rdfs:domain :Person .
 
 
 

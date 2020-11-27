@@ -109,6 +109,9 @@ class RDFoxAxiomConverter(
     List(Rule.create(range.res, range.ext ::: prop))
   }
 
+  override def visit(axiom: OWLDataPropertyDomainAxiom): List[Rule] =
+    axiom.asOWLSubClassOfAxiom.accept(this)
+
   override def visit(axiom: OWLInverseObjectPropertiesAxiom): List[Rule] =
     axiom.asSubObjectPropertyOfAxioms.asScala.toList.flatMap(_.accept(this))
 
