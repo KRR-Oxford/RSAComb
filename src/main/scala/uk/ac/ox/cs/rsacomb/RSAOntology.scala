@@ -6,7 +6,7 @@ import java.util.HashMap
 import java.util.stream.{Collectors, Stream}
 import java.io.File
 import org.semanticweb.owlapi.apibinding.OWLManager
-
+import org.semanticweb.owlapi.util.OWLOntologyMerger
 import org.semanticweb.owlapi.model.{OWLOntology, OWLAxiom}
 import org.semanticweb.owlapi.model.{
   OWLClass,
@@ -63,17 +63,19 @@ object RSAOntology {
 
   def apply(ontology: OWLOntology): RSAOntology = new RSAOntology(ontology)
 
-  def apply(ontology: File): RSAOntology =
-    new RSAOntology(loadOntology(ontology))
+  def apply(ontologies: File*): RSAOntology =
+    new RSAOntology(loadOntology(ontologies: _*))
 
   def genFreshVariable(): Variable = {
     counter += 1
     Variable.create(f"I$counter%03d")
   }
 
-  private def loadOntology(onto: File): OWLOntology = {
+  private def loadOntology(ontologies: File*): OWLOntology = {
     val manager = OWLManager.createOWLOntologyManager()
-    manager.loadOntologyFromOntologyDocument(onto)
+    ontologies.foreach { manager.loadOntologyFromOntologyDocument(_) }
+    val merger = new OWLOntologyMerger(manager)
+    merger.createMergedOntology(manager, OWLIRI.create("_:merged"))
   }
 }
 
@@ -163,8 +165,8 @@ class RSAOntology(val ontology: OWLOntology) {
     } yield rule
 
     /* DEBUG: print datalog rules */
-    //println("\nDatalog roles:")
-    //datalog.foreach(println)
+    println("\nDatalog roles:")
+    datalog.foreach(println)
 
     // Open connection with RDFox
     val (server, data) = RDFoxUtil.openConnection("RSACheck")

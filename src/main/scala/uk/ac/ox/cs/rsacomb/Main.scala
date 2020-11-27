@@ -19,11 +19,11 @@ object RSAComb extends App {
   rsacomb - combined approach for CQ answering for RSA ontologies.
 
   USAGE
-    rsacomb <path/to/ontology.owl> <path/to/query.sparql>
+    rsacomb <query> <ontology> ...
 
   where
-    the ontology is expected to be an OWL file and the (single)
-    query a SPARQL query file.
+    - query: a (single) SPARQL query file.
+    - ontology: one or more ontologies.
 
   """
 
@@ -32,15 +32,15 @@ object RSAComb extends App {
    * TODO: use something better later on
    */
 
-  if (args.length < 2) {
+  if (args.length < 3) {
     println(help)
     sys.exit;
   }
 
-  val ontoPath = new File(args(0))
-  val queryPath = new File(args(1))
+  val queryPath = new File(args(0))
+  val ontoPaths = args.drop(1).map(new File(_))
 
-  if (!ontoPath.isFile || !queryPath.isFile) {
+  if (!queryPath.isFile || !ontoPaths.forall(_.isFile)) {
     println("The provided arguments are not regular files.\n\n")
     println(help)
     sys.exit;
@@ -51,8 +51,9 @@ object RSAComb extends App {
    * case.
    */
 
-  val ontology = RSAOntology(ontoPath)
+  val ontology = RSAOntology(ontoPaths: _*)
   if (ontology.isRSA) {
+    //println("ONTOLOGY IS RSA")
 
     /** Read SPARQL query from file */
     val source = io.Source.fromFile(queryPath.getAbsoluteFile)
