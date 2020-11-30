@@ -32,7 +32,7 @@ object RSAComb extends App {
    * TODO: use something better later on
    */
 
-  if (args.length < 3) {
+  if (args.length < 2) {
     println(help)
     sys.exit;
   }
