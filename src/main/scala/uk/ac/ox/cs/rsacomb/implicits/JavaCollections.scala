@@ -9,4 +9,12 @@ object JavaCollections {
 
   implicit def scalaToJavaList[A](list: List[A]): java.util.List[A] =
     list.asJava
+
+  implicit def javaSetToScalaList[A](set: java.util.Set[A]): List[A] =
+    set.asScala.toList
+
+  implicit def javaCollectionToScalaList[A](
+      set: java.util.Collection[A]
+  ): List[A] =
+    set.asScala.toList
 }
