@@ -1,16 +1,16 @@
 package uk.ac.ox.cs.rsacomb.converter
 
 import org.semanticweb.owlapi.model.{
-  OWLPropertyExpression,
+  OWLAnnotationProperty,
+  OWLDataProperty,
+  OWLObjectInverseOf,
   OWLObjectProperty,
-  OWLDataProperty
+  OWLPropertyExpression
 }
 import org.semanticweb.owlapi.model.OWLPropertyExpressionVisitorEx
 
 import tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom
 import tech.oxfordsemantic.jrdfox.logic.expression.{Term, IRI, Literal}
-
-import org.semanticweb.owlapi.model.OWLObjectInverseOf
 
 import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Inverse}
 

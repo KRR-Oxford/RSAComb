@@ -54,6 +54,7 @@ class ConjunctiveQuery(
     val prefixes: Prefixes = new Prefixes()
 ) {
 
+  /** Simplify conversion between Java and Scala collections */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
 
   /** SELECT section of the SPARQL query.

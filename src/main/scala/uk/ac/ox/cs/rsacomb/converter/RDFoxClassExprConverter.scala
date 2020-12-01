@@ -83,7 +83,6 @@ class RDFoxClassExprConverter(
 
   // OWLObjectOneOf
   override def visit(expr: OWLObjectOneOf): RDFoxRuleShards = {
-    val visitor = RDFoxClassExprConverter(term, unsafe, skolem, suffix)
     // TODO: review nominal handling. Here we are taking "just" one
     val ind = expr.individuals
       .collect(Collectors.toList())
@@ -176,7 +175,6 @@ class RDFoxClassExprConverter(
 
   // OWLObjectMaxCardinality
   override def visit(expr: OWLObjectMaxCardinality): RDFoxRuleShards = {
-    // TODO: again, no hardcoded variables
     val vars =
       List(RSAOntology.genFreshVariable(), RSAOntology.genFreshVariable())
     val classResult = RDFoxClassExprConverter.merge(
