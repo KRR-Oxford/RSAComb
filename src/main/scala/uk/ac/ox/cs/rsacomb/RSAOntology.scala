@@ -10,10 +10,12 @@ import org.semanticweb.owlapi.util.OWLOntologyMerger
 import org.semanticweb.owlapi.model.{OWLOntology, OWLAxiom, OWLLogicalAxiom}
 import org.semanticweb.owlapi.model.{
   OWLClass,
+  OWLClassExpression,
   OWLObjectProperty,
   OWLSubObjectPropertyOfAxiom,
   OWLObjectPropertyExpression,
   OWLObjectSomeValuesFrom,
+  OWLDataSomeValuesFrom,
   OWLSubClassOfAxiom
 }
 import org.semanticweb.owlapi.model.parameters.Imports
@@ -48,7 +50,7 @@ import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
 import tech.oxfordsemantic.jrdfox.logic._
 import org.semanticweb.owlapi.model.OWLObjectInverseOf
 
-import uk.ac.ox.cs.rsacomb.converter.{RDFoxAxiomConverter, SkolemStrategy}
+import uk.ac.ox.cs.rsacomb.converter.{RDFoxConverter, SkolemStrategy}
 import uk.ac.ox.cs.rsacomb.suffix._
 import uk.ac.ox.cs.rsacomb.sparql._
 import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
@@ -150,28 +152,54 @@ class RSAOntology(val ontology: OWLOntology) {
     //println("\nUnsafe roles:")
     //println(unsafe)
 
+    object RSAConverter extends RDFoxConverter {
+
+      override def convert(
+          expr: OWLClassExpression,
+          term: Term,
+          unsafe: List[OWLObjectPropertyExpression],
+          skolem: SkolemStrategy,
+          suffix: RSASuffix
+      ): Shards =
+        (expr, skolem) match {
+
+          case (e: OWLObjectSomeValuesFrom, SkolemStrategy.Constant(c))
+              if unsafe contains e.getProperty => {
+            val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
+            (RSA.PE(term, c) :: RSA.U(c) :: res, ext)
+          }
+
+          case (e: OWLDataSomeValuesFrom, SkolemStrategy.Constant(c))
+              if unsafe contains e.getProperty => {
+            val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
+            (RSA.PE(term, c) :: RSA.U(c) :: res, ext)
+          }
+
+          case _ => super.convert(expr, term, unsafe, skolem, suffix)
+        }
+
+    }
+
     /* Ontology convertion into LP rules */
-    val datalog = for {
-      axiom <- axioms
-      visitor = new RDFoxAxiomConverter(
-        RSAOntology.genFreshVariable(),
-        unsafe,
-        SkolemStrategy.ConstantRSA(axiom.toString),
-        Empty
-      )
-      rule <- axiom.accept(visitor)
-    } yield rule
+    val term = RSAOntology.genFreshVariable()
+    val datalog = axioms
+      .map(a => {
+        val skolem = SkolemStrategy.Constant(a.toString)
+        RSAConverter.convert(a, term, unsafe, skolem, Empty)
+      })
+      .unzip
+    val facts = datalog._1.flatten
+    val rules = datalog._2.flatten
 
     /* DEBUG: print datalog rules */
-    println("\nDatalog roles:")
-    datalog.foreach(println)
+    //println("\nDatalog rules:")
+    //rules.foreach(println)
 
     // Open connection with RDFox
     val (server, data) = RDFoxUtil.openConnection("RSACheck")
-    // Add Data (hardcoded for now)
-    //data.importData(UpdateType.ADDITION, RSA.Prefixes, ":a a :A .")
 
     /* Add built-in rules
+     * TODO: substitute with RDFoxUtil.addRules
      */
     data.importData(
       UpdateType.ADDITION,
@@ -179,20 +207,11 @@ class RSAOntology(val ontology: OWLOntology) {
       "rsa:E[?X,?Y] :- rsa:PE[?X,?Y], rsa:U[?X], rsa:U[?Y] ."
     )
 
-    /* Add built-in rules
-     */
-    // data.importData(
-    //   UpdateType.ADDITION,
-    //   RSA.Prefixes,
-    //   "[?entity, a, ?superClass] :- [?entity, a, ?class], [?class, rdfs:subClassOf, ?superClass] ."
-    // )
+    /* Add ontology facts and rules */
+    RDFoxUtil.addFacts(data, facts)
+    RDFoxUtil.addRules(data, rules)
 
-    /* Add ontology rules
-     */
-    data.addRules(datalog.asJava)
-
-    /* Build graph
-     */
+    /* Build graph */
     val graph = this.rsaGraph(data);
     //println(graph)
 
