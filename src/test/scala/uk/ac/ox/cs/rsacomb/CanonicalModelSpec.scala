@@ -15,6 +15,8 @@ import tech.oxfordsemantic.jrdfox.logic.expression.Variable
 import scala.collection.JavaConverters._
 
 import uk.ac.ox.cs.rsacomb.RSAOntology
+import uk.ac.ox.cs.rsacomb.converter.SkolemStrategy
+import uk.ac.ox.cs.rsacomb.suffix.Empty
 import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
 
 object Ontology1_CanonicalModelSpec {
@@ -28,6 +30,7 @@ object Ontology1_CanonicalModelSpec {
   val ontology_path: File = new File("examples/example1.ttl")
   val ontology = RSAOntology(ontology_path)
   val program = ontology.canonicalModel
+  val converter = program.CanonicalModelConverter
 
   val roleR = new OWLObjectPropertyImpl(base("R"))
   val roleS = new OWLObjectPropertyImpl(base("S"))
@@ -89,9 +92,13 @@ class Ontology1_CanonicalModelSpec
   }
 
   renderer.render(AsubClassOfD) should "be converted into a single Rule" in {
-    val varX = Variable.create("X")
-    val visitor = program.RuleGenerator
-    val rules = AsubClassOfD.accept(visitor)
+    val term = Variable.create("X")
+    val unsafe = ontology.unsafeRoles
+    val skolem = SkolemStrategy.None
+    val suffix = Empty
+    val (facts, rules) =
+      converter.convert(AsubClassOfD, term, unsafe, skolem, suffix)
+    facts shouldBe empty
     rules.loneElement shouldBe a[Rule]
   }
 
@@ -154,10 +161,14 @@ class Ontology1_CanonicalModelSpec
   renderer.render(
     AsomeValuesFromSiC
   ) should "produce 1 rule" in {
-    val varX = Variable.create("X")
-    val visitor = program.RuleGenerator
-    val rules = AsomeValuesFromSiC.accept(visitor)
-    rules should have length 1
+    val term = Variable.create("X")
+    val unsafe = ontology.unsafeRoles
+    val skolem = SkolemStrategy.None
+    val suffix = Empty
+    val (facts, rules) =
+      converter.convert(AsomeValuesFromSiC, term, unsafe, skolem, suffix)
+    facts shouldBe empty
+    rules.loneElement shouldBe a[Rule]
   }
 
   renderer.render(
@@ -172,15 +183,18 @@ class Ontology1_CanonicalModelSpec
     ontology.cycle(DsomeValuesFromRB) should have size 48
   }
 
-  it should "produce 5 rules" in {
+  it should "produce 48 facts and 98 rules" in {
     // Rule 1 provides 1 rule (split in 2) + 48 fact
     // Rule 2 provides 0 rules
     // Rule 3 provides 48 rule (split in 2)
-    // Then (1*2 + 48) + (0) + (48*2) = 146
-    val varX = Variable.create("X")
-    val visitor = program.RuleGenerator
-    val rules = DsomeValuesFromRB.accept(visitor)
-    rules should have length 146
+    val term = Variable.create("X")
+    val unsafe = ontology.unsafeRoles
+    val skolem = SkolemStrategy.None
+    val suffix = Empty
+    val (facts, rules) =
+      converter.convert(DsomeValuesFromRB, term, unsafe, skolem, suffix)
+    facts should have length 48
+    rules should have length 98
   }
 
   renderer.render(
@@ -200,18 +214,26 @@ class Ontology1_CanonicalModelSpec
     // Rule 2 provides 0 rules
     // Rule 3 provides 32 rule (split in 2)
     // Then (1*2 + 32) + (0) + (32*2) = 98
-    val varX = Variable.create("X")
-    val visitor = program.RuleGenerator
-    val rules = DsomeValuesFromRB.accept(visitor)
-    rules should have length 146
+    val term = Variable.create("X")
+    val unsafe = ontology.unsafeRoles
+    val skolem = SkolemStrategy.None
+    val suffix = Empty
+    val (facts, rules) =
+      converter.convert(BsomeValuesFromSD, term, unsafe, skolem, suffix)
+    facts should have length 32
+    rules should have length 66
   }
 
   renderer.render(
     SsubPropertyOfT
   ) should "produce 2 rules" in {
-    val varX = Variable.create("X")
-    val visitor = program.RuleGenerator
-    val rules = SsubPropertyOfT.accept(visitor)
+    val term = Variable.create("X")
+    val unsafe = ontology.unsafeRoles
+    val skolem = SkolemStrategy.None
+    val suffix = Empty
+    val (facts, rules) =
+      converter.convert(SsubPropertyOfT, term, unsafe, skolem, suffix)
+    facts shouldBe empty
     rules should have length 2
   }
 
@@ -228,6 +250,7 @@ object Ontology2_CanonicalModelSpec {
   val ontology_path: File = new File("examples/example2.owl")
   val ontology = RSAOntology(ontology_path)
   val program = ontology.canonicalModel
+  val converter = program.CanonicalModelConverter
 
   val roleR = new OWLObjectPropertyImpl(base("R"))
   val roleS = new OWLObjectPropertyImpl(base("S"))
@@ -332,8 +355,13 @@ class Ontology2_CanonicalModelSpec
   renderer.render(
     AsomeValuesFromRB
   ) should "produce 1 rule" in {
-    val visitor = program.RuleGenerator
-    val rules = AsomeValuesFromRB.accept(visitor)
+    val term = Variable.create("X")
+    val unsafe = ontology.unsafeRoles
+    val skolem = SkolemStrategy.None
+    val suffix = Empty
+    val (facts, rules) =
+      converter.convert(AsomeValuesFromRB, term, unsafe, skolem, suffix)
+    facts shouldBe empty
     rules should have length 1
   }
 
@@ -342,8 +370,13 @@ class Ontology2_CanonicalModelSpec
   renderer.render(
     BsomeValuesFromSC
   ) should "produce 1 rule" in {
-    val visitor = program.RuleGenerator
-    val rules = BsomeValuesFromSC.accept(visitor)
+    val term = Variable.create("X")
+    val unsafe = ontology.unsafeRoles
+    val skolem = SkolemStrategy.None
+    val suffix = Empty
+    val (facts, rules) =
+      converter.convert(BsomeValuesFromSC, term, unsafe, skolem, suffix)
+    facts shouldBe empty
     rules should have length 1
   }
 
@@ -352,8 +385,13 @@ class Ontology2_CanonicalModelSpec
   renderer.render(
     CsomeValuesFromTD
   ) should "produce 1 rule" in {
-    val visitor = program.RuleGenerator
-    val rules = CsomeValuesFromTD.accept(visitor)
+    val term = Variable.create("X")
+    val unsafe = ontology.unsafeRoles
+    val skolem = SkolemStrategy.None
+    val suffix = Empty
+    val (facts, rules) =
+      converter.convert(CsomeValuesFromTD, term, unsafe, skolem, suffix)
+    facts shouldBe empty
     rules should have length 1
   }
 
@@ -362,8 +400,13 @@ class Ontology2_CanonicalModelSpec
   renderer.render(
     DsomeValuesFromPA
   ) should "produce 1 rule" in {
-    val visitor = program.RuleGenerator
-    val rules = DsomeValuesFromPA.accept(visitor)
+    val term = Variable.create("X")
+    val unsafe = ontology.unsafeRoles
+    val skolem = SkolemStrategy.None
+    val suffix = Empty
+    val (facts, rules) =
+      converter.convert(DsomeValuesFromPA, term, unsafe, skolem, suffix)
+    facts shouldBe empty
     rules should have length 1
   }
 
