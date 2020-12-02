@@ -76,6 +76,15 @@ class FilteringProgram(query: ConjunctiveQuery, constants: List[Term]) {
   val nis: Rule =
     Rule.create(RSA.NI(varX), RSA.Congruent(varX, varY), RSA.Named(varY))
 
+  /** Initializes instances of `rsa:Named`.
+    *
+    * They represent the set of constants appearing in the original
+    * ontology.
+    *
+    * @note corresponds to rules 2 in Table 3.
+    */
+  val facts = constants map RSA.Named
+
   /** Collection of filtering program rules. */
   val rules: List[Rule] =
     nis :: {
@@ -88,15 +97,6 @@ class FilteringProgram(query: ConjunctiveQuery, constants: List[Term]) {
         * @note corresponds to rule 1 in Table 3 in the paper.
         */
       val r1 = Rule.create(RSA.QM, query.atoms: _*)
-
-      /** Initializes instances of `rsa:Named`.
-        *
-        * They represent the set of constants appearing in the original
-        * ontology.
-        *
-        * @note corresponds to rules 2 in Table 3.
-        */
-      val r2 = constants.map(c => Rule.create(RSA.Named(c)))
 
       /** Initializes instances of `rsa:ID`.
         *
@@ -307,7 +307,7 @@ class FilteringProgram(query: ConjunctiveQuery, constants: List[Term]) {
         */
       val r9 = Rule.create(RSA.Ans, RSA.QM, not(RSA.SP))
 
-      (r1 :: r2 :::
+      (r1 ::
         r3a ::: r3b :: r3c ::
         r4a ::: r4b ::: r4c :::
         r5a ::: r5b ::: r5c :::

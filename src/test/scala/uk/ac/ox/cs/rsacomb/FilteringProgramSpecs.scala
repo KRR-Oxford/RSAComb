@@ -65,24 +65,32 @@ class FilteringProgramSpec extends AnyFlatSpec with Matchers {
 
   import FilteringProgramSpec._
 
-  "CQ 0" should "generate 30 rules" in {
+  "CQ 0" should "generate 27 rules and 3 facts" in {
     val cq = ConjunctiveQuery(cq0).get
-    FilteringProgram(cq, constants).rules should have length 30
+    val filter = FilteringProgram(cq, constants)
+    filter.facts should have length 3
+    filter.rules should have length 27
   }
 
   "CQ 1" should "generate 15 rules" in {
     val cq = ConjunctiveQuery(cq1).get
-    FilteringProgram(cq, List()).rules should have length 15
+    val filter = FilteringProgram(cq, List())
+    filter.facts shouldBe empty
+    filter.rules should have length 15
   }
 
   "CQ 2" should "generate 51 rules" in {
     val cq = ConjunctiveQuery(cq2).get
-    FilteringProgram(cq, List()).rules should have length 51
+    val filter = FilteringProgram(cq, List())
+    filter.facts shouldBe empty
+    filter.rules should have length 51
   }
 
   "BCQ 0" should "generate 46 rules" in {
     val cq = ConjunctiveQuery(bcq0).get
-    FilteringProgram(cq, constants).rules should have length 46
+    val filter = FilteringProgram(cq, constants)
+    filter.facts should have length 3
+    filter.rules should have length 43
   }
 
 }

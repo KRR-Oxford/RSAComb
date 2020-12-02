@@ -327,9 +327,11 @@ class RSAOntology(val ontology: OWLOntology) {
   def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = {
     import implicits.JavaCollections._
     val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
+    val filter = this.filteringProgram(query)
     RDFoxUtil.addRules(data, this.canonicalModel.rules)
     RDFoxUtil.addFacts(data, this.canonicalModel.facts)
-    data.addRules(this.filteringProgram(query).rules)
+    RDFoxUtil.addRules(data, filter.rules)
+    RDFoxUtil.addFacts(data, filter.facts)
     val answers = RDFoxUtil
       .submitQuery(
         data,
