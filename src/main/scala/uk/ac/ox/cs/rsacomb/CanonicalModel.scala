@@ -3,9 +3,10 @@ package uk.ac.ox.cs.rsacomb
 import org.semanticweb.owlapi.model.{OWLObjectInverseOf, OWLObjectProperty}
 import org.semanticweb.owlapi.model.{
   OWLClass,
+  OWLLogicalAxiom,
   // OWLObjectProperty,
   OWLSubObjectPropertyOfAxiom,
-  // OWLObjectPropertyExpression,
+  OWLObjectPropertyExpression,
   OWLObjectSomeValuesFrom,
   OWLSubClassOfAxiom
 }
@@ -25,10 +26,11 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
 
 import uk.ac.ox.cs.rsacomb.converter.{
   SkolemStrategy,
-  RDFoxAxiomConverter,
-  RDFoxPropertyExprConverter
+  RDFoxConverter
+  // RDFoxAxiomConverter,
+  // RDFoxPropertyExprConverter
 }
-import uk.ac.ox.cs.rsacomb.suffix.{Empty, Forward, Backward, Inverse}
+import uk.ac.ox.cs.rsacomb.suffix._
 import uk.ac.ox.cs.rsacomb.util.RSA
 
 class CanonicalModel(val ontology: RSAOntology) {
@@ -107,22 +109,28 @@ class CanonicalModel(val ontology: RSAOntology) {
     )
   }
 
-  val rules: List[Rule] = {
+  val (facts, rules): (List[TupleTableAtom], List[Rule]) = {
     // Compute rules from ontology axioms
-    val rules = ontology.axioms.flatMap(_.accept(RuleGenerator))
-    // Return full set of rules
-    rules ::: rolesAdditionalRules ::: topAxioms ::: equalityAxioms
+    val (facts, rules) = {
+      val term = RSAOntology.genFreshVariable()
+      val unsafe = ontology.unsafeRoles
+      val skolem = SkolemStrategy.None
+      val suffix = Empty
+      ontology.axioms
+        .map(CanonicalModelConverter.convert(_, term, unsafe, skolem, suffix))
+        .unzip
+    }
+    (
+      facts.flatten,
+      rolesAdditionalRules ::: topAxioms ::: equalityAxioms ::: rules.flatten
+    )
   }
 
-  object RuleGenerator
-      extends RDFoxAxiomConverter(
-        Variable.create("X"),
-        ontology.unsafeRoles,
-        SkolemStrategy.None,
-        Empty
-      ) {
+  object CanonicalModelConverter extends RDFoxConverter {
 
-    private def rules1(axiom: OWLSubClassOfAxiom): List[Rule] = {
+    private def rules1(
+        axiom: OWLSubClassOfAxiom
+    ): Result = {
       val unfold = ontology.unfold(axiom).toList
       // Fresh Variables
       val v0 = RSA("v0_" ++ axiom.hashed)
@@ -134,13 +142,9 @@ class CanonicalModel(val ontology: RSAOntology) {
         TupleTableAtom.rdf(varX, IRI.RDF_TYPE, cls)
       }
       val roleRf: TupleTableAtom = {
-        val visitor =
-          new RDFoxPropertyExprConverter(varX, v0, Forward)
-        axiom.getSuperClass
-          .asInstanceOf[OWLObjectSomeValuesFrom]
-          .getProperty
-          .accept(visitor)
-          .head
+        val prop =
+          axiom.getSuperClass.asInstanceOf[OWLObjectSomeValuesFrom].getProperty
+        super.convert(prop, varX, v0, Forward)
       }
       val atomB: TupleTableAtom = {
         val cls = axiom.getSuperClass
@@ -154,12 +158,12 @@ class CanonicalModel(val ontology: RSAOntology) {
       // returning facts as `Rule`s with true body. While this is correct
       // there is an easier way to import facts into RDFox. Are we able to
       // do that?
-      val facts = unfold.map(x => Rule.create(RSA.In(x)))
+      val facts = unfold map RSA.In
       val rules = List(
         Rule.create(roleRf, atomA, RSA.NotIn(varX)),
         Rule.create(atomB, atomA, RSA.NotIn(varX))
       )
-      facts ++ rules
+      (facts, rules)
     }
 
     private def rules2(axiom: OWLSubClassOfAxiom): List[Rule] = {
@@ -177,11 +181,8 @@ class CanonicalModel(val ontology: RSAOntology) {
           val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
           TupleTableAtom.rdf(t, IRI.RDF_TYPE, cls)
         }
-        def roleRf(t1: Term, t2: Term): TupleTableAtom = {
-          val visitor =
-            new RDFoxPropertyExprConverter(t1, t2, Forward)
-          roleR.accept(visitor).head
-        }
+        def roleRf(t1: Term, t2: Term): TupleTableAtom =
+          super.convert(roleR, t1, t2, Forward)
         def atomB(t: Term): TupleTableAtom = {
           val cls = axiom.getSuperClass
             .asInstanceOf[OWLObjectSomeValuesFrom]
@@ -215,11 +216,8 @@ class CanonicalModel(val ontology: RSAOntology) {
         val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
         TupleTableAtom.rdf(t, IRI.RDF_TYPE, cls)
       }
-      def roleRf(t: Term): TupleTableAtom = {
-        val visitor =
-          new RDFoxPropertyExprConverter(t, v1, Forward)
-        roleR.accept(visitor).head
-      }
+      def roleRf(t: Term): TupleTableAtom =
+        super.convert(roleR, t, v1, Forward)
       val atomB: TupleTableAtom = {
         val cls = axiom.getSuperClass
           .asInstanceOf[OWLObjectSomeValuesFrom]
@@ -236,46 +234,37 @@ class CanonicalModel(val ontology: RSAOntology) {
       }
     }
 
-    override def visit(axiom: OWLSubClassOfAxiom): List[Rule] = {
-      if (axiom.isT5) {
-        // TODO: get role in T5 axiom
-        // Assuming one role here
-        val role = axiom.objectPropertyExpressionsInSignature(0)
-        if (ontology.unsafeRoles contains role) {
-          val visitor =
-            new RDFoxAxiomConverter(
-              Variable.create("X"),
-              ontology.unsafeRoles,
-              SkolemStrategy.Standard(axiom.toString),
-              Forward
-            )
-          axiom.accept(visitor)
-        } else {
-          rules1(axiom) ::: rules2(axiom) ::: rules3(axiom)
+    override def convert(
+        axiom: OWLLogicalAxiom,
+        term: Term,
+        unsafe: List[OWLObjectPropertyExpression],
+        skolem: SkolemStrategy,
+        suffix: RSASuffix
+    ): Result =
+      axiom match {
+
+        case a: OWLSubClassOfAxiom if a.isT5 => {
+          val role = axiom.objectPropertyExpressionsInSignature(0)
+          if (unsafe contains role) {
+            val skolem = SkolemStrategy.Standard(a.toString)
+            super.convert(a, term, unsafe, skolem, Forward)
+          } else {
+            val (f1, r1) = rules1(a)
+            (f1, r1 ::: rules2(a) ::: rules3(a))
+          }
         }
-      } else {
-        // Fallback to standard OWL to LP translation
-        super.visit(axiom)
+
+        case a: OWLSubObjectPropertyOfAxiom => {
+          val (factsF, rulesF) =
+            super.convert(a, term, unsafe, SkolemStrategy.None, Forward)
+          val (factsB, rulesB) =
+            super.convert(a, term, unsafe, SkolemStrategy.None, Backward)
+          (factsF ::: factsB, rulesF ::: rulesB)
+        }
+
+        case a => super.convert(a, term, unsafe, skolem, suffix)
+
       }
-    }
-
-    override def visit(axiom: OWLSubObjectPropertyOfAxiom): List[Rule] = {
-      val varX = Variable.create("X")
-      val visitorF = new RDFoxAxiomConverter(
-        varX,
-        ontology.unsafeRoles,
-        SkolemStrategy.None,
-        Forward
-      )
-      val visitorB = new RDFoxAxiomConverter(
-        varX,
-        ontology.unsafeRoles,
-        SkolemStrategy.None,
-        Backward
-      )
-      axiom.accept(visitorB) ::: axiom.accept(visitorF)
-    }
-
   }
 
 }

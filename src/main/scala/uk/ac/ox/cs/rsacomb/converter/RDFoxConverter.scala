@@ -57,7 +57,7 @@ import uk.ac.ox.cs.rsacomb.util.RSA
   * normalization procedure that will prevent errors or unexpected
   * results.
   */
-object RDFoxConverter {
+trait RDFoxConverter {
 
   /** Simplify conversion between Java and Scala collections */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
@@ -85,7 +85,7 @@ object RDFoxConverter {
     * along with a set of atoms for the body of the rule (namely
     * `R(x,y), B(y), R(x,z), B(z)`).
     */
-  private type Shards = (List[TupleTableAtom], List[BodyFormula])
+  protected type Shards = (List[TupleTableAtom], List[BodyFormula])
 
   /** Represent the result of the conversion of
     * [[org.semanticweb.owlapi.model.OWLLogicalAxiom OWLLogicalAxiom]].
@@ -93,7 +93,10 @@ object RDFoxConverter {
     * In general we have assertion returning (a collection of) atoms,
     * while other axioms that generate rules.
     */
-  private type Result = Either[List[TupleTableAtom], List[Rule]]
+  protected type Result = (List[TupleTableAtom], List[Rule])
+  protected def Result(): Result = (List(), List())
+  protected def ResultF(atoms: List[TupleTableAtom]): Result = (atoms, List())
+  protected def ResultR(rules: List[Rule]): Result = (List(), rules)
 
   /** Converts a
     * [[org.semanticweb.owlapi.model.OWLLogicalAxiom OWLLogicalAxiom]]
@@ -145,35 +148,32 @@ object RDFoxConverter {
         val (sup, ext) =
           convert(a.getSuperClass, term, unsafe, skolem, suffix)
         val rule = Rule.create(sup, ext ::: sub)
-        Right(List(rule))
+        ResultR(List(rule))
       }
 
       // cannot be left
       // http://www.w3.org/TR/owl2-syntax/#Equivalent_Classes
-      case a: OWLEquivalentClassesAxiom =>
-        Right(
-          a.asPairwiseAxioms
-            .flatMap(_.asOWLSubClassOfAxioms)
-            .map(convert(_, term, unsafe, skolem, suffix))
-            .collect { case Right(rs) => rs }
-            .flatten
-        )
+      case a: OWLEquivalentClassesAxiom => {
+        val (atoms, rules) = a.asPairwiseAxioms
+          .flatMap(_.asOWLSubClassOfAxioms)
+          .map(convert(_, term, unsafe, skolem, suffix))
+          .unzip
+        (atoms.flatten, rules.flatten)
+      }
 
       case a: OWLEquivalentObjectPropertiesAxiom => {
-        Right(
-          a.asPairwiseAxioms
-            .flatMap(_.asSubObjectPropertyOfAxioms)
-            .map(convert(_, term, unsafe, skolem, suffix))
-            .collect { case Right(rs) => rs }
-            .flatten
-        )
+        val (atoms, rules) = a.asPairwiseAxioms
+          .flatMap(_.asSubObjectPropertyOfAxioms)
+          .map(convert(_, term, unsafe, skolem, suffix))
+          .unzip
+        (atoms.flatten, rules.flatten)
       }
 
       case a: OWLSubObjectPropertyOfAxiom => {
         val term1 = RSAOntology.genFreshVariable()
         val body = convert(a.getSubProperty, term, term1, suffix)
         val head = convert(a.getSuperProperty, term, term1, suffix)
-        Right(List(Rule.create(head, body)))
+        ResultR(List(Rule.create(head, body)))
       }
 
       case a: OWLObjectPropertyDomainAxiom =>
@@ -183,19 +183,18 @@ object RDFoxConverter {
         val term1 = RSAOntology.genFreshVariable()
         val (res, ext) = convert(a.getRange, term, unsafe, skolem, suffix)
         val prop = convert(a.getProperty, term1, term, suffix)
-        Right(List(Rule.create(res, prop :: ext)))
+        ResultR(List(Rule.create(res, prop :: ext)))
       }
 
       case a: OWLDataPropertyDomainAxiom =>
         convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)
 
-      case a: OWLInverseObjectPropertiesAxiom =>
-        Right(
-          a.asSubObjectPropertyOfAxioms
-            .map(convert(_, term, unsafe, skolem, suffix))
-            .collect { case Right(rs) => rs }
-            .flatten
-        )
+      case a: OWLInverseObjectPropertiesAxiom => {
+        val (atoms, rules) = a.asSubObjectPropertyOfAxioms
+          .map(convert(_, term, unsafe, skolem, suffix))
+          .unzip
+        (atoms.flatten, rules.flatten)
+      }
 
       case a: OWLClassAssertionAxiom => {
         val ind = a.getIndividual
@@ -204,20 +203,20 @@ object RDFoxConverter {
             val cls = a.getClassExpression
             val (res, _) =
               convert(cls, i.getIRI, unsafe, SkolemStrategy.None, suffix)
-            Left(res)
+            ResultF(res)
           }
-          case _ => Left(List())
+          case _ => Result()
         }
       }
 
       case a: OWLObjectPropertyAssertionAxiom =>
         if (!a.getSubject.isNamed || !a.getObject.isNamed)
-          Left(List())
+          Result()
         else {
           val subj = a.getSubject.asOWLNamedIndividual.getIRI
           val obj = a.getObject.asOWLNamedIndividual.getIRI
           val prop = convert(a.getProperty, subj, obj, suffix)
-          Left(List(prop))
+          ResultF(List(prop))
         }
 
       /** Catch-all case for all unhandled axiom types. */

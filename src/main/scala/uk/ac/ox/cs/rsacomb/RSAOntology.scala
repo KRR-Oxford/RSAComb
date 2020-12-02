@@ -7,7 +7,7 @@ import java.util.stream.{Collectors, Stream}
 import java.io.File
 import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.util.OWLOntologyMerger
-import org.semanticweb.owlapi.model.{OWLOntology, OWLAxiom}
+import org.semanticweb.owlapi.model.{OWLOntology, OWLAxiom, OWLLogicalAxiom}
 import org.semanticweb.owlapi.model.{
   OWLClass,
   OWLObjectProperty,
@@ -82,30 +82,28 @@ object RSAOntology {
 class RSAOntology(val ontology: OWLOntology) {
 
   import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom._
+  import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
 
   // Gather TBox/RBox/ABox from original ontology
-  val tbox: List[OWLAxiom] =
+  val tbox: List[OWLLogicalAxiom] =
     ontology
       .tboxAxioms(Imports.INCLUDED)
       .collect(Collectors.toList())
-      .asScala
-      .toList
+      .collect { case a: OWLLogicalAxiom => a }
 
-  val rbox: List[OWLAxiom] =
+  val rbox: List[OWLLogicalAxiom] =
     ontology
       .rboxAxioms(Imports.INCLUDED)
       .collect(Collectors.toList())
-      .asScala
-      .toList
+      .collect { case a: OWLLogicalAxiom => a }
 
-  val abox: List[OWLAxiom] =
+  val abox: List[OWLLogicalAxiom] =
     ontology
       .aboxAxioms(Imports.INCLUDED)
       .collect(Collectors.toList())
-      .asScala
-      .toList
+      .collect { case a: OWLLogicalAxiom => a }
 
-  val axioms: List[OWLAxiom] = abox ::: tbox ::: rbox
+  val axioms: List[OWLLogicalAxiom] = abox ::: tbox ::: rbox
 
   /* Retrieve individuals in the original ontology
    */
@@ -267,8 +265,8 @@ class RSAOntology(val ontology: OWLOntology) {
   ): Graph[Resource, UnDiEdge] = {
     val query = "SELECT ?X ?Y WHERE { ?X rsa:E ?Y }"
     val answers = RDFoxUtil.submitQuery(data, query, RSA.Prefixes).get
-    var edges: Seq[UnDiEdge[Resource]] = answers.map {
-      case Seq(n1, n2) => UnDiEdge(n1, n2)
+    var edges: Seq[UnDiEdge[Resource]] = answers.map { case Seq(n1, n2) =>
+      UnDiEdge(n1, n2)
     }
     Graph(edges: _*)
   }
@@ -310,7 +308,8 @@ class RSAOntology(val ontology: OWLOntology) {
   def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = {
     import implicits.JavaCollections._
     val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
-    data.addRules(this.canonicalModel.rules)
+    RDFoxUtil.addRules(data, this.canonicalModel.rules)
+    RDFoxUtil.addFacts(data, this.canonicalModel.facts)
     data.addRules(this.filteringProgram(query).rules)
     val answers = RDFoxUtil
       .submitQuery(
