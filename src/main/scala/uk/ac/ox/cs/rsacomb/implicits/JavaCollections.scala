@@ -17,4 +17,8 @@ object JavaCollections {
       set: java.util.Collection[A]
   ): List[A] =
     set.asScala.toList
+
+  implicit def scalaSeqTojavaCollection[A](
+      seq: Seq[A]
+  ): java.util.Collection[A] = seq.asJavaCollection
 }
