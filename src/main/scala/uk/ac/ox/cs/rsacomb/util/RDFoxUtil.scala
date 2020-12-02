@@ -5,7 +5,8 @@ import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.client.{
   ConnectionFactory,
   ServerConnection,
-  DataStoreConnection
+  DataStoreConnection,
+  UpdateType
 }
 import tech.oxfordsemantic.jrdfox.formats.SPARQLParser
 import tech.oxfordsemantic.jrdfox.logic.datalog.{
@@ -47,9 +48,8 @@ object RDFoxUtil {
     * @return a tuple with the newly opened server and data store
     * connections.
     *
-    * @see [[uk.ac.ox.cs.rsacomb.util.RDFoxUtil.closeConnection
-    * RDFoxUtil.closeConnection]] for
-    * details on how to close an open connection.
+    * @see [[uk.ac.ox.cs.rsacomb.util.RDFoxUtil.closeConnection RDFoxUtil.closeConnection]]
+    * for details on how to close an open connection.
     */
   def openConnection(
       datastore: String,
@@ -65,6 +65,26 @@ object RDFoxUtil {
     val data = server.newDataStoreConnection(datastore)
     (server, data)
   }
+
+  /** Adds a collection of rules to a data store.
+    *
+    * @param data datastore connection
+    * @param rules collection of rules to be added to the data store
+    */
+  def addRules(data: DataStoreConnection, rules: Seq[Rule]): Unit =
+    data addRules rules
+
+  /** Adds a collection of facts to a data store.
+    *
+    * @param data datastore connection
+    * @param facts collection of facts to be added to the data store
+    */
+  def addFacts(data: DataStoreConnection, facts: Seq[TupleTableAtom]): Unit =
+    data.importData(
+      UpdateType.ADDITION,
+      RSA.Prefixes,
+      facts.map(_.toString(Prefixes.s_emptyPrefixes)).mkString("", ".\n", ".")
+    )
 
   /** Parse a SELECT query from a string in SPARQL format.
     *
