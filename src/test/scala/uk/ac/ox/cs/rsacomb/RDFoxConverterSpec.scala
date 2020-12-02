@@ -32,7 +32,11 @@ object RDFoxConverterSpec {
   )
 }
 
-class RDFoxConverterSpec extends AnyFlatSpec with Matchers with LoneElement {
+class RDFoxConverterSpec
+    extends AnyFlatSpec
+    with Matchers
+    with LoneElement
+    with RDFoxConverter {
 
   import RDFoxConverterSpec._
 
@@ -40,7 +44,7 @@ class RDFoxConverterSpec extends AnyFlatSpec with Matchers with LoneElement {
     val cls = factory.getOWLClass(iriString0)
     val atom = TupleTableAtom.rdf(term0, IRI.RDF_TYPE, IRI.create(iriString0))
     val (res, ext) =
-      RDFoxConverter.convert(cls, term0, List(), SkolemStrategy.None, Empty)
+      convert(cls, term0, List(), SkolemStrategy.None, Empty)
     res.loneElement shouldEqual atom
     ext shouldBe empty
   }
@@ -51,13 +55,13 @@ class RDFoxConverterSpec extends AnyFlatSpec with Matchers with LoneElement {
     val cls2 = factory.getOWLClass(iriString2)
     val conj = factory.getOWLObjectIntersectionOf(cls0, cls1, cls2)
     val (res0, ext0) =
-      RDFoxConverter.convert(cls0, term0, List(), SkolemStrategy.None, Empty)
+      convert(cls0, term0, List(), SkolemStrategy.None, Empty)
     val (res1, ext1) =
-      RDFoxConverter.convert(cls1, term0, List(), SkolemStrategy.None, Empty)
+      convert(cls1, term0, List(), SkolemStrategy.None, Empty)
     val (res2, ext2) =
-      RDFoxConverter.convert(cls2, term0, List(), SkolemStrategy.None, Empty)
+      convert(cls2, term0, List(), SkolemStrategy.None, Empty)
     val (res, ext) =
-      RDFoxConverter.convert(conj, term0, List(), SkolemStrategy.None, Empty)
+      convert(conj, term0, List(), SkolemStrategy.None, Empty)
     res should contain theSameElementsAs (res0 ::: res1 ::: res2)
     ext should contain theSameElementsAs (ext0 ::: ext1 ::: ext2)
   }
@@ -66,9 +70,9 @@ class RDFoxConverterSpec extends AnyFlatSpec with Matchers with LoneElement {
     val cls0 = factory.getOWLClass(iriString0)
     val conj = factory.getOWLObjectIntersectionOf(cls0)
     val (res0, ext0) =
-      RDFoxConverter.convert(cls0, term0, List(), SkolemStrategy.None, Empty)
+      convert(cls0, term0, List(), SkolemStrategy.None, Empty)
     val (res, ext) =
-      RDFoxConverter.convert(conj, term0, List(), SkolemStrategy.None, Empty)
+      convert(conj, term0, List(), SkolemStrategy.None, Empty)
     res should contain theSameElementsAs res0
     ext should contain theSameElementsAs ext0
   }
@@ -78,7 +82,7 @@ class RDFoxConverterSpec extends AnyFlatSpec with Matchers with LoneElement {
     for (sx <- suffixes) {
       val atom =
         TupleTableAtom.rdf(term0, IRI.create(iriString0 :: sx), term1)
-      RDFoxConverter.convert(prop, term0, term1, sx) shouldEqual atom
+      convert(prop, term0, term1, sx) shouldEqual atom
     }
   }
 
@@ -88,7 +92,7 @@ class RDFoxConverterSpec extends AnyFlatSpec with Matchers with LoneElement {
     for (sx <- Seq(Empty, Forward, Backward)) {
       val atom =
         TupleTableAtom.rdf(term0, IRI.create(iriString0 :: sx + Inverse), term1)
-      RDFoxConverter.convert(inv, term0, term1, sx) shouldEqual atom
+      convert(inv, term0, term1, sx) shouldEqual atom
     }
   }
 
@@ -97,7 +101,7 @@ class RDFoxConverterSpec extends AnyFlatSpec with Matchers with LoneElement {
     for (suffix <- suffixes) {
       val atom =
         TupleTableAtom.rdf(term0, IRI.create(iriString0 :: suffix), term1)
-      RDFoxConverter.convert(prop, term0, term1, suffix) shouldEqual atom
+      convert(prop, term0, term1, suffix) shouldEqual atom
     }
   }
 
