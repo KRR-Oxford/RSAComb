@@ -156,7 +156,7 @@ trait RDFoxConverter {
       case a: OWLEquivalentClassesAxiom => {
         val (atoms, rules) = a.asPairwiseAxioms
           .flatMap(_.asOWLSubClassOfAxioms)
-          .map(convert(_, term, unsafe, skolem, suffix))
+          .map(a => convert(a, term, unsafe, skolem dup a, suffix))
           .unzip
         (atoms.flatten, rules.flatten)
       }
@@ -164,7 +164,7 @@ trait RDFoxConverter {
       case a: OWLEquivalentObjectPropertiesAxiom => {
         val (atoms, rules) = a.asPairwiseAxioms
           .flatMap(_.asSubObjectPropertyOfAxioms)
-          .map(convert(_, term, unsafe, skolem, suffix))
+          .map(a => convert(a, term, unsafe, skolem dup a, suffix))
           .unzip
         (atoms.flatten, rules.flatten)
       }
@@ -191,7 +191,7 @@ trait RDFoxConverter {
 
       case a: OWLInverseObjectPropertiesAxiom => {
         val (atoms, rules) = a.asSubObjectPropertyOfAxioms
-          .map(convert(_, term, unsafe, skolem, suffix))
+          .map(a => convert(a, term, unsafe, skolem dup a, suffix))
           .unzip
         (atoms.flatten, rules.flatten)
       }
