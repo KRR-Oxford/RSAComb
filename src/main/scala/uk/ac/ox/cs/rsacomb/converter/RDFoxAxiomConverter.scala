@@ -44,7 +44,7 @@ object RDFoxAxiomConverter {
   def apply(
       term: Term,
       unsafe: List[OWLObjectPropertyExpression],
-      skolem: SkolemStrategy = SkolemStrategy.None,
+      skolem: SkolemStrategy = NoSkolem,
       suffix: RSASuffix = Empty
   ): RDFoxAxiomConverter =
     new RDFoxAxiomConverter(term, unsafe, skolem, suffix)
@@ -63,7 +63,7 @@ class RDFoxAxiomConverter(
   override def visit(axiom: OWLSubClassOfAxiom): List[Rule] = {
     // Skolemization is needed only for the head of an axiom
     val subVisitor =
-      new RDFoxClassExprConverter(term, unsafe, SkolemStrategy.None, suffix)
+      new RDFoxClassExprConverter(term, unsafe, NoSkolem, suffix)
     val superVisitor = new RDFoxClassExprConverter(term, unsafe, skolem, suffix)
     // Each visitor returns a `RDFoxRuleShards`, a tuple (res,ext):
     // - the `res` List is a list of atoms resulting from the conversion
@@ -121,7 +121,7 @@ class RDFoxAxiomConverter(
       val term = RDFoxIRI.create(ind.asOWLNamedIndividual().getIRI.getIRIString)
       val cls = axiom.getClassExpression
       val visitor =
-        new RDFoxClassExprConverter(term, unsafe, SkolemStrategy.None, suffix)
+        new RDFoxClassExprConverter(term, unsafe, NoSkolem, suffix)
       val shard = cls.accept(visitor)
       List(Rule.create(shard.res.asJava, shard.ext.asJava))
     } else {

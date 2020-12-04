@@ -24,12 +24,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
   IRI
 }
 
-import uk.ac.ox.cs.rsacomb.converter.{
-  SkolemStrategy,
-  RDFoxConverter
-  // RDFoxAxiomConverter,
-  // RDFoxPropertyExprConverter
-}
+import uk.ac.ox.cs.rsacomb.converter._
 import uk.ac.ox.cs.rsacomb.suffix._
 import uk.ac.ox.cs.rsacomb.util.RSA
 
@@ -114,10 +109,8 @@ class CanonicalModel(val ontology: RSAOntology) {
     val (facts, rules) = {
       val term = RSAOntology.genFreshVariable()
       val unsafe = ontology.unsafeRoles
-      val skolem = SkolemStrategy.None
-      val suffix = Empty
       ontology.axioms
-        .map(CanonicalModelConverter.convert(_, term, unsafe, skolem, suffix))
+        .map(CanonicalModelConverter.convert(_, term, unsafe, NoSkolem, Empty))
         .unzip
     }
     (
@@ -245,10 +238,9 @@ class CanonicalModel(val ontology: RSAOntology) {
 
         case a: OWLSubClassOfAxiom if a.isT5 => {
           val role = axiom.objectPropertyExpressionsInSignature(0)
-          if (unsafe contains role) {
-            val skolem = SkolemStrategy.Standard(a.toString)
-            super.convert(a, term, unsafe, skolem, Forward)
-          } else {
+          if (unsafe contains role)
+            super.convert(a, term, unsafe, new Standard(a), Forward)
+          else {
             val (f1, r1) = rules1(a)
             (f1, r1 ::: rules2(a) ::: rules3(a))
           }
@@ -256,9 +248,9 @@ class CanonicalModel(val ontology: RSAOntology) {
 
         case a: OWLSubObjectPropertyOfAxiom => {
           val (factsF, rulesF) =
-            super.convert(a, term, unsafe, SkolemStrategy.None, Forward)
+            super.convert(a, term, unsafe, NoSkolem, Forward)
           val (factsB, rulesB) =
-            super.convert(a, term, unsafe, SkolemStrategy.None, Backward)
+            super.convert(a, term, unsafe, NoSkolem, Backward)
           (factsF ::: factsB, rulesF ::: rulesB)
         }
 

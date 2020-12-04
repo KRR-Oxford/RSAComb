@@ -38,7 +38,7 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
 }
 import tech.oxfordsemantic.jrdfox.logic.expression.{Term, IRI, FunctionCall}
 import uk.ac.ox.cs.rsacomb.RSAOntology
-import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Inverse}
+import uk.ac.ox.cs.rsacomb.suffix.{Empty, Inverse, RSASuffix}
 import uk.ac.ox.cs.rsacomb.util.RSA
 
 /** Horn-ALCHOIQ to RDFox axiom converter.
@@ -144,7 +144,7 @@ trait RDFoxConverter {
 
       case a: OWLSubClassOfAxiom => {
         val (sub, _) =
-          convert(a.getSubClass, term, unsafe, SkolemStrategy.None, suffix)
+          convert(a.getSubClass, term, unsafe, NoSkolem, suffix)
         val (sup, ext) =
           convert(a.getSuperClass, term, unsafe, skolem, suffix)
         val rule = Rule.create(sup, ext ::: sub)
@@ -202,7 +202,7 @@ trait RDFoxConverter {
           case i: OWLNamedIndividual => {
             val cls = a.getClassExpression
             val (res, _) =
-              convert(cls, i.getIRI, unsafe, SkolemStrategy.None, suffix)
+              convert(cls, i.getIRI, unsafe, NoSkolem, suffix)
             ResultF(res)
           }
           case _ => Result()
@@ -309,32 +309,18 @@ trait RDFoxConverter {
       case e: OWLObjectSomeValuesFrom => {
         val cls = e.getFiller()
         val role = e.getProperty()
-        // TODO: simplify this:
-        // Computes the result of rule skolemization. Depending on the used
-        // technique it might involve the introduction of additional atoms,
-        // and/or fresh constants and variables.
-        val (head, body, term1) = skolem match {
-          case SkolemStrategy.None =>
-            (List(), List(), RSAOntology.genFreshVariable)
-          case SkolemStrategy.Constant(c) => (List(), List(), c)
-          case SkolemStrategy.ConstantRSA(c) => {
-            if (unsafe.contains(role))
-              (List(RSA.PE(term, c), RSA.U(c)), List(), c)
-            else
-              (List(), List(), c)
-          }
-          case SkolemStrategy.Standard(f) => {
-            val x = RSAOntology.genFreshVariable
-            (
-              List(),
-              List(BindAtom.create(FunctionCall.create("SKOLEM", f, term), x)),
-              x
-            )
+        val varX = RSAOntology.genFreshVariable
+        val (bind, term1) = skolem match {
+          case NoSkolem    => (None, varX)
+          case c: Constant => (None, c.iri)
+          case s: Standard => {
+            val func = FunctionCall.create("SKOLEM", s.literal, term)
+            (Some(BindAtom.create(func, varX)), varX)
           }
         }
         val (res, ext) = convert(cls, term1, unsafe, skolem, suffix)
         val prop = convert(role, term, term1, suffix)
-        (prop :: head ::: res, body ::: ext)
+        (prop :: res, ext ++ bind)
       }
 
       /** Existential class expression (for data properties).
@@ -354,27 +340,17 @@ trait RDFoxConverter {
         // Computes the result of rule skolemization. Depending on the used
         // technique it might involve the introduction of additional atoms,
         // and/or fresh constants and variables.
-        val (head, body, term1) = skolem match {
-          case SkolemStrategy.None =>
-            (List(), List(), RSAOntology.genFreshVariable)
-          case SkolemStrategy.Constant(c) => (List(), List(), c)
-          case SkolemStrategy.ConstantRSA(c) => {
-            if (unsafe.contains(role))
-              (List(RSA.PE(term, c), RSA.U(c)), List(), c)
-            else
-              (List(), List(), c)
-          }
-          case SkolemStrategy.Standard(f) => {
-            val y = RSAOntology.genFreshVariable()
-            (
-              List(),
-              List(BindAtom.create(FunctionCall.create("SKOLEM", f, term), y)),
-              y
-            )
+        val varX = RSAOntology.genFreshVariable
+        val (bind, term1) = skolem match {
+          case NoSkolem    => (None, varX)
+          case c: Constant => (None, c.iri)
+          case s: Standard => {
+            val func = FunctionCall.create("SKOLEM", s.literal, term)
+            (Some(BindAtom.create(func, varX)), varX)
           }
         }
         val prop = convert(role, term, term1, suffix)
-        (prop :: head, body)
+        (List(prop), bind.toList)
       }
 
       /** Maximum cardinality restriction class

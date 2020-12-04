@@ -50,7 +50,7 @@ import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
 import tech.oxfordsemantic.jrdfox.logic._
 import org.semanticweb.owlapi.model.OWLObjectInverseOf
 
-import uk.ac.ox.cs.rsacomb.converter.{RDFoxConverter, SkolemStrategy}
+import uk.ac.ox.cs.rsacomb.converter._
 import uk.ac.ox.cs.rsacomb.suffix._
 import uk.ac.ox.cs.rsacomb.sparql._
 import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
@@ -163,16 +163,16 @@ class RSAOntology(val ontology: OWLOntology) {
       ): Shards =
         (expr, skolem) match {
 
-          case (e: OWLObjectSomeValuesFrom, SkolemStrategy.Constant(c))
+          case (e: OWLObjectSomeValuesFrom, c: Constant)
               if unsafe contains e.getProperty => {
             val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
-            (RSA.PE(term, c) :: RSA.U(c) :: res, ext)
+            (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
           }
 
-          case (e: OWLDataSomeValuesFrom, SkolemStrategy.Constant(c))
+          case (e: OWLDataSomeValuesFrom, c: Constant)
               if unsafe contains e.getProperty => {
             val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
-            (RSA.PE(term, c) :: RSA.U(c) :: res, ext)
+            (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
           }
 
           case _ => super.convert(expr, term, unsafe, skolem, suffix)
@@ -183,10 +183,7 @@ class RSAOntology(val ontology: OWLOntology) {
     /* Ontology convertion into LP rules */
     val term = RSAOntology.genFreshVariable()
     val datalog = axioms
-      .map(a => {
-        val skolem = SkolemStrategy.Constant(a.toString)
-        RSAConverter.convert(a, term, unsafe, skolem, Empty)
-      })
+      .map(a => RSAConverter.convert(a, term, unsafe, new Constant(a), Empty))
       .unzip
     val facts = datalog._1.flatten
     val rules = datalog._2.flatten

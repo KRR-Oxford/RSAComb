@@ -39,7 +39,7 @@ object RDFoxClassExprConverter {
   def apply(
       term: Term,
       unsafe: List[OWLObjectPropertyExpression] = List(),
-      skolem: SkolemStrategy = SkolemStrategy.None,
+      skolem: SkolemStrategy = NoSkolem,
       suffix: RSASuffix = Empty
   ): RDFoxClassExprConverter =
     new RDFoxClassExprConverter(term, unsafe, skolem, suffix)
@@ -58,8 +58,8 @@ object RDFoxClassExprConverter {
 class RDFoxClassExprConverter(
     term: Term,
     unsafe: List[OWLObjectPropertyExpression],
-    skolem: SkolemStrategy,
-    suffix: RSASuffix
+    skolem: SkolemStrategy = NoSkolem,
+    suffix: RSASuffix = Empty
 ) extends OWLClassExpressionVisitorEx[RDFoxRuleShards] {
 
   import uk.ac.ox.cs.rsacomb.implicits.RDFox._
@@ -106,18 +106,14 @@ class RDFoxClassExprConverter(
     // technique it might involve the introduction of additional atoms,
     // and/or fresh constants and variables.
     val (head, body, term1) = skolem match {
-      case SkolemStrategy.None        => (List(), List(), y)
-      case SkolemStrategy.Constant(c) => (List(), List(), c)
-      case SkolemStrategy.ConstantRSA(c) => {
-        if (unsafe.contains(prop))
-          (List(RSA.PE(term, c), RSA.U(c)), List(), c)
-        else
-          (List(), List(), c)
-      }
-      case SkolemStrategy.Standard(f) => {
+      case NoSkolem    => (List(), List(), y)
+      case c: Constant => (List(), List(), c.iri)
+      case s: Standard => {
         (
           List(),
-          List(BindAtom.create(FunctionCall.create("SKOLEM", f, term), y)),
+          List(
+            BindAtom.create(FunctionCall.create("SKOLEM", s.literal, term), y)
+          ),
           y
         )
       }
@@ -152,18 +148,14 @@ class RDFoxClassExprConverter(
     // technique it might involve the introduction of additional atoms,
     // and/or fresh constants and variables.
     val (head, body, term1) = skolem match {
-      case SkolemStrategy.None        => (List(), List(), y)
-      case SkolemStrategy.Constant(c) => (List(), List(), c)
-      case SkolemStrategy.ConstantRSA(c) => {
-        if (unsafe.contains(prop))
-          (List(RSA.PE(term, c), RSA.U(c)), List(), c)
-        else
-          (List(), List(), c)
-      }
-      case SkolemStrategy.Standard(f) => {
+      case NoSkolem    => (List(), List(), y)
+      case c: Constant => (List(), List(), c.iri)
+      case s: Standard => {
         (
           List(),
-          List(BindAtom.create(FunctionCall.create("SKOLEM", f, term), y)),
+          List(
+            BindAtom.create(FunctionCall.create("SKOLEM", s.literal, term), y)
+          ),
           y
         )
       }

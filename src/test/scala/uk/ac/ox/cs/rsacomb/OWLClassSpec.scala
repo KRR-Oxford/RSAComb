@@ -36,7 +36,9 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
 import uk.ac.ox.cs.rsacomb.converter.{
   RDFoxRuleShards,
   RDFoxClassExprConverter,
-  SkolemStrategy
+  SkolemStrategy,
+  Standard,
+  Constant
 }
 import uk.ac.ox.cs.rsacomb.util.RSA
 
@@ -179,16 +181,16 @@ class OWLClassSpec extends AnyFlatSpec with Matchers with LoneElement {
   // OWLObjectSomeValuesFrom
   (class_OWLObjectSomeValuesFrom.toString ++ " w/o skolemization") should
     "be converted into a RDFoxRuleShards" in {
-    val visitor = RDFoxClassExprConverter(term_x)
-    val result = class_OWLObjectSomeValuesFrom.accept(visitor)
-    result shouldBe a[RDFoxRuleShards]
-  }
+      val visitor = RDFoxClassExprConverter(term_x)
+      val result = class_OWLObjectSomeValuesFrom.accept(visitor)
+      result shouldBe a[RDFoxRuleShards]
+    }
 
   it should "have two TupleTableAtoms in its result list" in {
     val visitor = RDFoxClassExprConverter(term_x)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
     exactly(2, result.res) should (be(an[TupleTableAtom])
-    //and have('numberOfArguments (3))
+      //and have('numberOfArguments (3))
     )
   }
 
@@ -200,23 +202,23 @@ class OWLClassSpec extends AnyFlatSpec with Matchers with LoneElement {
 
   (class_OWLObjectSomeValuesFrom.toString ++ " w/ skolemization") should
     "be converted into a RDFoxRuleShards" in {
-    val skolem = SkolemStrategy.Standard(class_OWLObjectSomeValuesFrom.toString)
-    val visitor = RDFoxClassExprConverter(term_x, List(), skolem)
-    val result = class_OWLObjectSomeValuesFrom.accept(visitor)
-    result shouldBe a[RDFoxRuleShards]
-  }
+      val skolem = Standard(class_OWLObjectSomeValuesFrom.toString)
+      val visitor = RDFoxClassExprConverter(term_x, List(), skolem)
+      val result = class_OWLObjectSomeValuesFrom.accept(visitor)
+      result shouldBe a[RDFoxRuleShards]
+    }
 
   it should "have exactly two TupleTableAtoms in its result list" in {
-    val skolem = SkolemStrategy.Standard(class_OWLObjectSomeValuesFrom.toString)
+    val skolem = Standard(class_OWLObjectSomeValuesFrom.toString)
     val visitor = RDFoxClassExprConverter(term_x, List(), skolem)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
     exactly(2, result.res) should (be(an[TupleTableAtom])
-    //and have('numberOfArguments (3))
+      //and have('numberOfArguments (3))
     )
   }
 
   it should "should have a single SKOLEM call in the extension list" in {
-    val skolem = SkolemStrategy.Standard(class_OWLObjectSomeValuesFrom.toString)
+    val skolem = Standard(class_OWLObjectSomeValuesFrom.toString)
     val visitor = RDFoxClassExprConverter(term_x, List(), skolem)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
     result.ext.loneElement shouldBe a[BindAtom]
@@ -228,23 +230,23 @@ class OWLClassSpec extends AnyFlatSpec with Matchers with LoneElement {
 
   (class_OWLObjectSomeValuesFrom.toString ++ " w/ constant skolemization") should
     "be converted into a RDFoxRuleShards" in {
-    val skolem = SkolemStrategy.Constant(class_OWLObjectSomeValuesFrom.toString)
-    val visitor = RDFoxClassExprConverter(term_x, List(), skolem)
-    val result = class_OWLObjectSomeValuesFrom.accept(visitor)
-    result shouldBe a[RDFoxRuleShards]
-  }
+      val skolem = Constant(class_OWLObjectSomeValuesFrom.toString)
+      val visitor = RDFoxClassExprConverter(term_x, List(), skolem)
+      val result = class_OWLObjectSomeValuesFrom.accept(visitor)
+      result shouldBe a[RDFoxRuleShards]
+    }
 
   it should "have exactly two TupleTableAtoms in its result list" in {
-    val skolem = SkolemStrategy.Constant(class_OWLObjectSomeValuesFrom.toString)
+    val skolem = Constant(class_OWLObjectSomeValuesFrom.toString)
     val visitor = RDFoxClassExprConverter(term_x, List(), skolem)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
     exactly(2, result.res) should (be(an[TupleTableAtom])
-    //and have('numberOfArguments (3))
+      //and have('numberOfArguments (3))
     )
   }
 
   it should "have an empty extension list" in {
-    val skolem = SkolemStrategy.Constant(class_OWLObjectSomeValuesFrom.toString)
+    val skolem = Constant(class_OWLObjectSomeValuesFrom.toString)
     val visitor = RDFoxClassExprConverter(term_x, List(), skolem)
     val result = class_OWLObjectSomeValuesFrom.accept(visitor)
     result.ext shouldBe empty
@@ -253,10 +255,10 @@ class OWLClassSpec extends AnyFlatSpec with Matchers with LoneElement {
   // OWLObjectMaxCardinalityImpl
   class_OWLObjectMaxCardinality.toString should
     "be converted into a RDFoxRuleShards" in {
-    val visitor = RDFoxClassExprConverter(term_x)
-    val result = class_OWLObjectMaxCardinality.accept(visitor)
-    result shouldBe a[RDFoxRuleShards]
-  }
+      val visitor = RDFoxClassExprConverter(term_x)
+      val result = class_OWLObjectMaxCardinality.accept(visitor)
+      result shouldBe a[RDFoxRuleShards]
+    }
 
   // it should "have a single <owl:sameAs> TupleTableAtom in the result list" in {
   //   val visitor = RDFoxClassExprConverter(term_x)
@@ -270,7 +272,7 @@ class OWLClassSpec extends AnyFlatSpec with Matchers with LoneElement {
     val visitor = RDFoxClassExprConverter(term_x)
     val result = class_OWLObjectMaxCardinality.accept(visitor)
     exactly(4, result.ext) should (be(an[TupleTableAtom])
-    //and have('numberOfArguments (3))
+      //and have('numberOfArguments (3))
     )
   }
 

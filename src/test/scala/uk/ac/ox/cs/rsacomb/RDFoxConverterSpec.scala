@@ -10,7 +10,7 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom
 import tech.oxfordsemantic.jrdfox.logic.expression.{Variable, IRI}
 import uk.ac.ox.cs.rsacomb.converter.RDFoxConverter
 import uk.ac.ox.cs.rsacomb.suffix.{Empty, Forward, Backward, Inverse}
-import uk.ac.ox.cs.rsacomb.converter.SkolemStrategy
+import uk.ac.ox.cs.rsacomb.converter.{SkolemStrategy, NoSkolem}
 
 object RDFoxConverterSpec {
 
@@ -44,7 +44,7 @@ class RDFoxConverterSpec
     val cls = factory.getOWLClass(iriString0)
     val atom = TupleTableAtom.rdf(term0, IRI.RDF_TYPE, IRI.create(iriString0))
     val (res, ext) =
-      convert(cls, term0, List(), SkolemStrategy.None, Empty)
+      convert(cls, term0, List(), NoSkolem, Empty)
     res.loneElement shouldEqual atom
     ext shouldBe empty
   }
@@ -55,13 +55,13 @@ class RDFoxConverterSpec
     val cls2 = factory.getOWLClass(iriString2)
     val conj = factory.getOWLObjectIntersectionOf(cls0, cls1, cls2)
     val (res0, ext0) =
-      convert(cls0, term0, List(), SkolemStrategy.None, Empty)
+      convert(cls0, term0, List(), NoSkolem, Empty)
     val (res1, ext1) =
-      convert(cls1, term0, List(), SkolemStrategy.None, Empty)
+      convert(cls1, term0, List(), NoSkolem, Empty)
     val (res2, ext2) =
-      convert(cls2, term0, List(), SkolemStrategy.None, Empty)
+      convert(cls2, term0, List(), NoSkolem, Empty)
     val (res, ext) =
-      convert(conj, term0, List(), SkolemStrategy.None, Empty)
+      convert(conj, term0, List(), NoSkolem, Empty)
     res should contain theSameElementsAs (res0 ::: res1 ::: res2)
     ext should contain theSameElementsAs (ext0 ::: ext1 ::: ext2)
   }
@@ -70,9 +70,9 @@ class RDFoxConverterSpec
     val cls0 = factory.getOWLClass(iriString0)
     val conj = factory.getOWLObjectIntersectionOf(cls0)
     val (res0, ext0) =
-      convert(cls0, term0, List(), SkolemStrategy.None, Empty)
+      convert(cls0, term0, List(), NoSkolem, Empty)
     val (res, ext) =
-      convert(conj, term0, List(), SkolemStrategy.None, Empty)
+      convert(conj, term0, List(), NoSkolem, Empty)
     res should contain theSameElementsAs res0
     ext should contain theSameElementsAs ext0
   }

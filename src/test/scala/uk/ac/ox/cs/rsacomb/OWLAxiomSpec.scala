@@ -36,7 +36,13 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
 import org.semanticweb.owlapi.model.{IRI => OWLIRI}
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI => RDFIRI}
 
-import uk.ac.ox.cs.rsacomb.converter.{RDFoxAxiomConverter, SkolemStrategy}
+import uk.ac.ox.cs.rsacomb.converter.{
+  RDFoxAxiomConverter,
+  SkolemStrategy,
+  NoSkolem,
+  Standard,
+  Constant
+}
 import uk.ac.ox.cs.rsacomb.util.RSA
 
 object OWLAxiomSpec {
@@ -172,7 +178,7 @@ object OWLAxiomSpec {
   def convertAxiom(
       axiom: OWLAxiom,
       term: Term,
-      skolem: SkolemStrategy = SkolemStrategy.None
+      skolem: SkolemStrategy = NoSkolem
   ): List[Rule] = {
     axiom.accept(RDFoxAxiomConverter(term, List()))
   }
@@ -210,13 +216,13 @@ class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
   // OWLSubClassOfAxiom #2 (w/ constant skolemization)
   (axiom_OWLSubClassOf2.toString + "\n(w/ constant skolemization)") should
     "be converted into a singleton List[Rule]" in {
-    val skolem = SkolemStrategy.Constant(axiom_OWLSubClassOf2.toString)
-    val result = convertAxiom(axiom_OWLSubClassOf2, term_x, skolem)
-    result.loneElement shouldBe a[Rule]
-  }
+      val skolem = Constant(axiom_OWLSubClassOf2.toString)
+      val result = convertAxiom(axiom_OWLSubClassOf2, term_x, skolem)
+      result.loneElement shouldBe a[Rule]
+    }
 
   it should "contain a single atom (Student[?x]) in the body of the rule" in {
-    val skolem = SkolemStrategy.Constant(axiom_OWLSubClassOf2.toString)
+    val skolem = Constant(axiom_OWLSubClassOf2.toString)
     val result = convertAxiom(axiom_OWLSubClassOf2, term_x, skolem)
     val body =
       TupleTableAtom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Student.getIRIString)
@@ -237,13 +243,13 @@ class OWLAxiomSpec extends AnyFlatSpec with Matchers with LoneElement {
   // OWLSubClassOfAxiom #2 (w/ skolemization)
   (axiom_OWLSubClassOf2.toString + "\n(w/ skolemization)") should
     "be converted into a singleton List[Rule]" in {
-    val skolem = SkolemStrategy.Standard(axiom_OWLSubClassOf2.toString)
-    val result = convertAxiom(axiom_OWLSubClassOf2, term_x, skolem)
-    result.loneElement shouldBe a[Rule]
-  }
+      val skolem = Standard(axiom_OWLSubClassOf2.toString)
+      val result = convertAxiom(axiom_OWLSubClassOf2, term_x, skolem)
+      result.loneElement shouldBe a[Rule]
+    }
 
   it should "contain an atom (Student[?x]) in the body of the rule" in {
-    val skolem = SkolemStrategy.Standard(axiom_OWLSubClassOf2.toString)
+    val skolem = Standard(axiom_OWLSubClassOf2.toString)
     val result = convertAxiom(axiom_OWLSubClassOf2, term_x, skolem)
     val body =
       TupleTableAtom.rdf(term_x, RDFIRI.RDF_TYPE, iri_Student)
