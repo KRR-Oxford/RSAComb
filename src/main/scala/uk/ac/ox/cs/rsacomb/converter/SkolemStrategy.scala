@@ -4,7 +4,9 @@ import org.semanticweb.owlapi.model.OWLAxiom
 import tech.oxfordsemantic.jrdfox.logic.Datatype
 import tech.oxfordsemantic.jrdfox.logic.expression.{Literal, IRI}
 
-sealed trait SkolemStrategy
+sealed trait SkolemStrategy {
+  def dup(a: OWLAxiom): SkolemStrategy
+}
 
 /** No skolemization.
   *
@@ -17,7 +19,9 @@ sealed trait SkolemStrategy
   *   R(x,y), B(y) -> B(x)
   * }}}
   */
-case object NoSkolem extends SkolemStrategy
+case object NoSkolem extends SkolemStrategy {
+  def dup(a: OWLAxiom): SkolemStrategy = this
+}
 
 /** Functional skolemization
   *
@@ -46,9 +50,9 @@ case object NoSkolem extends SkolemStrategy
   * @note this requirement is not enforced by RDFox, that will fail
   * silently if a string argument is omitted.
   */
-class Standard(var axiom: OWLAxiom)(implicit toString: (OWLAxiom) => String)
+case class Standard(axiom: OWLAxiom)(implicit toString: (OWLAxiom) => String)
     extends SkolemStrategy {
-  def dup(a: OWLAxiom) = new Standard(a)(toString)
+  def dup(_axiom: OWLAxiom): Standard = copy(axiom = _axiom)(toString)
   lazy val literal =
     Literal.create(s"f_${toString(axiom)}", Datatype.XSD_STRING)
 }
@@ -69,8 +73,8 @@ class Standard(var axiom: OWLAxiom)(implicit toString: (OWLAxiom) => String)
   * for `c`, fresh constant '''uniquely''' associated with the input
   * axiom
   */
-class Constant(var axiom: OWLAxiom)(implicit toString: (OWLAxiom) => String)
+case class Constant(axiom: OWLAxiom)(implicit toString: (OWLAxiom) => String)
     extends SkolemStrategy {
-  def dup(a: OWLAxiom) = new Constant(a)(toString)
+  def dup(_axiom: OWLAxiom): Constant = copy(axiom = _axiom)(toString)
   lazy val iri = IRI.create(s"c_${toString(axiom)}")
 }
