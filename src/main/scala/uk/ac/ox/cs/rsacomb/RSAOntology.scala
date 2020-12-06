@@ -382,33 +382,6 @@ class RSAOntology(val ontology: OWLOntology) {
     }
   }
 
-  // def cycle(axiom: OWLSubClassOfAxiom): Set[Term] = {
-  //   // Assuming just one role in the signature of a T5 axiom
-  //   val roleR = axiom.objectPropertyExpressionsInSignature(0)
-  //   val conflR = this.confl(roleR)
-  //   // We just need the TBox to find
-  //   val tbox = ontology
-  //     .tboxAxioms(Imports.INCLUDED)
-  //     .collect(Collectors.toSet())
-  //     .asScala
-  //   for {
-  //     axiom1 <- tbox
-  //     // TODO: is this an optimization or an error?
-  //     if axiom1.isT5
-  //     // We expect only one role coming out of a T5 axiom
-  //     roleS <- axiom1.objectPropertyExpressionsInSignature
-  //     // Triples ordering is among triples involving safe roles.
-  //     if !unsafeRoles.contains(roleS)
-  //     if conflR.contains(roleS)
-  //     individual =
-  //       if (axiom.hashCode < axiom1.hashCode) {
-  //         RSA.rsa("v0_" ++ axiom1.hashCode.toString())
-  //       } else {
-  //         RSA.rsa("v1_" ++ axiom1.hashCode.toString())
-  //       }
-  //   } yield individual
-  // }
-
   def cycle(axiom: OWLSubClassOfAxiom): Set[Term] = {
     // TODO: we can actually use `toTriple` from `RSAAxiom`
     val classes =
@@ -418,10 +391,10 @@ class RSAOntology(val ontology: OWLOntology) {
       .objectPropertyExpressionsInSignature(0)
       .asInstanceOf[OWLObjectProperty]
     val classB = classes(1)
-    cycle_aux(classA, roleR, classB)
+    cycle_aux1(classA, roleR, classB)
   }
 
-  def cycle_aux(
+  def cycle_aux0(
       classA: OWLClass,
       roleR: OWLObjectProperty,
       classB: OWLClass
@@ -448,6 +421,36 @@ class RSAOntology(val ontology: OWLOntology) {
           RSA("v0_" ++ tripleDSC)
         }
     } yield individual
+  }
+
+  def cycle_aux1(
+      classA: OWLClass,
+      roleR: OWLObjectProperty,
+      classB: OWLClass
+  ): Set[Term] = {
+    val conflR = this.confl(roleR)
+    // We just need the TBox to find
+    val terms = for {
+      axiom1 <- tbox
+      // TODO: is this an optimization or an error?
+      if axiom1.isT5
+      // We expect only one role coming out of a T5 axiom
+      roleS <- axiom1.objectPropertyExpressionsInSignature
+      // Triples ordering is among triples involving safe roles.
+      if !unsafeRoles.contains(roleS)
+      if conflR.contains(roleS)
+      tripleARB = RSAAxiom.hashed(classA, roleR, classB)
+      tripleDSC = axiom1.hashed
+      individual =
+        if (tripleARB > tripleDSC) {
+          RSA("v1_" ++ tripleDSC)
+        } else {
+          // Note that this is also the case for
+          // `tripleARB == tripleDSC`
+          RSA("v0_" ++ tripleDSC)
+        }
+    } yield individual
+    terms to Set
   }
 
   def unfold(axiom: OWLSubClassOfAxiom): Set[Term] =
