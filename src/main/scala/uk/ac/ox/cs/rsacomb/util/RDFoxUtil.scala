@@ -3,6 +3,7 @@ package uk.ac.ox.cs.rsacomb.util
 import java.io.StringReader
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.client.{
+  ComponentInfo,
   ConnectionFactory,
   ServerConnection,
   DataStoreConnection,
@@ -64,6 +65,20 @@ object RDFoxUtil {
       server.createDataStore(datastore, "par-complex-nn", opts)
     val data = server.newDataStoreConnection(datastore)
     (server, data)
+  }
+
+  /** Gather statistics from RDFox datastore.
+    *
+    * @see [[https://docs.oxfordsemantic.tech/programmatic-access-APIs.html#in-depth-diagnostic-information]]
+    * and [[https://docs.oxfordsemantic.tech/programmatic-access-APIs.html#managing-statistics]]
+    * for more ways of gathering diagnostics from RDFox.
+    */
+  def gatherStatistics(data: DataStoreConnection): String = {
+    val info = data.getComponentInfo(true)
+    s"${info.getName}: ${info.getPropertyValues}"
+      .replaceAll("\\{", "{\n  ")
+      .replaceAll(", ", ",\n  ")
+      .replaceAll("\\}", "\n}")
   }
 
   /** Adds a collection of rules to a data store.
