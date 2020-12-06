@@ -169,7 +169,7 @@ class Ontology1_CanonicalModelSpec
 
   renderer.render(
     DsomeValuesFromRB
-  ) should "have a 'cycle' set of 48 elements" in {
+  ) should "have a 'cycle' set of 48 elements" ignore {
     // Cycle introduces a new constant for each possible triple (the
     // order among triples is total). In this example there are 4
     // concept names and R has 3 safe roles in its conflict set (S, T,
@@ -179,7 +179,7 @@ class Ontology1_CanonicalModelSpec
     ontology.cycle(DsomeValuesFromRB) should have size 48
   }
 
-  it should "produce 48 facts and 98 rules" in {
+  it should "produce 48 facts and 98 rules" ignore {
     // Rule 1 provides 1 rule (split in 2) + 48 fact
     // Rule 2 provides 0 rules
     // Rule 3 provides 48 rule (split in 2)
@@ -193,7 +193,7 @@ class Ontology1_CanonicalModelSpec
 
   renderer.render(
     BsomeValuesFromSD
-  ) should "have a 'cycle' set of 32 elements" in {
+  ) should "have a 'cycle' set of 32 elements" ignore {
     // Cycle introduces a new constant for each possible triple (the
     // order among triples is total). In this example there are 4
     // concept names and S has 2 safe roles in its conflict set (R,
@@ -203,7 +203,7 @@ class Ontology1_CanonicalModelSpec
     ontology.cycle(BsomeValuesFromSD) should have size 32
   }
 
-  it should "produce 5 rules" in {
+  it should "produce 5 rules" ignore {
     // Rule 1 provides 1 rule (split in 2) + 32 fact
     // Rule 2 provides 0 rules
     // Rule 3 provides 32 rule (split in 2)
