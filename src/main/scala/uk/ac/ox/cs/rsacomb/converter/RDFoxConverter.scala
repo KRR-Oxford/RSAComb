@@ -8,6 +8,7 @@ import org.semanticweb.owlapi.model.{
   OWLClassAssertionAxiom,
   OWLClassExpression,
   OWLDataProperty,
+  OWLDataPropertyAssertionAxiom,
   OWLDataPropertyDomainAxiom,
   OWLDataPropertyExpression,
   OWLDataSomeValuesFrom,
@@ -215,6 +216,20 @@ trait RDFoxConverter {
         else {
           val subj = a.getSubject.asOWLNamedIndividual.getIRI
           val obj = a.getObject.asOWLNamedIndividual.getIRI
+          val prop = convert(a.getProperty, subj, obj, suffix)
+          ResultF(List(prop))
+        }
+
+      /** Data property assertion.
+        *
+        * @see [[org.semanticweb.owlapi.model.OWLDataPropertyAssertionAxiom OWLDataPropertyAssertionAxiom]]
+        */
+      case a: OWLDataPropertyAssertionAxiom =>
+        if (!a.getSubject.isNamed || !a.getObject.isNamed)
+          Result()
+        else {
+          val subj = a.getSubject.asOWLNamedIndividual.getIRI
+          val obj = a.getObject
           val prop = convert(a.getProperty, subj, obj, suffix)
           ResultF(List(prop))
         }
