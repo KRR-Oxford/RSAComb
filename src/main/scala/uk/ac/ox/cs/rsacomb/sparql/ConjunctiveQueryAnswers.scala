@@ -1,6 +1,6 @@
 package uk.ac.ox.cs.rsacomb.sparql
 
-import tech.oxfordsemantic.jrdfox.logic.expression.Resource
+import tech.oxfordsemantic.jrdfox.logic.expression.{Resource, Variable}
 
 /** A collections of answers to a query.
   *
@@ -13,6 +13,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.Resource
   */
 class ConjunctiveQueryAnswers(
     bcq: Boolean,
+    val variables: Seq[Variable],
     val answers: Seq[Seq[Resource]]
 ) {
 
@@ -21,8 +22,11 @@ class ConjunctiveQueryAnswers(
       if (answers.isEmpty) "FALSE" else "TRUE"
     } else {
       if (answers.isEmpty)
-        "NO ANSWER"
-      else
-        answers.map(_.mkString("(", ", ", ")")).mkString("\n")
+        "NO ANSWER."
+      else {
+        val header = variables map (_.getName) mkString "\t"
+        val body = answers.map(_.mkString("\t")).mkString("\n")
+        s"$header\n$body"
+      }
     }
 }
