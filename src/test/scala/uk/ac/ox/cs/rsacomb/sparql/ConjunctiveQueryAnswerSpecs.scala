@@ -43,11 +43,11 @@ class ConjunctiveQueryAnswerSpec extends AnyFlatSpec with Matchers {
   import ConjunctiveQueryAnswerSpec._
 
   "A conjunctive query" should "print an header and a single line if it has a single answer" in {
-    oneAnswer.toString shouldBe s"X\tY\tZ\n$iri1\t$iri2\t$iri3"
+    oneAnswer.toString shouldBe s"X\tY\tZ\n${iri1.getIRI}\t${iri2.getIRI}\t${iri3.getIRI}"
   }
 
   it should "print a header and multiple answers on multiple lines" in {
-    multipleAnswers.toString shouldBe s"Y\tZ\n$iri1\t$iri1\n$iri1\t$iri2\n$iri1\t$iri3"
+    multipleAnswers.toString shouldBe s"Y\tZ\n${iri1.getIRI}\t${iri1.getIRI}\n${iri1.getIRI}\t${iri2.getIRI}\n${iri1.getIRI}\t${iri3.getIRI}"
   }
 
   it should "print a special \"NO ANSWER.\" string when it has no answer" in {
