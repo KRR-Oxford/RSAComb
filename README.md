@@ -71,6 +71,9 @@ The following is a summary of fixes (🔧), changes (🔄) and improvements (⚡
   ```
   where `rsa:named` is an internal predicate keeping track of all constants in the original ontology.
 
++ ⚡ Both in the canonical model and the filtering program computations,
+  rules without a body are loaded into RDFox as facts.
+
 ## References
 
 [1] Feier, Cristina, David Carral, Giorgio Stefanoni, Bernardo Cuenca Grau, and Ian Horrocks.
