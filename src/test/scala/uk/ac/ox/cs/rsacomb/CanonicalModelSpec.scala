@@ -1,4 +1,4 @@
-package rsacomb
+package uk.ac.ox.cs.rsacomb
 
 import java.io.File
 import org.scalatest.LoneElement

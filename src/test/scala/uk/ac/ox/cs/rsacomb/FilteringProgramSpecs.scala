@@ -1,4 +1,4 @@
-package rsacomb
+package uk.ac.ox.cs.rsacomb
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
