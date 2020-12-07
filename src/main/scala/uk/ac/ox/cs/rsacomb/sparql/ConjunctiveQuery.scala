@@ -31,7 +31,7 @@ object ConjunctiveQuery {
     * @return an [[scala.Option]] containing a ConjunctiveQuery if the
     *         input query represents one, None is returned otherwise.
     */
-  def apply(
+  def parse(
       query: String,
       prefixes: Prefixes = new Prefixes()
   ): Option[ConjunctiveQuery] =

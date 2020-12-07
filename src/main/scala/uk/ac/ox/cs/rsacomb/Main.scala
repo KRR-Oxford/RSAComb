@@ -60,7 +60,7 @@ object RSAComb extends App {
     val query = RDFoxUtil.loadQueryFromFile(queryPath.getAbsoluteFile)
 
     /* Compute answers to query */
-    ConjunctiveQuery(query).map(ontology ask _) match {
+    ConjunctiveQuery.parse(query).map(ontology ask _) match {
       case Some(answers) => Logger print answers
       case None =>
         throw new RuntimeException("Submitted query is not conjunctive")

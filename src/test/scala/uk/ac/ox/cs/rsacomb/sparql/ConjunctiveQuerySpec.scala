@@ -142,35 +142,35 @@ class ConjunctiveQuerySpec
   import ConjunctiveQuerySpec._
 
   "A conjunctive query" should "result in a `ConjunctiveQuery` instance" in {
-    ConjunctiveQuery(cq0) shouldBe defined
+    ConjunctiveQuery.parse(cq0) shouldBe defined
   }
 
   "A boolean conjunctive query" should "result in a `ConjunctiveQuery` instance" in {
-    ConjunctiveQuery(bcq0) shouldBe defined
+    ConjunctiveQuery.parse(bcq0) shouldBe defined
   }
 
   "A query with proper SELECT defined" should "not be a BCQ" in {
-    ConjunctiveQuery(cq0).value should not be 'bcq
+    ConjunctiveQuery.parse(cq0).value should not be 'bcq
   }
 
   "A query with a \"*\" SELECT" should "not be a BCQ" in {
-    ConjunctiveQuery(cq1).value should not be 'bcq
+    ConjunctiveQuery.parse(cq1).value should not be 'bcq
   }
 
   "An ASK query" should "not be a BCQ" in {
-    ConjunctiveQuery(bcq0).value shouldBe 'bcq
+    ConjunctiveQuery.parse(bcq0).value shouldBe 'bcq
   }
 
   "Queries" should "have distinct answer and bounded variables" in {
     for (q <- queries) {
-      val cq = ConjunctiveQuery(q)
+      val cq = ConjunctiveQuery.parse(q)
       forAll(cq.value.answer) { v => cq.value.bounded should not contain v }
       forAll(cq.value.bounded) { v => cq.value.answer should not contain v }
     }
   }
 
   "CQ0" should "have {?obj, ?pred} as bounded variables" in {
-    ConjunctiveQuery(cq0).value.bounded should contain theSameElementsAs
+    ConjunctiveQuery.parse(cq0).value.bounded should contain theSameElementsAs
       List(
         Variable.create("Y"),
         Variable.create("Z")
@@ -178,15 +178,15 @@ class ConjunctiveQuerySpec
   }
 
   "CQ1" should "have no bounded variable" in {
-    ConjunctiveQuery(cq1).value.bounded shouldBe empty
+    ConjunctiveQuery.parse(cq1).value.bounded shouldBe empty
   }
 
   "CQ2" should "have no bounded variable" in {
-    ConjunctiveQuery(cq2).value.bounded shouldBe empty
+    ConjunctiveQuery.parse(cq2).value.bounded shouldBe empty
   }
 
   "CQ3" should "have {?w, ?fp} as bounded variables" in {
-    ConjunctiveQuery(cq3).value.bounded should contain theSameElementsAs
+    ConjunctiveQuery.parse(cq3).value.bounded should contain theSameElementsAs
       List(
         Variable.create("w"),
         Variable.create("fp")
@@ -194,11 +194,11 @@ class ConjunctiveQuerySpec
   }
 
   "CQ4" should "have no bounded variable" in {
-    ConjunctiveQuery(cq4).value.bounded shouldBe empty
+    ConjunctiveQuery.parse(cq4).value.bounded shouldBe empty
   }
 
   "CQ5" should "have a non-empty bounded set" in {
-    ConjunctiveQuery(cq5).value.bounded should contain theSameElementsAs
+    ConjunctiveQuery.parse(cq5).value.bounded should contain theSameElementsAs
       List(
         Variable.create("w"),
         Variable.create("c_int"),
@@ -208,7 +208,7 @@ class ConjunctiveQuerySpec
   }
 
   "CQ6" should "have a non-empty bounded set" in {
-    ConjunctiveQuery(cq6).value.bounded should contain theSameElementsAs
+    ConjunctiveQuery.parse(cq6).value.bounded should contain theSameElementsAs
       List(
         Variable.create("w"),
         Variable.create("int")
@@ -216,7 +216,7 @@ class ConjunctiveQuerySpec
   }
 
   "CQ7" should "have a non-empty bounded set" in {
-    ConjunctiveQuery(cq7).value.bounded should contain theSameElementsAs
+    ConjunctiveQuery.parse(cq7).value.bounded should contain theSameElementsAs
       List(
         Variable.create("w"),
         Variable.create("z"),
