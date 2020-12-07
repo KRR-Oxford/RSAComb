@@ -109,8 +109,8 @@ class RSAOntology(val ontology: OWLOntology) {
   val axioms: List[OWLLogicalAxiom] = abox ::: tbox ::: rbox
 
   Logger.print(s"Original TBox: ${tbox.length} axioms", Logger.DEBUG)
-  Logger.print(s"Original RBox: ${tbox.length} axioms", Logger.DEBUG)
-  Logger.print(s"Original ABox: ${tbox.length} axioms", Logger.DEBUG)
+  Logger.print(s"Original RBox: ${rbox.length} axioms", Logger.DEBUG)
+  Logger.print(s"Original ABox: ${abox.length} axioms", Logger.DEBUG)
 
   /* Retrieve individuals in the original ontology
    */
