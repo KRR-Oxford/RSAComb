@@ -403,6 +403,20 @@ class RSAOntology(val ontology: OWLOntology) {
     answers
   }
 
+  /** Returns set of unfiltered answers.
+    *
+    * This is equivalent to quering just the canonical model.
+    *
+    * @note this method does not load any data to RDFox. The return
+    * value is considered well defined only after
+    * [[uk.ac.ox.cs.rsacomb.RSAOntology.ask RSAOntology.ask]]
+    * for the corresponding query has been called.
+    */
+  def askUnfiltered(cq: ConjunctiveQuery): Option[Seq[Seq[Resource]]] = {
+    val query = RDFoxUtil.buildDescriptionQuery("QM", cq.variables.length)
+    queryDataStore(cq, query, RSA.Prefixes)
+  }
+
   def self(axiom: OWLSubClassOfAxiom): Set[Term] = {
     // Assuming just one role in the signature of a T5 axiom
     val role = axiom.objectPropertyExpressionsInSignature(0)

@@ -17,6 +17,9 @@ class ConjunctiveQueryAnswers(
     val answers: Seq[Seq[Resource]]
 ) {
 
+  /** Returns number of answers. */
+  val length: Int = if (bcq) 0 else answers.length
+
   override def toString(): String =
     if (bcq) {
       if (answers.isEmpty) "FALSE" else "TRUE"

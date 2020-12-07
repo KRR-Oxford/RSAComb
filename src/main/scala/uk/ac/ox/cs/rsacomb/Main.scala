@@ -57,13 +57,29 @@ object RSAComb extends App {
     Logger print "Ontology is RSA!"
 
     /** Read SPARQL query from file */
-    val query = RDFoxUtil.loadQueryFromFile(queryPath.getAbsoluteFile)
+    val strQuery = RDFoxUtil.loadQueryFromFile(queryPath.getAbsoluteFile)
+    val query = ConjunctiveQuery parse strQuery
 
-    /* Compute answers to query */
-    ConjunctiveQuery.parse(query).map(ontology ask _) match {
-      case Some(answers) => Logger print answers
+    query match {
+      case Some(query) => {
+        val answers = ontology ask query
+        Logger.print(s"$answers", Logger.QUIET)
+        Logger print s"Number of answer: ${answers.length}"
+
+        val unfiltered = ontology askUnfiltered query
+        val percentage = unfiltered match {
+          case Some(u) =>
+            if (u.length > 0) (1 - answers.length / u.length) * 100 else 0
+          case None => 0
+        }
+        Logger.print(
+          s"Percentage of spurious answers: $percentage%",
+          Logger.DEBUG
+        )
+      }
       case None =>
         throw new RuntimeException("Submitted query is not conjunctive")
     }
+
   }
 }
