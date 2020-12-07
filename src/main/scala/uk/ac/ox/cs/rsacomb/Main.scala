@@ -10,7 +10,7 @@ import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Term}
 
 /* Local imports */
-import util.{RDFoxUtil, RSA}
+import util.{Logger, RDFoxUtil, RSA}
 import sparql.ConjunctiveQuery
 
 object RSAComb extends App {
@@ -53,15 +53,17 @@ object RSAComb extends App {
 
   val ontology = RSAOntology(ontoPaths: _*)
   if (ontology.isRSA) {
-    //println("ONTOLOGY IS RSA")
+
+    Logger print "Ontology is RSA!"
 
     /** Read SPARQL query from file */
-    val source = io.Source.fromFile(queryPath.getAbsoluteFile)
-    val query = source.getLines mkString "\n"
-    source.close()
+    val query = RDFoxUtil.loadQueryFromFile(queryPath.getAbsoluteFile)
 
     /* Compute answers to query */
-    val answers = ConjunctiveQuery(query).map(ontology ask _)
-    answers map (_.toString) foreach println
+    ConjunctiveQuery(query).map(ontology ask _) match {
+      case Some(answers) => Logger print answers
+      case None =>
+        throw new RuntimeException("Submitted query is not conjunctive")
+    }
   }
 }
