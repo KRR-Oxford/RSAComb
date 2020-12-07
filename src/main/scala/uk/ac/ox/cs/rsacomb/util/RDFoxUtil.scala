@@ -114,6 +114,10 @@ object RDFoxUtil {
       Logger.DEBUG
     )
 
+  /** Force materialization in RDFox. */
+  def materialize(data: DataStoreConnection): Unit =
+    Logger.timed(data.updateMaterialization(), "Materialization", Logger.DEBUG)
+
   /** Load SPARQL query from file. */
   def loadQueryFromFile(file: File): String = {
     val source = io.Source.fromFile(file)
