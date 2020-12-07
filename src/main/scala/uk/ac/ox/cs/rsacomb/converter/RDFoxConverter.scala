@@ -225,7 +225,7 @@ trait RDFoxConverter {
         * @see [[org.semanticweb.owlapi.model.OWLDataPropertyAssertionAxiom OWLDataPropertyAssertionAxiom]]
         */
       case a: OWLDataPropertyAssertionAxiom =>
-        if (!a.getSubject.isNamed || !a.getObject.isNamed)
+        if (!a.getSubject.isNamed)
           Result()
         else {
           val subj = a.getSubject.asOWLNamedIndividual.getIRI
