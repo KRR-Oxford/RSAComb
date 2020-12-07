@@ -336,7 +336,7 @@ class RSAOntology(val ontology: OWLOntology) {
         RSA.Prefixes
       )
       .map(
-        new ConjunctiveQueryAnswers(query.bcq, _)
+        new ConjunctiveQueryAnswers(query.bcq, query.variables, _)
       )
       .get
     RDFoxUtil.closeConnection(server, data)

@@ -61,7 +61,7 @@ object RSAComb extends App {
     source.close()
 
     /* Compute answers to query */
-    val answers = ConjunctiveQuery(query).map(ontology ask _)
+    val answers = ConjunctiveQuery.parse(query).map(ontology ask _)
     answers map (_.toString) foreach println
   }
 }
