@@ -425,7 +425,8 @@ trait RDFoxConverter {
         * @see [[https://www.w3.org/TR/owl2-syntax/#Inverse_Object_Properties Inverse Object Properties]]
         */
       case e: OWLObjectInverseOf =>
-        convert(e.getInverse, term1, term2, suffix + Inverse)
+        //convert(e.getInverse, term1, term2, suffix + Inverse)
+        convert(e.getInverse, term2, term1, suffix)
 
       /** The infamous impossible case.
         *

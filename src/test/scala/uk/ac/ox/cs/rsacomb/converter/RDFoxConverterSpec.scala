@@ -86,12 +86,11 @@ class RDFoxConverterSpec
     }
   }
 
-  "The inverse of an object property" should "be converted into an atom with matching negated predicate" in {
+  "The inverse of an object property" should "be converted into an atom with inverted subject/object" in {
     val prop = factory.getOWLObjectProperty(iriString0)
     val inv = factory.getOWLObjectInverseOf(prop)
     for (sx <- Seq(Empty, Forward, Backward)) {
-      val atom =
-        TupleTableAtom.rdf(term0, IRI.create(iriString0 :: sx + Inverse), term1)
+      val atom = TupleTableAtom.rdf(term1, IRI.create(iriString0 :: sx), term0)
       convert(inv, term0, term1, sx) shouldEqual atom
     }
   }
