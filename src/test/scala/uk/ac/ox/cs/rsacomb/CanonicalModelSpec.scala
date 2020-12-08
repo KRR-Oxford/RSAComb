@@ -218,13 +218,13 @@ class Ontology1_CanonicalModelSpec
 
   renderer.render(
     SsubPropertyOfT
-  ) should "produce 2 rules" in {
+  ) should "produce 3 rules" in {
     val term = Variable.create("X")
     val unsafe = ontology.unsafeRoles
     val (facts, rules) =
       converter.convert(SsubPropertyOfT, term, unsafe, NoSkolem, Empty)
     facts shouldBe empty
-    rules should have length 2
+    rules should have length 3
   }
 
 }

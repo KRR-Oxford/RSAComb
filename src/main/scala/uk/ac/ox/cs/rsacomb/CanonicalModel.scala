@@ -247,11 +247,10 @@ class CanonicalModel(val ontology: RSAOntology) {
         }
 
         case a: OWLSubObjectPropertyOfAxiom => {
-          val (factsF, rulesF) =
-            super.convert(a, term, unsafe, NoSkolem, Forward)
-          val (factsB, rulesB) =
-            super.convert(a, term, unsafe, NoSkolem, Backward)
-          (factsF ::: factsB, rulesF ::: rulesB)
+          val (facts, rules) = List(Empty, Forward, Backward)
+            .map(super.convert(a, term, unsafe, NoSkolem, _))
+            .unzip
+          (facts.flatten, rules.flatten)
         }
 
         case a => super.convert(a, term, unsafe, skolem, suffix)
