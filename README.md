@@ -71,8 +71,11 @@ The following is a summary of fixes (🔧), changes (🔄) and improvements (⚡
   ```
   where `rsa:named` is an internal predicate keeping track of all constants in the original ontology.
 
-+ ⚡ Both in the canonical model and the filtering program computations,
-  rules without a body are loaded into RDFox as facts.
++ ⚡ In Def. 3, regarding the generation of the logic program used for the RSA checkk, only T5 axioms involving an unsafe role will introduce the internal predicates `PE` and `U`.
+
++ ⚡ Both in the canonical model and the filtering program computations, rules without a body are loaded into RDFox as facts.
+
++ ⚡ The `cycle` function introduced in Def.4 establishing the direction of the *unraveling* of loops is defined over triples `(A,R,B)`. We are currently limiting the triple only to those appearing in a T5 axiom `A ⊑ ∃R.B`. Note that this greatly limits the size of cycle for a given triple, and as a consequence limits the number of rules used to compute the canonical model.
 
 ## References
 

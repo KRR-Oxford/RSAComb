@@ -1,6 +1,11 @@
 package uk.ac.ox.cs.rsacomb.sparql
 
-import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Resource, Variable}
+import tech.oxfordsemantic.jrdfox.logic.expression.{
+  IRI,
+  Literal,
+  Resource,
+  Variable
+}
 
 /** A collections of answers to a query.
   *
@@ -30,8 +35,9 @@ class ConjunctiveQueryAnswers(
         val header = variables map (_.getName) mkString "\t"
         val body = answers
           .map(_.map {
-            case x: IRI => x.getIRI
-            case x      => x.toString
+            case x: IRI     => x.getIRI
+            case x: Literal => x.getLexicalForm
+            case x          => x.toString
           }.mkString("\t"))
           .mkString("\n")
         s"$header\n$body"

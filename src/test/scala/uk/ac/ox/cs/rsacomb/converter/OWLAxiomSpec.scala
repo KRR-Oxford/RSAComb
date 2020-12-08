@@ -1,4 +1,4 @@
-package rsacomb
+package uk.ac.ox.cs.rsacomb.converter
 
 import java.util.{ArrayList => JList}
 import org.scalatest.LoneElement

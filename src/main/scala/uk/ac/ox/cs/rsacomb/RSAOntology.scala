@@ -11,6 +11,7 @@ import org.semanticweb.owlapi.model.{OWLOntology, OWLAxiom, OWLLogicalAxiom}
 import org.semanticweb.owlapi.model.{
   OWLClass,
   OWLClassExpression,
+  OWLDataPropertyAssertionAxiom,
   OWLObjectProperty,
   OWLSubObjectPropertyOfAxiom,
   OWLObjectPropertyExpression,
@@ -35,7 +36,8 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
   Term,
   Variable,
   IRI,
-  Resource
+  Resource,
+  Literal
 }
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 
@@ -121,6 +123,12 @@ class RSAOntology(val ontology: OWLOntology) {
       .map(_.getIRI)
       .map(implicits.RDFox.owlapiToRdfoxIri)
       .toList
+
+  val literals: List[Literal] =
+    abox
+      .collect { case a: OWLDataPropertyAssertionAxiom => a }
+      .map(_.getObject)
+      .map(implicits.RDFox.owlapiToRdfoxLiteral)
 
   val concepts: List[OWLClass] =
     ontology.getClassesInSignature().asScala.toList
@@ -298,7 +306,7 @@ class RSAOntology(val ontology: OWLOntology) {
 
   def filteringProgram(query: ConjunctiveQuery): FilteringProgram =
     Logger.timed(
-      new FilteringProgram(query, individuals),
+      new FilteringProgram(query, individuals ++ literals),
       "Generating filtering program",
       Logger.DEBUG
     )
