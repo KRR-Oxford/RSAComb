@@ -351,7 +351,6 @@ class RSAOntology(val ontology: OWLOntology) {
       Logger print s"Canonical model: ${canon.facts.length} facts"
       RDFoxUtil.addFacts(data, this.canonicalModel.facts)
 
-      RDFoxUtil materialize data
       RDFoxUtil printStatisticsFor data
 
       Logger print s"Filtering program: ${filter.rules.length} rules"
@@ -360,7 +359,6 @@ class RSAOntology(val ontology: OWLOntology) {
       Logger print s"Filtering program: ${filter.facts.length} facts"
       RDFoxUtil.addFacts(data, filter.facts)
 
-      RDFoxUtil materialize data
       RDFoxUtil printStatisticsFor data
 
       val answers = {
