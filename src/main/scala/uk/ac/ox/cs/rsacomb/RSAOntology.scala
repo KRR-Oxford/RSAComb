@@ -298,9 +298,8 @@ class RSAOntology(val ontology: OWLOntology) {
   ): Graph[Resource, UnDiEdge] = {
     val query = "SELECT ?X ?Y WHERE { ?X rsa:E ?Y }"
     val answers = RDFoxUtil.submitQuery(data, query, RSA.Prefixes).get
-    var edges: Seq[UnDiEdge[Resource]] = answers.map { case Seq(n1, n2) =>
-      UnDiEdge(n1, n2)
-    }
+    var edges: Seq[UnDiEdge[Resource]] =
+      answers.collect { case (_, Seq(n1, n2)) => UnDiEdge(n1, n2) }
     Graph(edges: _*)
   }
 
@@ -402,7 +401,7 @@ class RSAOntology(val ontology: OWLOntology) {
       query: String,
       prefixes: Prefixes = new Prefixes(),
       opts: ju.Map[String, String] = new ju.HashMap[String, String]()
-  ): Option[Seq[Seq[Resource]]] = {
+  ): Option[Seq[(Long, Seq[Resource])]] = {
     val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
     val answers = RDFoxUtil.submitQuery(data, query, prefixes, opts)
     RDFoxUtil.closeConnection(server, data)
@@ -418,7 +417,9 @@ class RSAOntology(val ontology: OWLOntology) {
     * [[uk.ac.ox.cs.rsacomb.RSAOntology.ask RSAOntology.ask]]
     * for the corresponding query has been called.
     */
-  def askUnfiltered(cq: ConjunctiveQuery): Option[Seq[Seq[Resource]]] = {
+  def askUnfiltered(
+      cq: ConjunctiveQuery
+  ): Option[Seq[(Long, Seq[Resource])]] = {
     val query = RDFoxUtil.buildDescriptionQuery("QM", cq.variables.length)
     queryDataStore(cq, query, RSA.Prefixes)
   }

@@ -68,8 +68,13 @@ object RSAComb extends App {
 
         val unfiltered = ontology askUnfiltered query
         val percentage = unfiltered match {
-          case Some(u) =>
+          case Some(u) => {
+            Logger.print(
+              s"Number of spurious answers: ${u.length}.",
+              Logger.DEBUG
+            )
             if (u.length > 0) (1 - answers.length / u.length) * 100 else 0
+          }
           case None => 0
         }
         Logger.print(

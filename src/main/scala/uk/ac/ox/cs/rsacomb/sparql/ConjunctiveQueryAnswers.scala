@@ -19,11 +19,14 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
 class ConjunctiveQueryAnswers(
     bcq: Boolean,
     val variables: Seq[Variable],
-    val answers: Seq[Seq[Resource]]
+    val answers: Seq[(Long, Seq[Resource])]
 ) {
 
-  /** Returns number of answers. */
+  /** Returns number of distinct answers. */
   val length: Int = if (bcq) 0 else answers.length
+
+  /** Returns number of answers taking into account multiplicity. */
+  val lengthWithMultiplicity: Long = answers.map(_._1).sum
 
   override def toString(): String =
     if (bcq) {
@@ -34,11 +37,15 @@ class ConjunctiveQueryAnswers(
       else {
         val header = variables map (_.getName) mkString "\t"
         val body = answers
-          .map(_.map {
-            case x: IRI     => x.getIRI
-            case x: Literal => x.getLexicalForm
-            case x          => x.toString
-          }.mkString("\t"))
+          .map(
+            _._2
+              .map {
+                case x: IRI     => x.getIRI
+                case x: Literal => x.getLexicalForm
+                case x          => x.toString
+              }
+              .mkString("\t")
+          )
           .mkString("\n")
         s"$header\n$body"
       }

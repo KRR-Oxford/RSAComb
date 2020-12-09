@@ -37,8 +37,8 @@ object RDFoxUtil {
   /** Type alias for a collection of answers to a
     * [[tech.oxfordsemantic.jrdfox.logic.sparql.statement.Query]].
     */
-  private type QueryAnswers = Seq[Seq[Resource]]
-  private def QueryAnswers() = List.empty[Seq[Resource]]
+  private type QueryAnswers = Seq[(Long, Seq[Resource])]
+  private def QueryAnswers() = List.empty[(Long, Seq[Resource])]
 
   /** Type alias for <option => value> RDFox options. */
   private type RDFoxOpts = java.util.Map[String, String]
@@ -170,7 +170,7 @@ object RDFoxUtil {
       while (mul > 0) {
         val answer =
           (0 until cursor.getArity).map(cursor.getResource(_)).toList
-        answers = answer :: answers
+        answers = (mul, answer) :: answers
         mul = cursor.advance()
       }
       cursor.close();
@@ -218,7 +218,7 @@ object RDFoxUtil {
           .map(i => s"?S rsa:${pred :: Nth(i)} ?X$i .")
           .mkString("WHERE {\n", "\n", "\n}")
     } else {
-      s"ASK { ?X a rsa:$pred }"
+      s"ASK { ?X a rsa:${pred :: Nth(0)} }"
     }
   }
 
