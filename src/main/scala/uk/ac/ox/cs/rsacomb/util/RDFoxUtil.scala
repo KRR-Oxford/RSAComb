@@ -1,5 +1,6 @@
 package uk.ac.ox.cs.rsacomb.util
 
+import java.io.File
 import java.io.StringReader
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.client.{
@@ -20,6 +21,7 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
 import tech.oxfordsemantic.jrdfox.logic.expression.{Resource}
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 import uk.ac.ox.cs.rsacomb.suffix.Nth
+import uk.ac.ox.cs.rsacomb.util.Logger
 
 /** A collection of helper methods for RDFox */
 object RDFoxUtil {
@@ -35,8 +37,8 @@ object RDFoxUtil {
   /** Type alias for a collection of answers to a
     * [[tech.oxfordsemantic.jrdfox.logic.sparql.statement.Query]].
     */
-  private type QueryAnswers = Seq[Seq[Resource]]
-  private def QueryAnswers() = List.empty[Seq[Resource]]
+  private type QueryAnswers = Seq[(Long, Seq[Resource])]
+  private def QueryAnswers() = List.empty[(Long, Seq[Resource])]
 
   /** Type alias for <option => value> RDFox options. */
   private type RDFoxOpts = java.util.Map[String, String]
@@ -67,18 +69,21 @@ object RDFoxUtil {
     (server, data)
   }
 
-  /** Gather statistics from RDFox datastore.
+  /** Prints statistics from RDFox datastore.
+    *
+    * Prints something only when Logger level is set to DEBUG or more.
     *
     * @see [[https://docs.oxfordsemantic.tech/programmatic-access-APIs.html#in-depth-diagnostic-information]]
     * and [[https://docs.oxfordsemantic.tech/programmatic-access-APIs.html#managing-statistics]]
     * for more ways of gathering diagnostics from RDFox.
     */
-  def gatherStatistics(data: DataStoreConnection): String = {
+  def printStatisticsFor(data: DataStoreConnection): Unit = {
     val info = data.getComponentInfo(true)
-    s"${info.getName}: ${info.getPropertyValues}"
+    val stats = s"${info.getName}: ${info.getPropertyValues}"
       .replaceAll("\\{", "{\n  ")
       .replaceAll(", ", ",\n  ")
       .replaceAll("\\}", "\n}")
+    Logger.print(stats, Logger.DEBUG)
   }
 
   /** Adds a collection of rules to a data store.
@@ -87,7 +92,11 @@ object RDFoxUtil {
     * @param rules collection of rules to be added to the data store
     */
   def addRules(data: DataStoreConnection, rules: Seq[Rule]): Unit =
-    data addRules rules
+    Logger.timed(
+      data addRules rules,
+      "Loading rules",
+      Logger.DEBUG
+    )
 
   /** Adds a collection of facts to a data store.
     *
@@ -95,11 +104,28 @@ object RDFoxUtil {
     * @param facts collection of facts to be added to the data store
     */
   def addFacts(data: DataStoreConnection, facts: Seq[TupleTableAtom]): Unit =
-    data.importData(
-      UpdateType.ADDITION,
-      RSA.Prefixes,
-      facts.map(_.toString(Prefixes.s_emptyPrefixes)).mkString("", ".\n", ".")
+    Logger.timed(
+      data.importData(
+        UpdateType.ADDITION,
+        RSA.Prefixes,
+        facts.map(_.toString(Prefixes.s_emptyPrefixes)).mkString("", ".\n", ".")
+      ),
+      "Loading facts",
+      Logger.DEBUG
     )
+
+  /** Force materialization in RDFox. */
+  def materialize(data: DataStoreConnection): Unit =
+    Logger.timed(data.updateMaterialization(), "Materialization", Logger.DEBUG)
+
+  /** Load SPARQL query from file. */
+  def loadQueryFromFile(file: File): String = {
+    val source = io.Source.fromFile(file)
+    val query = source.getLines mkString "\n"
+    Logger print s"Loaded query:\n$query"
+    source.close()
+    query
+  }
 
   /** Parse a SELECT query from a string in SPARQL format.
     *
@@ -136,19 +162,23 @@ object RDFoxUtil {
       data: DataStoreConnection,
       query: SelectQuery,
       opts: RDFoxOpts = RDFoxOpts()
-  ): QueryAnswers = {
-    val cursor = data.createCursor(query, opts)
-    var answers = QueryAnswers()
-    var mul = cursor.open()
-    while (mul > 0) {
-      val answer =
-        (0 until cursor.getArity).map(cursor.getResource(_)).toList
-      answers = answer :: answers
-      mul = cursor.advance()
-    }
-    cursor.close();
-    answers
-  }
+  ): QueryAnswers = Logger.timed(
+    {
+      val cursor = data.createCursor(query, opts)
+      var answers = QueryAnswers()
+      var mul = cursor.open()
+      while (mul > 0) {
+        val answer =
+          (0 until cursor.getArity).map(cursor.getResource(_)).toList
+        answers = (mul, answer) :: answers
+        mul = cursor.advance()
+      }
+      cursor.close();
+      answers
+    },
+    "Answer query",
+    Logger.DEBUG
+  )
 
   /** Execute a query over a given datastore connection.
     *
@@ -188,7 +218,7 @@ object RDFoxUtil {
           .map(i => s"?S rsa:${pred :: Nth(i)} ?X$i .")
           .mkString("WHERE {\n", "\n", "\n}")
     } else {
-      s"ASK { ?X a rsa:$pred }"
+      s"ASK { ?X a rsa:${pred :: Nth(0)} }"
     }
   }
 

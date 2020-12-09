@@ -56,6 +56,7 @@ import uk.ac.ox.cs.rsacomb.converter._
 import uk.ac.ox.cs.rsacomb.suffix._
 import uk.ac.ox.cs.rsacomb.sparql._
 import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
+import uk.ac.ox.cs.rsacomb.util.Logger
 
 object RSAOntology {
 
@@ -109,6 +110,10 @@ class RSAOntology(val ontology: OWLOntology) {
 
   val axioms: List[OWLLogicalAxiom] = abox ::: tbox ::: rbox
 
+  Logger.print(s"Original TBox: ${tbox.length} axioms", Logger.DEBUG)
+  Logger.print(s"Original RBox: ${rbox.length} axioms", Logger.DEBUG)
+  Logger.print(s"Original ABox: ${abox.length} axioms", Logger.DEBUG)
+
   /* Retrieve individuals in the original ontology
    */
   val individuals: List[IRI] =
@@ -149,87 +154,91 @@ class RSAOntology(val ontology: OWLOntology) {
    *    why the ontology might not be RSA. This could help a second
    *    step of approximation of an Horn-ALCHOIQ to RSA
    */
-  lazy val isRSA: Boolean = {
+  lazy val isRSA: Boolean = Logger.timed(
+    {
+      val unsafe = this.unsafeRoles
 
-    val unsafe = this.unsafeRoles
+      // val renderer = new DLSyntaxObjectRenderer()
+      // println()
+      // println("Unsafe roles:")
+      // println(unsafe)
+      // println()
+      // println("DL rules:")
+      // tbox.foreach(x => println(renderer.render(x)))
 
-    /* DEBUG: print rules in DL syntax and unsafe roles */
-    //val renderer = new DLSyntaxObjectRenderer()
-    //println("\nDL rules:")
-    //axioms.foreach(x => println(renderer.render(x)))
-    //println("\nUnsafe roles:")
-    //println(unsafe)
+      object RSAConverter extends RDFoxConverter {
 
-    object RSAConverter extends RDFoxConverter {
+        override def convert(
+            expr: OWLClassExpression,
+            term: Term,
+            unsafe: List[OWLObjectPropertyExpression],
+            skolem: SkolemStrategy,
+            suffix: RSASuffix
+        ): Shards =
+          (expr, skolem) match {
 
-      override def convert(
-          expr: OWLClassExpression,
-          term: Term,
-          unsafe: List[OWLObjectPropertyExpression],
-          skolem: SkolemStrategy,
-          suffix: RSASuffix
-      ): Shards =
-        (expr, skolem) match {
+            case (e: OWLObjectSomeValuesFrom, c: Constant)
+                if unsafe contains e.getProperty => {
+              val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
+              (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
+            }
 
-          case (e: OWLObjectSomeValuesFrom, c: Constant)
-              if unsafe contains e.getProperty => {
-            val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
-            (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
+            case (e: OWLDataSomeValuesFrom, c: Constant)
+                if unsafe contains e.getProperty => {
+              val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
+              (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
+            }
+
+            case _ => super.convert(expr, term, unsafe, skolem, suffix)
           }
 
-          case (e: OWLDataSomeValuesFrom, c: Constant)
-              if unsafe contains e.getProperty => {
-            val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
-            (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
-          }
+      }
 
-          case _ => super.convert(expr, term, unsafe, skolem, suffix)
-        }
+      /* Ontology convertion into LP rules */
+      val term = RSAOntology.genFreshVariable()
+      val datalog = axioms
+        .map(a => RSAConverter.convert(a, term, unsafe, new Constant(a), Empty))
+        .unzip
+      val facts = datalog._1.flatten
+      val rules = datalog._2.flatten
 
-    }
+      //println("Datalog rules:")
+      //rules foreach println
 
-    /* Ontology convertion into LP rules */
-    val term = RSAOntology.genFreshVariable()
-    val datalog = axioms
-      .map(a => RSAConverter.convert(a, term, unsafe, new Constant(a), Empty))
-      .unzip
-    val facts = datalog._1.flatten
-    val rules = datalog._2.flatten
+      // Open connection with RDFox
+      val (server, data) = RDFoxUtil.openConnection("RSACheck")
 
-    /* DEBUG: print datalog rules */
-    //println("\nDatalog rules:")
-    //rules.foreach(println)
+      /* Add built-in rules
+       * TODO: substitute with RDFoxUtil.addRules
+       */
+      data.importData(
+        UpdateType.ADDITION,
+        RSA.Prefixes,
+        "rsa:E[?X,?Y] :- rsa:PE[?X,?Y], rsa:U[?X], rsa:U[?Y] ."
+      )
 
-    // Open connection with RDFox
-    val (server, data) = RDFoxUtil.openConnection("RSACheck")
+      /* Add ontology facts and rules */
+      RDFoxUtil.addFacts(data, facts)
+      RDFoxUtil.addRules(data, rules)
 
-    /* Add built-in rules
-     * TODO: substitute with RDFoxUtil.addRules
-     */
-    data.importData(
-      UpdateType.ADDITION,
-      RSA.Prefixes,
-      "rsa:E[?X,?Y] :- rsa:PE[?X,?Y], rsa:U[?X], rsa:U[?Y] ."
-    )
+      /* Build graph */
+      val graph = this.rsaGraph(data);
+      //println("Graph:")
+      //println(graph)
 
-    /* Add ontology facts and rules */
-    RDFoxUtil.addFacts(data, facts)
-    RDFoxUtil.addRules(data, rules)
+      // Close connection to RDFox
+      RDFoxUtil.closeConnection(server, data)
 
-    /* Build graph */
-    val graph = this.rsaGraph(data);
-    //println(graph)
-
-    // Close connection to RDFox
-    RDFoxUtil.closeConnection(server, data)
-
-    /* To check if the graph is tree-like we check for acyclicity in a
-     * undirected graph.
-     *
-     * TODO: Implement additional checks (taking into account equality)
-     */
-    graph.isAcyclic
-  }
+      /* To check if the graph is tree-like we check for acyclicity in a
+       * undirected graph.
+       *
+       * TODO: Implement additional checks (taking into account equality)
+       */
+      graph.isAcyclic
+    },
+    "RSA check",
+    Logger.DEBUG
+  )
 
   lazy val unsafeRoles: List[OWLObjectPropertyExpression] = {
 
@@ -289,16 +298,23 @@ class RSAOntology(val ontology: OWLOntology) {
   ): Graph[Resource, UnDiEdge] = {
     val query = "SELECT ?X ?Y WHERE { ?X rsa:E ?Y }"
     val answers = RDFoxUtil.submitQuery(data, query, RSA.Prefixes).get
-    var edges: Seq[UnDiEdge[Resource]] = answers.map { case Seq(n1, n2) =>
-      UnDiEdge(n1, n2)
-    }
+    var edges: Seq[UnDiEdge[Resource]] =
+      answers.collect { case (_, Seq(n1, n2)) => UnDiEdge(n1, n2) }
     Graph(edges: _*)
   }
 
   def filteringProgram(query: ConjunctiveQuery): FilteringProgram =
-    new FilteringProgram(query, individuals ++ literals)
+    Logger.timed(
+      new FilteringProgram(query, individuals ++ literals),
+      "Generating filtering program",
+      Logger.DEBUG
+    )
 
-  lazy val canonicalModel = new CanonicalModel(this)
+  lazy val canonicalModel = Logger.timed(
+    new CanonicalModel(this),
+    "Generating canonical model program",
+    Logger.DEBUG
+  )
 
   // TODO: the following functions needs testing
   def confl(
@@ -329,27 +345,42 @@ class RSAOntology(val ontology: OWLOntology) {
     *  @param query query to execute
     *  @return a collection of answers
     */
-  def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = {
-    import implicits.JavaCollections._
-    val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
-    val filter = this.filteringProgram(query)
-    RDFoxUtil.addRules(data, this.canonicalModel.rules)
-    RDFoxUtil.addFacts(data, this.canonicalModel.facts)
-    RDFoxUtil.addRules(data, filter.rules)
-    RDFoxUtil.addFacts(data, filter.facts)
-    val answers = RDFoxUtil
-      .submitQuery(
-        data,
-        RDFoxUtil.buildDescriptionQuery("Ans", query.answer.size),
-        RSA.Prefixes
-      )
-      .map(
-        new ConjunctiveQueryAnswers(query.bcq, query.variables, _)
-      )
-      .get
-    RDFoxUtil.closeConnection(server, data)
-    answers
-  }
+  def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = Logger.timed(
+    {
+      import implicits.JavaCollections._
+      val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
+      val canon = this.canonicalModel
+      val filter = this.filteringProgram(query)
+
+      Logger print s"Canonical model: ${canon.rules.length} rules"
+      RDFoxUtil.addRules(data, this.canonicalModel.rules)
+
+      Logger print s"Canonical model: ${canon.facts.length} facts"
+      RDFoxUtil.addFacts(data, this.canonicalModel.facts)
+
+      RDFoxUtil printStatisticsFor data
+
+      Logger print s"Filtering program: ${filter.rules.length} rules"
+      RDFoxUtil.addRules(data, filter.rules)
+
+      Logger print s"Filtering program: ${filter.facts.length} facts"
+      RDFoxUtil.addFacts(data, filter.facts)
+
+      RDFoxUtil printStatisticsFor data
+
+      val answers = {
+        val ans = RDFoxUtil.buildDescriptionQuery("Ans", query.answer.size)
+        RDFoxUtil
+          .submitQuery(data, ans, RSA.Prefixes)
+          .map(new ConjunctiveQueryAnswers(query.bcq, query.variables, _))
+          .get
+      }
+      RDFoxUtil.closeConnection(server, data)
+      answers
+    },
+    "Answers computation",
+    Logger.DEBUG
+  )
 
   /** Query the RDFox data store used for query answering.
     *
@@ -370,11 +401,27 @@ class RSAOntology(val ontology: OWLOntology) {
       query: String,
       prefixes: Prefixes = new Prefixes(),
       opts: ju.Map[String, String] = new ju.HashMap[String, String]()
-  ): Option[Seq[Seq[Resource]]] = {
+  ): Option[Seq[(Long, Seq[Resource])]] = {
     val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
     val answers = RDFoxUtil.submitQuery(data, query, prefixes, opts)
     RDFoxUtil.closeConnection(server, data)
     answers
+  }
+
+  /** Returns set of unfiltered answers.
+    *
+    * This is equivalent to quering just the canonical model.
+    *
+    * @note this method does not load any data to RDFox. The return
+    * value is considered well defined only after
+    * [[uk.ac.ox.cs.rsacomb.RSAOntology.ask RSAOntology.ask]]
+    * for the corresponding query has been called.
+    */
+  def askUnfiltered(
+      cq: ConjunctiveQuery
+  ): Option[Seq[(Long, Seq[Resource])]] = {
+    val query = RDFoxUtil.buildDescriptionQuery("QM", cq.variables.length)
+    queryDataStore(cq, query, RSA.Prefixes)
   }
 
   def self(axiom: OWLSubClassOfAxiom): Set[Term] = {

@@ -10,7 +10,7 @@ import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Term}
 
 /* Local imports */
-import util.{RDFoxUtil, RSA}
+import util.{Logger, RDFoxUtil, RSA}
 import sparql.ConjunctiveQuery
 
 object RSAComb extends App {
@@ -53,15 +53,38 @@ object RSAComb extends App {
 
   val ontology = RSAOntology(ontoPaths: _*)
   if (ontology.isRSA) {
-    //println("ONTOLOGY IS RSA")
+
+    Logger print "Ontology is RSA!"
 
     /** Read SPARQL query from file */
-    val source = io.Source.fromFile(queryPath.getAbsoluteFile)
-    val query = source.getLines mkString "\n"
-    source.close()
+    val strQuery = RDFoxUtil.loadQueryFromFile(queryPath.getAbsoluteFile)
+    val query = ConjunctiveQuery parse strQuery
 
-    /* Compute answers to query */
-    val answers = ConjunctiveQuery.parse(query).map(ontology ask _)
-    answers map (_.toString) foreach println
+    query match {
+      case Some(query) => {
+        val answers = ontology ask query
+        Logger.print(s"$answers", Logger.QUIET)
+        Logger print s"Number of answer: ${answers.length}"
+
+        val unfiltered = ontology askUnfiltered query
+        val percentage = unfiltered match {
+          case Some(u) => {
+            Logger.print(
+              s"Number of spurious answers: ${u.length}.",
+              Logger.DEBUG
+            )
+            if (u.length > 0) (1 - answers.length / u.length) * 100 else 0
+          }
+          case None => 0
+        }
+        Logger.print(
+          s"Percentage of spurious answers: $percentage%",
+          Logger.DEBUG
+        )
+      }
+      case None =>
+        throw new RuntimeException("Submitted query is not conjunctive")
+    }
+
   }
 }
