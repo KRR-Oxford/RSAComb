@@ -218,7 +218,7 @@ object RDFoxUtil {
           .map(i => s"?S rsa:${pred :: Nth(i)} ?X$i .")
           .mkString("WHERE {\n", "\n", "\n}")
     } else {
-      s"ASK { ?X a rsa:${pred :: Nth(0)} }"
+      s"ASK { ?X a rsa:$pred }"
     }
   }
 
