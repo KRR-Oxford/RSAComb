@@ -40,7 +40,7 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
 import tech.oxfordsemantic.jrdfox.logic.expression.{Term, IRI, FunctionCall}
 import uk.ac.ox.cs.rsacomb.RSAOntology
 import uk.ac.ox.cs.rsacomb.suffix.{Empty, Inverse, RSASuffix}
-import uk.ac.ox.cs.rsacomb.util.RSA
+import uk.ac.ox.cs.rsacomb.util.{RSA, RDFoxUtil}
 
 /** Horn-ALCHOIQ to RDFox axiom converter.
   *
@@ -328,10 +328,7 @@ trait RDFoxConverter {
         val (bind, term1) = skolem match {
           case NoSkolem    => (None, varX)
           case c: Constant => (None, c.iri)
-          case s: Standard => {
-            val func = FunctionCall.create("SKOLEM", s.literal, term)
-            (Some(BindAtom.create(func, varX)), varX)
-          }
+          case s: Standard => (Some(RDFoxUtil.skolem(s.name, term, varX)), varX)
         }
         val (res, ext) = convert(cls, term1, unsafe, skolem, suffix)
         val prop = convert(role, term, term1, suffix)
@@ -359,10 +356,7 @@ trait RDFoxConverter {
         val (bind, term1) = skolem match {
           case NoSkolem    => (None, varX)
           case c: Constant => (None, c.iri)
-          case s: Standard => {
-            val func = FunctionCall.create("SKOLEM", s.literal, term)
-            (Some(BindAtom.create(func, varX)), varX)
-          }
+          case s: Standard => (Some(RDFoxUtil.skolem(s.name, term, varX)), varX)
         }
         val prop = convert(role, term, term1, suffix)
         (List(prop), bind.toList)

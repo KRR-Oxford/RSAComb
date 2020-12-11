@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VERSION="4.0.0"
+VERSION="4.1.0"
 NAME="RDFox-linux-$VERSION"
 LINK="https://rdfox-distribution.s3.eu-west-2.amazonaws.com/release/v$VERSION/$NAME.zip"
 DEST="./lib/"

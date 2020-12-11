@@ -53,8 +53,7 @@ case object NoSkolem extends SkolemStrategy {
 case class Standard(axiom: OWLAxiom)(implicit toString: (OWLAxiom) => String)
     extends SkolemStrategy {
   def dup(_axiom: OWLAxiom): Standard = copy(axiom = _axiom)(toString)
-  lazy val literal =
-    Literal.create(s"f_${toString(axiom)}", Datatype.XSD_STRING)
+  lazy val name = s"f_${toString(axiom)}"
 }
 
 /** Constant skolemization

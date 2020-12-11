@@ -1,7 +1,6 @@
 package uk.ac.ox.cs.rsacomb.util
 
-import java.io.File
-import java.io.StringReader
+import java.io.{OutputStream, File, StringReader}
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.client.{
   ComponentInfo,
@@ -11,6 +10,7 @@ import tech.oxfordsemantic.jrdfox.client.{
   UpdateType
 }
 import tech.oxfordsemantic.jrdfox.formats.SPARQLParser
+import tech.oxfordsemantic.jrdfox.logic.Datatype
 import tech.oxfordsemantic.jrdfox.logic.datalog.{
   Rule,
   BodyFormula,
@@ -18,7 +18,12 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
   TupleTableAtom,
   TupleTableName
 }
-import tech.oxfordsemantic.jrdfox.logic.expression.{Resource}
+import tech.oxfordsemantic.jrdfox.logic.expression.{
+  Literal,
+  Resource,
+  Variable,
+  Term
+}
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 import uk.ac.ox.cs.rsacomb.suffix.Nth
 import uk.ac.ox.cs.rsacomb.util.Logger
@@ -68,6 +73,13 @@ object RDFoxUtil {
     val data = server.newDataStoreConnection(datastore)
     (server, data)
   }
+
+  /** Create a built-in `rdfox:SKOLEM` TupleTableAtom. */
+  def skolem(name: String, terms: Term*): TupleTableAtom =
+    TupleTableAtom.create(
+      TupleTableName.SKOLEM,
+      (Literal.create(name, Datatype.XSD_STRING) +: terms): _*
+    )
 
   /** Prints statistics from RDFox datastore.
     *
@@ -125,6 +137,26 @@ object RDFoxUtil {
     Logger print s"Loaded query:\n$query"
     source.close()
     query
+  }
+
+  /** Export data in `text/turtle`.
+    *
+    * @param data datastore connection from which to export data.
+    * @param rules output stream for rules
+    * @param facts output stream for facts
+    */
+  def export(
+      data: DataStoreConnection,
+      rules: OutputStream,
+      facts: OutputStream
+  ): Unit = {
+    data.exportData(Prefixes.s_emptyPrefixes, facts, "text/turtle", RDFoxOpts())
+    data.exportData(
+      Prefixes.s_emptyPrefixes,
+      rules,
+      "application/x.datalog",
+      RDFoxOpts()
+    )
   }
 
   /** Parse a SELECT query from a string in SPARQL format.
@@ -231,11 +263,11 @@ object RDFoxUtil {
     * built-in `SKOLEM` funtion of RDFox.
     */
   def reify(rule: Rule): Rule = {
-    val (bs, as) = rule.getHead.map(_.reified).unzip
+    val (sk, as) = rule.getHead.map(_.reified).unzip
     val head: List[TupleTableAtom] = as.flatten
-    val bind: List[BodyFormula] = bs.flatten
+    val skolem: List[BodyFormula] = sk.flatten
     val body: List[BodyFormula] = rule.getBody.map(reify).flatten
-    Rule.create(head, bind ::: body)
+    Rule.create(head, skolem ::: body)
   }
 
   /** Reify a [[tech.oxfordsemantic.jrdfox.logic.datalog.BodyFormula BodyFormula]].
@@ -250,15 +282,16 @@ object RDFoxUtil {
     formula match {
       case atom: TupleTableAtom => atom.reified._2
       case neg: Negation => {
-        val (bs, as) = neg.getNegatedAtoms
+        val (sk, as) = neg.getNegatedAtoms
           .map({
             case a: TupleTableAtom => a.reified
             case a                 => (None, List(a))
           })
           .unzip
-        val bind = bs.flatten.map(_.getBoundVariable)
+        val skolem =
+          sk.flatten.map(_.getArguments.last).collect { case v: Variable => v }
         val atoms = as.flatten
-        List(Negation.create(bind, atoms))
+        List(Negation.create(skolem, atoms))
       }
       case other => List(other)
     }
