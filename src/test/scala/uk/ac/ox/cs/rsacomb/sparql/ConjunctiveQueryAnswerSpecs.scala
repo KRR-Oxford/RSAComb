@@ -61,7 +61,7 @@ class ConjunctiveQueryAnswerSpec extends AnyFlatSpec with Matchers {
     )
   }
   "Test answer 4" should "have length 1 (3 with multiplicity)" in {
-    noAnswer should have(
+    emptyAnswer should have(
       'length (1),
       'lengthWithMultiplicity (3)
     )
@@ -74,13 +74,13 @@ class ConjunctiveQueryAnswerSpec extends AnyFlatSpec with Matchers {
   }
   "Test boolean answer 2" should "have length 1 (1 with multiplicity)" in {
     trueAnswer1 should have(
-      'length (1),
+      'length (0),
       'lengthWithMultiplicity (1)
     )
   }
   "Test boolean answer 3" should "have length 3 (8 with multiplicity)" in {
     trueAnswer2 should have(
-      'length (3),
+      'length (0),
       'lengthWithMultiplicity (8)
     )
   }
