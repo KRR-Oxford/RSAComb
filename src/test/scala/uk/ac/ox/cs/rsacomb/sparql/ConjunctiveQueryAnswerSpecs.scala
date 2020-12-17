@@ -16,31 +16,74 @@ object ConjunctiveQueryAnswerSpec {
   val oneAnswer = new ConjunctiveQueryAnswers(
     false,
     Seq(varX, varY, varZ),
-    Seq(Seq(iri1, iri2, iri3))
+    Seq((4, Seq(iri1, iri2, iri3)))
   )
   val multipleAnswers =
     new ConjunctiveQueryAnswers(
       false,
       Seq(varY, varZ),
-      Seq(Seq(iri1, iri1), Seq(iri1, iri2), Seq(iri1, iri3))
+      Seq((1, Seq(iri1, iri1)), (2, Seq(iri1, iri2)), (1, Seq(iri1, iri3)))
     )
   val noAnswer = new ConjunctiveQueryAnswers(false, Seq(), Seq())
   val emptyAnswer =
-    new ConjunctiveQueryAnswers(false, Seq(varX, varY), Seq(Seq()))
+    new ConjunctiveQueryAnswers(false, Seq(varX, varY), Seq((3, Seq())))
 
   val falseAnswer = new ConjunctiveQueryAnswers(true, Seq(), Seq())
-  val trueAnswer1 = new ConjunctiveQueryAnswers(true, Seq(), Seq(Seq()))
+  val trueAnswer1 = new ConjunctiveQueryAnswers(true, Seq(), Seq((1, Seq())))
   val trueAnswer2 =
     new ConjunctiveQueryAnswers(
       true,
       Seq(varX, varY),
-      Seq(Seq(iri1, iri1), Seq(iri1, iri2), Seq(iri1, iri3))
+      Seq((5, Seq(iri1, iri1)), (2, Seq(iri1, iri2)), (1, Seq(iri1, iri3)))
     )
 }
 
 class ConjunctiveQueryAnswerSpec extends AnyFlatSpec with Matchers {
 
   import ConjunctiveQueryAnswerSpec._
+
+  "Test answer 1" should "have length 1 (4 with multiplicity)" in {
+    oneAnswer should have(
+      'length (1),
+      'lengthWithMultiplicity (4)
+    )
+  }
+  "Test answer 2" should "have length 3 (4 with multiplicity)" in {
+    multipleAnswers should have(
+      'length (3),
+      'lengthWithMultiplicity (4)
+    )
+  }
+  "Test answer 3" should "have length 0 (0 with multiplicity)" in {
+    noAnswer should have(
+      'length (0),
+      'lengthWithMultiplicity (0)
+    )
+  }
+  "Test answer 4" should "have length 1 (3 with multiplicity)" in {
+    noAnswer should have(
+      'length (1),
+      'lengthWithMultiplicity (3)
+    )
+  }
+  "Test boolean answer 1" should "have length 0 (0 with multiplicity)" in {
+    falseAnswer should have(
+      'length (0),
+      'lengthWithMultiplicity (0)
+    )
+  }
+  "Test boolean answer 2" should "have length 1 (1 with multiplicity)" in {
+    trueAnswer1 should have(
+      'length (1),
+      'lengthWithMultiplicity (1)
+    )
+  }
+  "Test boolean answer 3" should "have length 3 (8 with multiplicity)" in {
+    trueAnswer2 should have(
+      'length (3),
+      'lengthWithMultiplicity (8)
+    )
+  }
 
   "A conjunctive query" should "print an header and a single line if it has a single answer" in {
     oneAnswer.toString shouldBe s"X\tY\tZ\n${iri1.getIRI}\t${iri2.getIRI}\t${iri3.getIRI}"
