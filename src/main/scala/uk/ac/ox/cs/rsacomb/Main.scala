@@ -64,23 +64,35 @@ object RSAComb extends App {
       case Some(query) => {
         val answers = ontology ask query
         Logger.print(s"$answers", Logger.QUIET)
-        Logger print s"Number of answer: ${answers.length}"
+        Logger print s"Number of answer: ${answers.length} (${answers.lengthWithMultiplicity})"
 
         val unfiltered = ontology askUnfiltered query
-        val percentage = unfiltered match {
-          case Some(u) => {
+        unfiltered map { u =>
+          Logger.print(
+            s"Number of unfiltered answers: ${u.length} (${u.map(_._1).sum}).",
+            Logger.DEBUG
+          )
+          //u foreach println
+          val spurious = {
+            val sp =
+              RDFoxUtil.buildDescriptionQuery("SP", query.variables.length)
+            ontology.queryDataStore(query, sp, RSA.Prefixes)
+          }
+          spurious map { s =>
             Logger.print(
-              s"Number of spurious answers: ${u.length}.",
+              s"Number of spurious answers: ${s.length} (${s.map(_._1).sum})",
               Logger.DEBUG
             )
-            if (u.length > 0) (1 - answers.length / u.length) * 100 else 0
+            //s foreach println
+            val perc =
+              if (u.length > 0) (s.length / u.length.toFloat) * 100 else 0
+            Logger.print(
+              s"Percentage of spurious answers: $perc%",
+              Logger.DEBUG
+            )
           }
-          case None => 0
+
         }
-        Logger.print(
-          s"Percentage of spurious answers: $percentage%",
-          Logger.DEBUG
-        )
       }
       case None =>
         throw new RuntimeException("Submitted query is not conjunctive")
