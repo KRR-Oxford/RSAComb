@@ -1,4 +1,4 @@
-package uk.ox.ac.cs.rsacomb.converter
+package uk.ac.ox.cs.rsacomb.converter
 
 // import java.util.{ArrayList => JList}
 
