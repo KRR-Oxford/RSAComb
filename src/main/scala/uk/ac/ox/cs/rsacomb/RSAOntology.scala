@@ -24,7 +24,11 @@ import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory
 import org.semanticweb.owlapi.model.{IRI => OWLIRI}
 import uk.ac.manchester.cs.owl.owlapi.OWLObjectPropertyImpl
 
-import tech.oxfordsemantic.jrdfox.client.{UpdateType, DataStoreConnection}
+import tech.oxfordsemantic.jrdfox.client.{
+  DataStoreConnection,
+  TransactionType,
+  UpdateType
+}
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.logic.datalog.{
   Rule,
@@ -352,21 +356,30 @@ class RSAOntology(val ontology: OWLOntology) {
       val canon = this.canonicalModel
       val filter = this.filteringProgram(query)
 
+      //data.beginTransaction(TransactionType.READ_WRITE)
+
       Logger print s"Canonical model: ${canon.rules.length} rules"
       RDFoxUtil.addRules(data, this.canonicalModel.rules)
 
       Logger print s"Canonical model: ${canon.facts.length} facts"
       RDFoxUtil.addFacts(data, this.canonicalModel.facts)
 
-      RDFoxUtil printStatisticsFor data
+      Logger print s"Filtering program: ${filter.facts.length} facts"
+      RDFoxUtil.addFacts(data, filter.facts)
 
       Logger print s"Filtering program: ${filter.rules.length} rules"
       RDFoxUtil.addRules(data, filter.rules)
 
-      Logger print s"Filtering program: ${filter.facts.length} facts"
-      RDFoxUtil.addFacts(data, filter.facts)
+      //data.commitTransaction()
 
       RDFoxUtil printStatisticsFor data
+
+      //{
+      //  import java.io.{FileOutputStream, File}
+      //  val rules = new FileOutputStream(new File("rules2.dlog"))
+      //  val facts = new FileOutputStream(new File("facts2.ttl"))
+      //  RDFoxUtil.export(data, rules, facts)
+      //}
 
       val answers = {
         val ans = RDFoxUtil.buildDescriptionQuery("Ans", query.answer.size)
