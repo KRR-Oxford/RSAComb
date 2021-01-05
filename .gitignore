@@ -49,3 +49,4 @@ tags
 .vscode/settings.json
 .vscode/launch.json
 project/project/metals.sbt
+drafts
