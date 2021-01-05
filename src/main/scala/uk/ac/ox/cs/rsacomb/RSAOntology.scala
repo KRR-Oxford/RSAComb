@@ -114,9 +114,9 @@ class RSAOntology(val ontology: OWLOntology) {
 
   val axioms: List[OWLLogicalAxiom] = abox ::: tbox ::: rbox
 
-  Logger.print(s"Original TBox: ${tbox.length} axioms", Logger.DEBUG)
-  Logger.print(s"Original RBox: ${rbox.length} axioms", Logger.DEBUG)
-  Logger.print(s"Original ABox: ${abox.length} axioms", Logger.DEBUG)
+  Logger.print(s"Original TBox: ${tbox.length}", Logger.DEBUG)
+  Logger.print(s"Original RBox: ${rbox.length}", Logger.DEBUG)
+  Logger.print(s"Original ABox: ${abox.length}", Logger.DEBUG)
 
   /* Retrieve individuals in the original ontology
    */
@@ -358,16 +358,18 @@ class RSAOntology(val ontology: OWLOntology) {
 
       //data.beginTransaction(TransactionType.READ_WRITE)
 
-      Logger print s"Canonical model: ${canon.rules.length} rules"
+      Logger print s"Canonical model rules: ${canon.rules.length}"
       RDFoxUtil.addRules(data, this.canonicalModel.rules)
 
-      Logger print s"Canonical model: ${canon.facts.length} facts"
+      Logger print s"Canonical model facts: ${canon.facts.length}"
       RDFoxUtil.addFacts(data, this.canonicalModel.facts)
 
-      Logger print s"Filtering program: ${filter.facts.length} facts"
+      RDFoxUtil printStatisticsFor data
+
+      Logger print s"Filtering program facts: ${filter.facts.length}"
       RDFoxUtil.addFacts(data, filter.facts)
 
-      Logger print s"Filtering program: ${filter.rules.length} rules"
+      Logger print s"Filtering program rules: ${filter.rules.length}"
       RDFoxUtil.addRules(data, filter.rules)
 
       //data.commitTransaction()

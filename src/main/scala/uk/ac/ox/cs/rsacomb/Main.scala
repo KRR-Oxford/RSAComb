@@ -61,7 +61,7 @@ object RSAComb extends App {
       case Some(query) => {
         val answers = ontology ask query
         Logger.print(s"$answers", Logger.QUIET)
-        Logger print s"Number of answer: ${answers.length} (${answers.lengthWithMultiplicity})"
+        Logger print s"Number of answers: ${answers.length} (${answers.lengthWithMultiplicity})"
 
         /* Additional DEBUG information */
         if (Logger.level >= Logger.DEBUG) {

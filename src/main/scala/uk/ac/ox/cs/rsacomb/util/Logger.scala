@@ -38,7 +38,7 @@ object Logger {
     print(s"$desc (START)", lvl)
     val result = expr
     val t1 = System.currentTimeMillis()
-    print(s"$desc (END): ${(t1 - t0).toFloat / 1000}s", lvl)
+    print(s"$desc (END): ${(t1 - t0).toFloat / 1000}", lvl)
     result
   }
 
