@@ -126,9 +126,9 @@ class FilteringProgram(query: ConjunctiveQuery, constants: List[Term]) {
         if index2 >= 0
       } yield Rule.create(
         RSA.FK,
+        RSA.ID(RSA(index1), RSA(index2)),
         role1 << Forward,
         role2 << Forward,
-        RSA.ID(RSA(index1), RSA(index2)),
         not(RSA.Congruent(role1.getArguments get 0, role2.getArguments get 0))
       )
       val r4b = for {
@@ -140,9 +140,9 @@ class FilteringProgram(query: ConjunctiveQuery, constants: List[Term]) {
         if index2 >= 0
       } yield Rule.create(
         RSA.FK,
+        RSA.ID(RSA(index1), RSA(index2)),
         role1 << Forward,
         role2 << Backward,
-        RSA.ID(RSA(index1), RSA(index2)),
         not(RSA.Congruent(role1.getArguments get 0, role2.getArguments get 2))
       )
       val r4c = for {
@@ -154,9 +154,9 @@ class FilteringProgram(query: ConjunctiveQuery, constants: List[Term]) {
         if index2 >= 0
       } yield Rule.create(
         RSA.FK,
+        RSA.ID(RSA(index1), RSA(index2)),
         role1 << Backward,
         role2 << Backward,
-        RSA.ID(RSA(index1), RSA(index2)),
         not(RSA.Congruent(role1.getArguments get 2, role2.getArguments get 2))
       )
 
@@ -180,13 +180,13 @@ class FilteringProgram(query: ConjunctiveQuery, constants: List[Term]) {
           RSA(query.bounded indexOf r1arg0),
           RSA(query.bounded indexOf r2arg0)
         ),
-        role1 << Forward,
-        role2 << Forward,
         RSA.ID(
           RSA(query.bounded indexOf r1arg2),
           RSA(query.bounded indexOf r2arg2)
         ),
         RSA.Congruent(r1arg0, r2arg0),
+        role1 << Forward,
+        role2 << Forward,
         not(RSA.NI(r1arg0))
       )
       val r5b = for {
@@ -205,13 +205,13 @@ class FilteringProgram(query: ConjunctiveQuery, constants: List[Term]) {
           RSA(query.bounded indexOf r1arg0),
           RSA(query.bounded indexOf r2arg2)
         ),
-        role1 << Forward,
-        role2 << Backward,
         RSA.ID(
           RSA(query.bounded indexOf r1arg2),
           RSA(query.bounded indexOf r2arg0)
         ),
         RSA.Congruent(r1arg0, r2arg2),
+        role1 << Forward,
+        role2 << Backward,
         not(RSA.NI(r1arg0))
       )
       val r5c = for {
@@ -230,13 +230,13 @@ class FilteringProgram(query: ConjunctiveQuery, constants: List[Term]) {
           RSA(query.bounded indexOf r1arg2),
           RSA(query.bounded indexOf r2arg2)
         ),
-        role1 << Backward,
-        role2 << Backward,
         RSA.ID(
           RSA(query.bounded indexOf r1arg0),
           RSA(query.bounded indexOf r2arg0)
         ),
         RSA.Congruent(r1arg2, r2arg2),
+        role1 << Backward,
+        role2 << Backward,
         not(RSA.NI(r1arg2))
       )
 
