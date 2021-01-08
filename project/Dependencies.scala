@@ -8,8 +8,11 @@ object Dependencies {
 
   // Libraries
   val scalatest = "org.scalatest" %% "scalatest" % scalatestVersion
-  val scalatestFlatSpec = "org.scalatest" %% "scalatest-flatspec" % scalatestVersion
-  val scalatestShouldMatchers = "org.scalatest" %% "scalatest-shouldmatchers" % scalatestVersion
-  val apibinding = "net.sourceforge.owlapi" % "owlapi-apibinding" % owlapiVersion
+  val scalatestFlatSpec =
+    "org.scalatest" %% "scalatest-flatspec" % scalatestVersion
+  val scalatestShouldMatchers =
+    "org.scalatest" %% "scalatest-shouldmatchers" % scalatestVersion
+  val apibinding =
+    "net.sourceforge.owlapi" % "owlapi-apibinding" % owlapiVersion
   val graphcore = "org.scala-graph" %% "graph-core" % scalagraphVersion
 }

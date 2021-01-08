@@ -11,19 +11,42 @@ In order to use this program you need to have [RDFox](https://www.oxfordsemantic
 RDFox is proprietary software and as such we are not able to distribute it along with our code.
 Please refer to [this link](https://www.oxfordsemantic.tech/tryrdfoxforfree) to request a free trial.
 
-This software has been developed and tested with RDFox v.4.0
+This software has been developed and tested with RDFox v.4.1
 
 ## Using the software
 
-TODO
+We assume you followed [these steps](https://docs.oxfordsemantic.tech/getting-started.html#getting-started) in order to setup RDFox on your personal machine and in particular you know the path to the `JRDFox.jar` library that comes with the distribution.
 
 ### Provide RDFox license
 
-TODO
+The [documentation](https://docs.oxfordsemantic.tech/features-and-requirements.html#license-key), describes several ways to provide the license to RDFox.
 
-### Compiling the project
+One easy way is to put your license key in a file `RDFox.lic` in `$HOME/.RDFox/`, with adeguate read permissions for the user executing the program.
 
-TODO
+### Compiling and running the project
+
+The project uses [sbt](https://www.scala-sbt.org/) to manage dependences.
+
+To compile the project run the following from the base directory:
+```
+sbt compile
+```
+
+The project uses the sbt plugin [sbt-assembly](https://github.com/sbt/sbt-assembly) to produce a fat jar with all the required dependences.
+Run the following from the base directory of the project to produce a standalone `jar` file.
+```
+sbt assembly
+```
+
+The output of the command will print the location of the produced jar. Execute it with
+```
+java -jar <path/to/fat.jar> [<option> ...]
+```
+
+Note that the fat jar file distributed with this repository excludes the RDFox as a dependency. Provided that you have the RDFox setup on your machine, you can run the program as follows
+```
+java -cp <path/to/JRDFox.jar>:<path/to/fat.jar> uk.ac.ox.cs.rsacomb.RSAComb [<option> ...]
+```
 
 ### Running tests and examples
 
