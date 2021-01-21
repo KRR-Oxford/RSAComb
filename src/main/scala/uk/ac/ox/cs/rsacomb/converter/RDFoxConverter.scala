@@ -1,35 +1,7 @@
 package uk.ac.ox.cs.rsacomb.converter
 
 import java.util.stream.Collectors
-import org.semanticweb.owlapi.model.{
-  OWLAnnotationProperty,
-  OWLLogicalAxiom,
-  OWLClass,
-  OWLClassAssertionAxiom,
-  OWLClassExpression,
-  OWLDataProperty,
-  OWLDataPropertyAssertionAxiom,
-  OWLDataPropertyDomainAxiom,
-  OWLDataPropertyExpression,
-  OWLDataSomeValuesFrom,
-  OWLEquivalentClassesAxiom,
-  OWLEquivalentObjectPropertiesAxiom,
-  OWLInverseObjectPropertiesAxiom,
-  OWLNamedIndividual,
-  OWLObjectIntersectionOf,
-  OWLObjectInverseOf,
-  OWLObjectMaxCardinality,
-  OWLObjectOneOf,
-  OWLObjectProperty,
-  OWLObjectPropertyAssertionAxiom,
-  OWLObjectPropertyDomainAxiom,
-  OWLObjectPropertyExpression,
-  OWLObjectPropertyRangeAxiom,
-  OWLObjectSomeValuesFrom,
-  OWLPropertyExpression,
-  OWLSubClassOfAxiom,
-  OWLSubObjectPropertyOfAxiom
-}
+import org.semanticweb.owlapi.model._
 import scala.collection.JavaConverters._
 import tech.oxfordsemantic.jrdfox.logic.datalog.{
   BindAtom,
@@ -120,9 +92,7 @@ trait RDFoxConverter {
     * - [[org.semanticweb.owlapi.model.OWLDisjointUnionAxiom OWLDisjointUnionAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLEquivalentDataPropertiesAxiom OWLEquivalentDataPropertiesAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLFunctionalDataPropertyAxiom OWLFunctionalDataPropertyAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLFunctionalObjectPropertyAxiom OWLFunctionalObjectPropertyAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLHasKeyAxiom OWLHasKeyAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLInverseFunctionalObjectPropertyAxiom OWLInverseFunctionalObjectPropertyAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLIrreflexiveObjectPropertyAxiom OWLIrreflexiveObjectPropertyAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLNegativeDataPropertyAssertionAxiom OWLNegativeDataPropertyAssertionAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLNegativeObjectPropertyAssertionAxiom OWLNegativeObjectPropertyAssertionAxiom]]
@@ -190,12 +160,21 @@ trait RDFoxConverter {
       case a: OWLDataPropertyDomainAxiom =>
         convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)
 
+      case a: OWLDataPropertyRangeAxiom =>
+        Result() // ignored
+
       case a: OWLInverseObjectPropertiesAxiom => {
         val (atoms, rules) = a.asSubObjectPropertyOfAxioms
           .map(a => convert(a, term, unsafe, skolem dup a, suffix))
           .unzip
         (atoms.flatten, rules.flatten)
       }
+
+      case a: OWLFunctionalObjectPropertyAxiom =>
+        convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)
+
+      case a: OWLInverseFunctionalObjectPropertyAxiom =>
+        convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)
 
       case a: OWLClassAssertionAxiom => {
         val ind = a.getIndividual

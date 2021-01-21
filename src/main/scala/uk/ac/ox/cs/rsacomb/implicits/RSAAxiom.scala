@@ -7,12 +7,13 @@ import org.semanticweb.owlapi.model.{
   OWLEquivalentClassesAxiom
 }
 import org.semanticweb.owlapi.model.{
-  OWLObjectPropertyExpression,
-  OWLSubObjectPropertyOfAxiom,
   OWLClass,
   OWLClassExpression,
+  OWLFunctionalObjectPropertyAxiom,
+  OWLObjectMaxCardinality,
+  OWLObjectPropertyExpression,
   OWLObjectSomeValuesFrom,
-  OWLObjectMaxCardinality
+  OWLSubObjectPropertyOfAxiom
 }
 import org.semanticweb.owlapi.model.ClassExpressionType
 import org.semanticweb.owlapi.model.{
@@ -85,9 +86,15 @@ object RSAAxiom {
       }
 
       override def visit(axiom: OWLEquivalentClassesAxiom): Boolean = {
-        // TODO
-        false
+        axiom
+          .asOWLSubClassOfAxioms()
+          .asScala
+          .map(_.accept(this))
+          .exists(identity)
       }
+
+      override def visit(axiom: OWLFunctionalObjectPropertyAxiom): Boolean =
+        t == RSAAxiomType.T4
 
       def doDefault(axiom: OWLAxiom): Boolean = false
     }
