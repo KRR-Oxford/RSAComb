@@ -107,9 +107,7 @@ trait RDFoxConverter {
     * - [[org.semanticweb.owlapi.model.OWLNegativeObjectPropertyAssertionAxiom OWLNegativeObjectPropertyAssertionAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLReflexiveObjectPropertyAxiom OWLReflexiveObjectPropertyAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLSameIndividualAxiom OWLSameIndividualAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLSubDataPropertyOfAxiom OWLSubDataPropertyOfAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLSubPropertyChainOfAxiom OWLSubPropertyChainOfAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLSymmetricObjectPropertyAxiom OWLSymmetricObjectPropertyAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLTransitiveObjectPropertyAxiom OWLTransitiveObjectPropertyAxiom]]
     * - [[org.semanticweb.owlapi.model.SWRLRule SWRLRule]]
     */
@@ -156,6 +154,13 @@ trait RDFoxConverter {
         ResultR(List(Rule.create(head, body)))
       }
 
+      case a: OWLSubDataPropertyOfAxiom => {
+        val term1 = RSAOntology.genFreshVariable()
+        val body = convert(a.getSubProperty, term, term1, suffix)
+        val head = convert(a.getSuperProperty, term, term1, suffix)
+        ResultR(List(Rule.create(head, body)))
+      }
+
       case a: OWLObjectPropertyDomainAxiom =>
         convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)
 
@@ -168,9 +173,6 @@ trait RDFoxConverter {
 
       case a: OWLDataPropertyDomainAxiom =>
         convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)
-
-      case a: OWLDataPropertyRangeAxiom =>
-        Result() // ignored
 
       case a: OWLDisjointClassesAxiom => {
         val body = a.getOperandsAsList.asScala.toSeq
@@ -191,6 +193,13 @@ trait RDFoxConverter {
 
       case a: OWLInverseFunctionalObjectPropertyAxiom =>
         convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)
+
+      case a: OWLSymmetricObjectPropertyAxiom => {
+        val (atoms, rules) = a.asSubPropertyAxioms
+          .map(a => convert(a, term, unsafe, skolem dup a, suffix))
+          .unzip
+        (atoms.flatten, rules.flatten)
+      }
 
       case a: OWLClassAssertionAxiom => {
         val ind = a.getIndividual
@@ -228,6 +237,9 @@ trait RDFoxConverter {
           val prop = convert(a.getProperty, subj, obj, suffix)
           ResultF(List(prop))
         }
+
+      case a: OWLDataPropertyRangeAxiom =>
+        Result() // ignored
 
       /** Catch-all case for all unhandled axiom types. */
       case a =>
