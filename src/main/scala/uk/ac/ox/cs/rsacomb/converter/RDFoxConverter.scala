@@ -256,7 +256,6 @@ trait RDFoxConverter {
     * - [[org.semanticweb.owlapi.model.OWLDataAllValuesFrom OWLDataAllValuesFrom]]
     * - [[org.semanticweb.owlapi.model.OWLDataExactCardinality OWLDataExactCardinality]]
     * - [[org.semanticweb.owlapi.model.OWLDataMaxCardinality OWLDataMaxCardinality]]
-    * - [[org.semanticweb.owlapi.model.OWLDataHasValue OWLDataHasValue]]
     * - [[org.semanticweb.owlapi.model.OWLObjectAllValuesFrom OWLObjectAllValuesFrom]]
     * - [[org.semanticweb.owlapi.model.OWLObjectComplementOf OWLObjectComplementOf]]
     * - [[org.semanticweb.owlapi.model.OWLObjectExactCardinality OWLObjectExactCardinality]]
@@ -444,6 +443,14 @@ trait RDFoxConverter {
         }
         (List(convert(e.getProperty, term, term1, suffix)), List())
       }
+
+      /** Existential quantification with singleton literal filler
+        *
+        * @see
+        * [[http://www.w3.org/TR/owl2-syntax/#Literal_Value_Restriction]]
+        */
+      case e: OWLDataHasValue =>
+        (List(convert(e.getProperty, term, e.getFiller, suffix)), List())
       /** Catch-all case for all unhandled class expressions. */
       case e =>
         throw new RuntimeException(
