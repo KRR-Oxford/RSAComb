@@ -1,6 +1,7 @@
 package uk.ac.ox.cs.rsacomb.converter
 
 import java.util.stream.Collectors
+import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model._
 import scala.collection.JavaConverters._
 import tech.oxfordsemantic.jrdfox.logic.datalog.{
@@ -39,6 +40,15 @@ trait RDFoxConverter {
     * abstract syntax.
     */
   import uk.ac.ox.cs.rsacomb.implicits.RDFox._
+
+  /** Factory used for converting expressions when needed.
+    *
+    * @note most of the time this is used to perform some kind of
+    * normalization on axioms. In later versions it might be worth
+    * moving the normalization code in its own independent step.
+    */
+  private val manager = OWLManager.createOWLOntologyManager()
+  private val factory = manager.getOWLDataFactory()
 
   /** Represents the result of the conversion of a
     * [[org.semanticweb.owlapi.model.OWLClassExpression OWLClassExpression]].
@@ -228,14 +238,11 @@ trait RDFoxConverter {
     * - [[org.semanticweb.owlapi.model.OWLDataAllValuesFrom OWLDataAllValuesFrom]]
     * - [[org.semanticweb.owlapi.model.OWLDataExactCardinality OWLDataExactCardinality]]
     * - [[org.semanticweb.owlapi.model.OWLDataMaxCardinality OWLDataMaxCardinality]]
-    * - [[org.semanticweb.owlapi.model.OWLDataMinCardinality OWLDataMinCardinality]]
     * - [[org.semanticweb.owlapi.model.OWLDataHasValue OWLDataHasValue]]
     * - [[org.semanticweb.owlapi.model.OWLObjectAllValuesFrom OWLObjectAllValuesFrom]]
     * - [[org.semanticweb.owlapi.model.OWLObjectComplementOf OWLObjectComplementOf]]
     * - [[org.semanticweb.owlapi.model.OWLObjectExactCardinality OWLObjectExactCardinality]]
     * - [[org.semanticweb.owlapi.model.OWLObjectHasSelf OWLObjectHasSelf]]
-    * - [[org.semanticweb.owlapi.model.OWLObjectHasValue OWLObjectHasValue]]
-    * - [[org.semanticweb.owlapi.model.OWLObjectMinCardinality OWLObjectMinCardinality]]
     * - [[org.semanticweb.owlapi.model.OWLObjectUnionOf OWLObjectUnionOf]]
     *
     * Moreover:
@@ -365,6 +372,60 @@ trait RDFoxConverter {
         (List(eq), res.flatten ++ props)
       }
 
+      /** Minimum cardinality restriction class
+        *
+        * @note we only admit classes with cardinality set to 1 because
+        * they are equivalent to existential quantification.
+        *
+        * @throws `RuntimeException` when dealing with a restriction
+        * with cardinality != 1.
+        *
+        * @see [[https://www.w3.org/TR/owl2-syntax/#Minimum_Cardinality]]
+        */
+      case e: OWLObjectMinCardinality => {
+        if (e.getCardinality != 1)
+          throw new RuntimeException(
+            s"Class expression '$e' has cardinality restriction != 1."
+          )
+        val filler = e.getFiller
+        val property = e.getProperty
+        val expr = factory.getOWLObjectSomeValuesFrom(property, filler)
+        convert(expr, term, unsafe, skolem, suffix)
+      }
+
+      /** Minimum cardinality restriction class
+        *
+        * @note we only admit classes with cardinality set to 1 because
+        * they are equivalent to existential quantification.
+        *
+        * @throws `RuntimeException` when dealing with a restriction
+        * with cardinality != 1.
+        *
+        * @see [[http://www.w3.org/TR/owl2-syntax/#Minimum_Cardinality_2]]
+        */
+      case e: OWLDataMinCardinality => {
+        if (e.getCardinality != 1)
+          throw new RuntimeException(
+            s"Class expression '$e' has cardinality restriction != 1."
+          )
+        val filler = e.getFiller
+        val property = e.getProperty
+        val expr = factory.getOWLDataSomeValuesFrom(property, filler)
+        convert(expr, term, unsafe, skolem, suffix)
+      }
+
+      /** Existential quantification with singleton filler
+        *
+        * @see
+        * [[http://www.w3.org/TR/owl2-syntax/#Individual_Value_Restriction]]
+        */
+      case e: OWLObjectHasValue => {
+        val term1: Term = e.getFiller match {
+          case i: OWLNamedIndividual     => i.getIRI
+          case i: OWLAnonymousIndividual => i.getID
+        }
+        (List(convert(e.getProperty, term, term1, suffix)), List())
+      }
       /** Catch-all case for all unhandled class expressions. */
       case e =>
         throw new RuntimeException(

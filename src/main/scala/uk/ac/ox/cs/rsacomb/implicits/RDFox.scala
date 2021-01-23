@@ -1,8 +1,17 @@
 package uk.ac.ox.cs.rsacomb.implicits
 
 import tech.oxfordsemantic.jrdfox.logic.Datatype
-import tech.oxfordsemantic.jrdfox.logic.expression.{IRI => RDFoxIRI, Literal}
-import org.semanticweb.owlapi.model.{IRI => OWLIRI, OWLLiteral, OWLDatatype}
+import tech.oxfordsemantic.jrdfox.logic.expression.{
+  BlankNode,
+  IRI => RDFoxIRI,
+  Literal
+}
+import org.semanticweb.owlapi.model.{
+  IRI => OWLIRI,
+  NodeID,
+  OWLLiteral,
+  OWLDatatype
+}
 import org.semanticweb.owlapi.vocab.OWL2Datatype
 
 object RDFox {
@@ -12,6 +21,12 @@ object RDFox {
 
   implicit def owlapiToRdfoxIri(iri: OWLIRI): RDFoxIRI =
     RDFoxIRI.create(iri.getIRIString())
+
+  implicit def nodeIdToBlankNode(node: NodeID): BlankNode =
+    BlankNode.create(node.getID)
+
+  implicit def blankNodeToNodeId(node: BlankNode): NodeID =
+    NodeID.getNodeID(node.getID)
 
   implicit def stringToRdfoxIri(iri: String): RDFoxIRI =
     RDFoxIRI.create(iri)
