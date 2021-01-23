@@ -96,7 +96,6 @@ trait RDFoxConverter {
     * - [[org.semanticweb.owlapi.model.OWLDataPropertyRangeAxiom OWLDataPropertyRangeAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLDatatypeDefinitionAxiom OWLDatatypeDefinitionAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLDifferentIndividualsAxiom OWLDifferentIndividualsAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLDisjointClassesAxiom OWLDisjointClassesAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLDisjointDataPropertiesAxiom OWLDisjointDataPropertiesAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLDisjointObjectPropertiesAxiom OWLDisjointObjectPropertiesAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLDisjointUnionAxiom OWLDisjointUnionAxiom]]
@@ -172,6 +171,13 @@ trait RDFoxConverter {
 
       case a: OWLDataPropertyRangeAxiom =>
         Result() // ignored
+
+      case a: OWLDisjointClassesAxiom => {
+        val body = a.getOperandsAsList.asScala.toSeq
+          .flatMap((cls) => convert(cls, term, unsafe, NoSkolem, suffix)._1)
+        val bottom = TupleTableAtom.rdf(term, IRI.RDF_TYPE, IRI.NOTHING)
+        ResultR(List(Rule.create(bottom, body: _*)))
+      }
 
       case a: OWLInverseObjectPropertiesAxiom => {
         val (atoms, rules) = a.asSubObjectPropertyOfAxioms
