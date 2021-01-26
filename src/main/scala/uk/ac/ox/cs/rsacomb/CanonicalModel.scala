@@ -24,68 +24,109 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
   IRI
 }
 
+import implicits.JavaCollections._
+
 import uk.ac.ox.cs.rsacomb.converter._
 import uk.ac.ox.cs.rsacomb.suffix._
 import uk.ac.ox.cs.rsacomb.util.RSA
 
+/** Canonical model generator
+  *
+  * Converts the input axioms in a given ontology into logic rules that
+  * can then be passed to RDFox to compute the actual canonical model
+  * (via materialization).
+  *
+  * @param ontology the RSA ontology the canonical model is targeting.
+  */
 class CanonicalModel(val ontology: RSAOntology) {
 
+  /** Simplify conversion between OWLAPI and RDFox concepts */
   import implicits.RDFox._
-  import implicits.JavaCollections._
+
+  /** Extends capabilities of
+    * [[tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom TupleTableAtom]]
+    */
   import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom._
 
+  /** Introduce additional rules for each role.
+    *
+    * Some relations between roles and their inverse or their "suffixed"
+    * versions need to be explicitly stated in terms of logic rules.
+    */
   val rolesAdditionalRules: List[Rule] = {
-    // Given a role (predicate) compute additional logic rules
-    def additional(pred: String): Seq[Rule] = {
-      val varX = Variable.create("X")
-      val varY = Variable.create("Y")
-      for (
-        (hSuffix, bSuffix) <- List(
-          (Empty, Forward),
-          (Empty, Backward),
-          (Inverse, Forward + Inverse),
-          (Inverse, Backward + Inverse),
-          (Backward + Inverse, Forward),
-          (Forward + Inverse, Backward),
-          (Backward, Forward + Inverse),
-          (Forward, Backward + Inverse)
-        )
-      )
-        yield Rule.create(
-          TupleTableAtom.rdf(varX, pred :: hSuffix, varY),
-          TupleTableAtom.rdf(varX, pred :: bSuffix, varY)
-        )
-    }
-    // Compute additional rules per role
     ontology.roles
       .collect { case prop: OWLObjectProperty => prop }
-      .map(_.getIRI.getIRIString)
-      .flatMap(additional)
+      .flatMap((pred) => {
+        val iri = pred.getIRI.getIRIString
+        val (varX, varY) = (Variable.create("X"), Variable.create("Y"))
+        for (
+          (hSuffix, bSuffix) <- Seq(
+            (Empty, Forward),
+            (Empty, Backward),
+            (Inverse, Forward + Inverse),
+            (Inverse, Backward + Inverse),
+            (Backward + Inverse, Forward),
+            (Forward + Inverse, Backward),
+            (Backward, Forward + Inverse),
+            (Forward, Backward + Inverse)
+          )
+        )
+          yield Rule.create(
+            TupleTableAtom.rdf(varX, iri :: hSuffix, varY),
+            TupleTableAtom.rdf(varX, iri :: bSuffix, varY)
+          )
+      })
   }
 
-  private lazy val topAxioms: List[Rule] = {
-    val varX = Variable.create("X")
-    val varY = Variable.create("Y")
-    val concepts = ontology.concepts.map(c => {
+  /** Top axiomatization
+    *
+    * Corresponding to the following rules:
+    *
+    * ```
+    *   [?a, rdf:type, owl:Thing] :- [?a, rdf:type, ?b] .
+    *   [?a, rdf:type, owl:Thing], [?b, rdf:type, owl:Thing] :- [?a, ?r, ?b], FILTER(?r != rdf:type).
+    * ```
+    *
+    * @note this is a naïve implementation of top axiomatization and
+    * might change in the future. The ideal solution would be for RDFox
+    * to take care of this, but at the time of writing this is not
+    * compatible with the way we are using the tool.
+    */
+  private val topAxioms: List[Rule] = {
+    val varA = Variable.create("A")
+    val varR = Variable.create("R")
+    val varB = Variable.create("B")
+    List(
       Rule.create(
-        RSA.Thing(varX),
-        TupleTableAtom.rdf(varX, IRI.RDF_TYPE, c.getIRI)
-      )
-    })
-    val roles = ontology.roles.map(r => {
-      val name = r match {
-        case x: OWLObjectProperty => x.getIRI.getIRIString
-        case x: OWLObjectInverseOf =>
-          x.getInverse.getNamedProperty.getIRI.getIRIString :: Inverse
-      }
+        RSA.Thing(varA),
+        TupleTableAtom.rdf(varA, IRI.RDF_TYPE, varB)
+      ),
       Rule.create(
-        List(RSA.Thing(varX), RSA.Thing(varY)),
-        List(TupleTableAtom.rdf(varX, name, varY))
+        List(RSA.Thing(varA), RSA.Thing(varB)),
+        List(
+          TupleTableAtom.rdf(varA, varR, varB),
+          FilterAtom.create(FunctionCall.notEqual(varR, IRI.RDF_TYPE))
+        )
       )
-    })
-    concepts ::: roles
+    )
   }
 
+  /** Equality axiomatization
+    *
+    * Introduce reflexivity, simmetry and transitivity rules for a naïve
+    * equality axiomatization.
+    *
+    * @note that we are using a custom `congruent` predicate to indicate
+    * equality. This is to avoid interfering with the standard
+    * `owl:sameAs`.
+    *
+    * @note RDFox is able to handle equality in a "smart" way, but this
+    * behaviour is incompatible with other needed features like
+    * negation-as-failure and aggregates.
+    *
+    * @todo to complete the equality axiomatization we need to introduce
+    * substitution rules to explicate a complete "equality" semantics.
+    */
   private val equalityAxioms: List[Rule] = {
     val varX = Variable.create("X")
     val varY = Variable.create("Y")
