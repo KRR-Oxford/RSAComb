@@ -121,10 +121,12 @@ trait RDFoxConverter {
     axiom match {
 
       case a: OWLSubClassOfAxiom => {
+        val subcls = a.getSubClass
+        val supcls = a.getSuperClass
         val (sub, _) =
-          convert(a.getSubClass, term, unsafe, NoSkolem, suffix)
+          convert(subcls, term, unsafe, NoSkolem, suffix)
         val (sup, ext) =
-          convert(a.getSuperClass, term, unsafe, skolem, suffix)
+          convert(supcls, term, unsafe, skolem, suffix)
         val rule = Rule.create(sup, ext ::: sub)
         ResultR(List(rule))
       }
@@ -241,13 +243,18 @@ trait RDFoxConverter {
       case a: OWLDataPropertyRangeAxiom =>
         Result() // ignored
 
-      /** Catch-all case for all unhandled axiom types. */
-      case a =>
-        throw new RuntimeException(
-          s"Axiom '$a' is not supported (yet?)"
-        )
+      case a: OWLFunctionalDataPropertyAxiom =>
+        Result()
 
+      case a: OWLTransitiveObjectPropertyAxiom =>
+        Result()
+
+      /** Catch-all case for all unhandled axiom types. */
+      case a => default(axiom)
     }
+
+  protected def default(axiom: OWLLogicalAxiom): Result =
+    throw new RuntimeException(s"Axiom '$axiom' is not supported (yet?)")
 
   /** Converts a class expression into a collection of atoms.
     *
@@ -431,6 +438,16 @@ trait RDFoxConverter {
         convert(expr, term, unsafe, skolem, suffix)
       }
 
+      //case (_, sup: OWLObjectExactCardinality) => {
+      //  println(s"Ignored: $a")
+      //  return Result()
+      //}
+
+      //case (_, sup: OWLDataExactCardinality) => {
+      //  println(s"Ignored: $a")
+      //  return Result()
+      //}
+
       /** Existential quantification with singleton filler
         *
         * @see
@@ -451,6 +468,11 @@ trait RDFoxConverter {
         */
       case e: OWLDataHasValue =>
         (List(convert(e.getProperty, term, e.getFiller, suffix)), List())
+
+      case e: OWLObjectUnionOf => {
+        (List(), List())
+      }
+
       /** Catch-all case for all unhandled class expressions. */
       case e =>
         throw new RuntimeException(

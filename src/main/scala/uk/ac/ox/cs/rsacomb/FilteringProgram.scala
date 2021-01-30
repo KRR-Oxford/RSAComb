@@ -22,8 +22,8 @@ object FilteringProgram {
     * @param constants constants in the original ontology. They will be
     * used to initialize predicate `rsa:Named`.
     */
-  def apply(query: ConjunctiveQuery, constants: List[Term]): FilteringProgram =
-    new FilteringProgram(query, constants)
+  def apply(query: ConjunctiveQuery): FilteringProgram =
+    new FilteringProgram(query)
 
 }
 
@@ -34,7 +34,7 @@ object FilteringProgram {
   *
   * Instances can be created using the companion object.
   */
-class FilteringProgram(query: ConjunctiveQuery, constants: List[Term]) {
+class FilteringProgram(query: ConjunctiveQuery) {
 
   /** Extends capabilities of
     * [[tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom TupleTableAtom]]
@@ -75,15 +75,6 @@ class FilteringProgram(query: ConjunctiveQuery, constants: List[Term]) {
     */
   val nis: Rule =
     Rule.create(RSA.NI(varX), RSA.Congruent(varX, varY), RSA.Named(varY))
-
-  /** Initializes instances of `rsa:Named`.
-    *
-    * They represent the set of constants appearing in the original
-    * ontology.
-    *
-    * @note corresponds to rules 2 in Table 3.
-    */
-  val facts = constants map RSA.Named
 
   /** Collection of filtering program rules. */
   val rules: List[Rule] =

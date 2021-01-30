@@ -46,6 +46,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 
 /* Scala imports */
+import scala.util.{Try, Success, Failure}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.Set
 import scalax.collection.immutable.Graph
@@ -70,56 +71,75 @@ object RSAOntology {
   /** Name of the RDFox data store used for CQ answering */
   private val DataStore = "answer_computation"
 
-  def apply(ontology: OWLOntology): RSAOntology = new RSAOntology(ontology)
-
-  def apply(ontologies: File*): RSAOntology =
-    new RSAOntology(loadOntology(ontologies: _*))
+  def apply(ontology: File, data: File*): RSAOntology =
+    new RSAOntology(ontology, data: _*)
 
   def genFreshVariable(): Variable = {
     counter += 1
     Variable.create(f"I$counter%03d")
   }
 
-  private def loadOntology(ontologies: File*): OWLOntology = {
-    val manager = OWLManager.createOWLOntologyManager()
-    ontologies.foreach { manager.loadOntologyFromOntologyDocument(_) }
-    val merger = new OWLOntologyMerger(manager)
-    merger.createMergedOntology(manager, OWLIRI.create("_:merged"))
-  }
 }
 
-class RSAOntology(val ontology: OWLOntology) {
+class RSAOntology(_ontology: File, val datafiles: File*) {
 
+  /** Simplify conversion between OWLAPI and RDFox concepts */
+  import implicits.RDFox._
   import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom._
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
 
-  // Gather TBox/RBox/ABox from original ontology
+  /** Manager instance to interface with OWLAPI */
+  private val manager = OWLManager.createOWLOntologyManager()
+
+  /** TBox + RBox of the input knowledge base. */
+  val ontology: OWLOntology =
+    manager.loadOntologyFromOntologyDocument(_ontology)
+
+  /** OWLAPI internal reasoner some preliminary reasoning task. */
+  private val reasoner =
+    (new StructuralReasonerFactory()).createReasoner(ontology)
+
+  /** Imported knowledge base. */
+  //lazy val kbase: OWLOntology = {
+  //  val merger = new OWLOntologyMerger(manager)
+  //  _data.foreach { manager.loadOntologyFromOntologyDocument(_) }
+  //  merger.createMergedOntology(manager, OWLIRI.create("_:merged"))
+  //}
+
+  /** TBox axioms */
   val tbox: List[OWLLogicalAxiom] =
     ontology
       .tboxAxioms(Imports.INCLUDED)
       .collect(Collectors.toList())
       .collect { case a: OWLLogicalAxiom => a }
+  Logger.print(s"Original TBox: ${tbox.length}", Logger.DEBUG)
 
+  /** RBox axioms */
   val rbox: List[OWLLogicalAxiom] =
     ontology
       .rboxAxioms(Imports.INCLUDED)
       .collect(Collectors.toList())
       .collect { case a: OWLLogicalAxiom => a }
+  Logger.print(s"Original RBox: ${rbox.length}", Logger.DEBUG)
 
+  /** ABox axioms
+    *
+    * @note this represents only the set of assertions contained in the
+    * ontology file. Data files specified in `datafiles` are directly
+    * imported in RDFox due to performance issues when trying to import
+    * large data files via OWLAPI.
+    */
   val abox: List[OWLLogicalAxiom] =
     ontology
       .aboxAxioms(Imports.INCLUDED)
       .collect(Collectors.toList())
       .collect { case a: OWLLogicalAxiom => a }
+  Logger.print(s"Original RBox: ${abox.length}", Logger.DEBUG)
 
-  val axioms: List[OWLLogicalAxiom] = abox ::: tbox ::: rbox
+  /** Collection of logical axioms in the input ontology */
+  lazy val axioms: List[OWLLogicalAxiom] = abox ::: tbox ::: rbox
 
-  Logger.print(s"Original TBox: ${tbox.length}", Logger.DEBUG)
-  Logger.print(s"Original RBox: ${rbox.length}", Logger.DEBUG)
-  Logger.print(s"Original ABox: ${abox.length}", Logger.DEBUG)
-
-  /* Retrieve individuals in the original ontology
-   */
+  /* Retrieve individuals in the original ontology */
   val individuals: List[IRI] =
     ontology
       .getIndividualsInSignature()
@@ -129,7 +149,7 @@ class RSAOntology(val ontology: OWLOntology) {
       .toList
 
   val literals: List[Literal] =
-    abox
+    axioms
       .collect { case a: OWLDataPropertyAssertionAxiom => a }
       .map(_.getObject)
       .map(implicits.RDFox.owlapiToRdfoxLiteral)
@@ -137,17 +157,12 @@ class RSAOntology(val ontology: OWLOntology) {
   val concepts: List[OWLClass] =
     ontology.getClassesInSignature().asScala.toList
 
+  // This is needed in the computation of rules in the canonical model.
+  // Can we avoid this using RDFox built-in functions?
   val roles: List[OWLObjectPropertyExpression] =
-    axioms
+    (tbox ++ rbox)
       .flatMap(_.objectPropertyExpressionsInSignature)
       .distinct
-
-  /** OWLAPI reasoner
-    *
-    * Used to carry out some preliminary reasoning task.
-    */
-  private val reasoner =
-    (new StructuralReasonerFactory()).createReasoner(ontology)
 
   /* Steps for RSA check
    * 1) convert ontology axioms into LP rules
@@ -157,18 +172,15 @@ class RSAOntology(val ontology: OWLOntology) {
    *    ideally this annotates the graph with info about the reasons
    *    why the ontology might not be RSA. This could help a second
    *    step of approximation of an Horn-ALCHOIQ to RSA
+   *
+   * TODO: Implement additional checks (taking into account equality)
+   *
+   * To check if the graph is tree-like we check for acyclicity in a
+   * undirected graph.
    */
   lazy val isRSA: Boolean = Logger.timed(
     {
       val unsafe = this.unsafeRoles
-
-      // val renderer = new DLSyntaxObjectRenderer()
-      // println()
-      // println("Unsafe roles:")
-      // println(unsafe)
-      // println()
-      // println("DL rules:")
-      // tbox.foreach(x => println(renderer.render(x)))
 
       object RSAConverter extends RDFoxConverter {
 
@@ -195,66 +207,78 @@ class RSAOntology(val ontology: OWLOntology) {
 
             case _ => super.convert(expr, term, unsafe, skolem, suffix)
           }
-
       }
 
       /* Ontology convertion into LP rules */
       val term = RSAOntology.genFreshVariable()
-      val datalog = axioms
-        .map(a => RSAConverter.convert(a, term, unsafe, new Constant(a), Empty))
-        .unzip
-      val facts = datalog._1.flatten
-      val rules = datalog._2.flatten
-
-      //println("Datalog rules:")
-      //rules foreach println
-
-      // Open connection with RDFox
-      val (server, data) = RDFoxUtil.openConnection("RSACheck")
-
-      /* Add built-in rules
-       * TODO: substitute with RDFoxUtil.addRules
-       */
-      data.importData(
-        UpdateType.ADDITION,
-        RSA.Prefixes,
-        "rsa:E[?X,?Y] :- rsa:PE[?X,?Y], rsa:U[?X], rsa:U[?Y] ."
+      val conversion = Try(
+        axioms.map(a =>
+          RSAConverter.convert(a, term, unsafe, new Constant(a), Empty)
+        )
       )
 
-      /* Add ontology facts and rules */
-      RDFoxUtil.addFacts(data, facts)
-      RDFoxUtil.addRules(data, rules)
+      conversion match {
+        case Success(result) => {
+          val datalog = result.unzip
+          val facts = datalog._1.flatten
+          var rules = datalog._2.flatten
 
-      /* Build graph */
-      val graph = this.rsaGraph(data);
-      //println("Graph:")
-      //println(graph)
+          /* Open connection with RDFox */
+          val (server, data) = RDFoxUtil.openConnection("RSACheck")
 
-      // Close connection to RDFox
-      RDFoxUtil.closeConnection(server, data)
+          /* Add additional built-in rules */
+          val varX = Variable.create("X")
+          val varY = Variable.create("Y")
+          rules = Rule.create(
+            RSA.E(varX, varY),
+            RSA.PE(varX, varY),
+            RSA.U(varX),
+            RSA.U(varY)
+          ) :: rules
 
-      /* To check if the graph is tree-like we check for acyclicity in a
-       * undirected graph.
-       *
-       * TODO: Implement additional checks (taking into account equality)
-       */
-      graph.isAcyclic
+          /* Load facts and rules from ontology */
+          RDFoxUtil.addFacts(data, facts)
+          RDFoxUtil.addRules(data, rules)
+          /* Load data files */
+          RDFoxUtil.addData(data, datafiles: _*)
+
+          /* Build graph */
+          val graph = this.rsaGraph(data);
+
+          /* Close connection to RDFox */
+          RDFoxUtil.closeConnection(server, data)
+
+          /* Acyclicity test */
+          graph.isAcyclic
+        }
+        case Failure(e) => {
+          Logger print s"Unsupported axiom: $e"
+          false
+        }
+      }
     },
     "RSA check",
     Logger.DEBUG
   )
 
+  /** Unsafe roles of a given ontology.
+    *
+    * Unsafety conditions are the following:
+    *
+    * 1) For all roles r1 appearing in an axiom of type T5, r1 is unsafe
+    *    if there exists a role r2 (different from top) appearing in an
+    *    axiom of type T3 and r1 is a subproperty of the inverse of r2.
+    *
+    * 2) For all roles p1 appearing in an axiom of type T5, p1 is unsafe
+    *    if there exists a role p2 appearing in an axiom of type T4 and
+    *    p1 is a subproperty of either p2 or the inverse of p2.
+    */
   lazy val unsafeRoles: List[OWLObjectPropertyExpression] = {
 
     /* DEBUG: print rules in DL syntax */
     //val renderer = new DLSyntaxObjectRenderer()
 
-    /* Checking for (1) unsafety condition:
-     *
-     *    For all roles r1 appearing in an axiom of type T5, r1 is unsafe
-     *    if there exists a role r2 (different from top) appearing in an axiom
-     *    of type T3 and r1 is a subproperty of the inverse of r2.
-     */
+    /* Checking for unsafety condition (1) */
     val unsafe1 = for {
       axiom <- tbox
       if axiom.isT5
@@ -271,13 +295,7 @@ class RSAOntology(val ontology: OWLOntology) {
       if roleSuperInv.contains(role2)
     } yield role1
 
-    /* Checking for (2) unsafety condition:
-     *
-     *    For all roles p1 appearing in an axiom of type T5, p1 is unsafe if
-     *    there exists a role p2 appearing in an axiom of type T4 and p1 is a
-     *    subproperty of either p2 or the inverse of p2.
-     *
-     */
+    /* Checking for unsafety condition (2) */
     val unsafe2 = for {
       axiom <- tbox
       if axiom.isT5
@@ -307,18 +325,89 @@ class RSAOntology(val ontology: OWLOntology) {
     Graph(edges: _*)
   }
 
-  def filteringProgram(query: ConjunctiveQuery): FilteringProgram =
-    Logger.timed(
-      new FilteringProgram(query, individuals ++ literals),
-      "Generating filtering program",
-      Logger.DEBUG
+  /** Top axiomatization rules
+    *
+    * For each concept/role *in the ontology file* introduce a rule to
+    * derive `owl:Thing`.
+    *
+    * @note this might not be enough in cases where data files contain
+    * concept/roles that are not in the ontology file. While this is
+    * non-standard, it is not forbidden either and may cause problems
+    * since not all individuals are considered part of `owl:Thing`.
+    *
+    * @note this is a naïve implementation of top axiomatization and
+    * might change in the future. The ideal solution would be for RDFox
+    * to take care of this, but at the time of writing this is not
+    * compatible with the way we are using the tool.
+    */
+  private val topAxioms: List[Rule] = {
+    val varX = Variable.create("X")
+    val varY = Variable.create("Y")
+    concepts
+      .map(c => {
+        Rule.create(
+          RSA.Thing(varX),
+          TupleTableAtom.rdf(varX, IRI.RDF_TYPE, c.getIRI)
+        )
+      }) ++ roles.map(r => {
+      val name = r match {
+        case x: OWLObjectProperty => x.getIRI.getIRIString
+        case x: OWLObjectInverseOf =>
+          x.getInverse.getNamedProperty.getIRI.getIRIString :: Inverse
+      }
+      Rule.create(
+        List(RSA.Thing(varX), RSA.Thing(varY)),
+        List(TupleTableAtom.rdf(varX, name, varY))
+      )
+    })
+  }
+
+  /** Equality axiomatization rules
+    *
+    * Introduce reflexivity, simmetry and transitivity rules for a naïve
+    * equality axiomatization.
+    *
+    * @note that we are using a custom `congruent` predicate to indicate
+    * equality. This is to avoid interfering with the standard
+    * `owl:sameAs`.
+    *
+    * @note RDFox is able to handle equality in a "smart" way, but this
+    * behaviour is incompatible with other needed features like
+    * negation-as-failure and aggregates.
+    *
+    * @todo to complete the equality axiomatization we need to introduce
+    * substitution rules to explicate a complete "equality" semantics.
+    */
+  private val equalityAxioms: List[Rule] = {
+    val varX = Variable.create("X")
+    val varY = Variable.create("Y")
+    val varZ = Variable.create("Z")
+    List(
+      // Reflexivity
+      Rule.create(RSA.Congruent(varX, varX), RSA.Thing(varX)),
+      // Simmetry
+      Rule.create(RSA.Congruent(varY, varX), RSA.Congruent(varX, varY)),
+      // Transitivity
+      Rule.create(
+        RSA.Congruent(varX, varZ),
+        RSA.Congruent(varX, varY),
+        RSA.Congruent(varY, varZ)
+      )
     )
+  }
 
   lazy val canonicalModel = Logger.timed(
     new CanonicalModel(this),
     "Generating canonical model program",
     Logger.DEBUG
   )
+
+  def filteringProgram(query: ConjunctiveQuery): FilteringProgram =
+    Logger.timed(
+      new FilteringProgram(query),
+      "Generating filtering program",
+      Logger.DEBUG
+    )
 
   // TODO: the following functions needs testing
   def confl(
@@ -356,18 +445,30 @@ class RSAOntology(val ontology: OWLOntology) {
       val canon = this.canonicalModel
       val filter = this.filteringProgram(query)
 
-      //data.beginTransaction(TransactionType.READ_WRITE)
+      /* Upload data from data file */
+      RDFoxUtil.addData(data, datafiles: _*)
+
+      /* Top / equality axiomatization */
+      RDFoxUtil.addRules(data, topAxioms ++ equalityAxioms)
+
+      /* Generate `named` predicates */
+      RDFoxUtil.addFacts(data, (individuals ++ literals) map RSA.Named)
+      data.evaluateUpdate(
+        RSA.Prefixes,
+        "INSERT { ?X a  rsa:Named } WHERE { ?X a owl:Thing }",
+        new java.util.HashMap[String, String]
+      )
 
       Logger print s"Canonical model rules: ${canon.rules.length}"
-      RDFoxUtil.addRules(data, this.canonicalModel.rules)
+      RDFoxUtil.addRules(data, canon.rules)
 
       Logger print s"Canonical model facts: ${canon.facts.length}"
-      RDFoxUtil.addFacts(data, this.canonicalModel.facts)
+      RDFoxUtil.addFacts(data, canon.facts)
+
+      //canon.facts.foreach(println)
+      //canon.rules.foreach(println)
 
       RDFoxUtil printStatisticsFor data
-
-      Logger print s"Filtering program facts: ${filter.facts.length}"
-      RDFoxUtil.addFacts(data, filter.facts)
 
       Logger print s"Filtering program rules: ${filter.rules.length}"
       RDFoxUtil.addRules(data, filter.rules)

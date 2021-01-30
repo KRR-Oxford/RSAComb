@@ -123,6 +123,22 @@ object RDFoxUtil {
         facts.map(_.toString(Prefixes.s_emptyPrefixes)).mkString("", ".\n", ".")
       ),
       "Loading facts",
+
+  /** Imports a sequence of files directly into a datastore.
+    *
+    * @param data datastore connection.
+    * @param files sequence of files to upload.
+    */
+  def addData(data: DataStoreConnection, files: File*): Unit =
+    Logger.timed(
+      files.foreach {
+        data.importData(
+          UpdateType.ADDITION,
+          RSA.Prefixes,
+          _
+        )
+      },
+      "Loading data files",
       Logger.DEBUG
     )
 

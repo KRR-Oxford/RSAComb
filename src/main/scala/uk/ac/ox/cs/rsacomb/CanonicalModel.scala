@@ -12,17 +12,12 @@ import org.semanticweb.owlapi.model.{
 }
 
 import tech.oxfordsemantic.jrdfox.logic.datalog.{
-  Rule,
   BodyFormula,
-  TupleTableAtom,
-  Negation
+  Negation,
+  Rule,
+  TupleTableAtom
 }
-import tech.oxfordsemantic.jrdfox.logic.expression.{
-  Term,
-  Variable,
-  // Resource,
-  IRI
-}
+import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Term, Variable}
 
 import implicits.JavaCollections._
 
@@ -78,73 +73,6 @@ class CanonicalModel(val ontology: RSAOntology) {
       })
   }
 
-  /** Top axiomatization
-    *
-    * Corresponding to the following rules:
-    *
-    * ```
-    *   [?a, rdf:type, owl:Thing] :- [?a, rdf:type, ?b] .
-    *   [?a, rdf:type, owl:Thing], [?b, rdf:type, owl:Thing] :- [?a, ?r, ?b], FILTER(?r != rdf:type).
-    * ```
-    *
-    * @note this is a naïve implementation of top axiomatization and
-    * might change in the future. The ideal solution would be for RDFox
-    * to take care of this, but at the time of writing this is not
-    * compatible with the way we are using the tool.
-    */
-  private val topAxioms: List[Rule] = {
-    val varA = Variable.create("A")
-    val varR = Variable.create("R")
-    val varB = Variable.create("B")
-    List(
-      Rule.create(
-        RSA.Thing(varA),
-        TupleTableAtom.rdf(varA, IRI.RDF_TYPE, varB)
-      ),
-      Rule.create(
-        List(RSA.Thing(varA), RSA.Thing(varB)),
-        List(
-          TupleTableAtom.rdf(varA, varR, varB),
-          FilterAtom.create(FunctionCall.notEqual(varR, IRI.RDF_TYPE))
-        )
-      )
-    )
-  }
-
-  /** Equality axiomatization
-    *
-    * Introduce reflexivity, simmetry and transitivity rules for a naïve
-    * equality axiomatization.
-    *
-    * @note that we are using a custom `congruent` predicate to indicate
-    * equality. This is to avoid interfering with the standard
-    * `owl:sameAs`.
-    *
-    * @note RDFox is able to handle equality in a "smart" way, but this
-    * behaviour is incompatible with other needed features like
-    * negation-as-failure and aggregates.
-    *
-    * @todo to complete the equality axiomatization we need to introduce
-    * substitution rules to explicate a complete "equality" semantics.
-    */
-  private val equalityAxioms: List[Rule] = {
-    val varX = Variable.create("X")
-    val varY = Variable.create("Y")
-    val varZ = Variable.create("Z")
-    List(
-      // Reflexivity
-      Rule.create(RSA.Congruent(varX, varX), RSA.Thing(varX)),
-      // Simmetry
-      Rule.create(RSA.Congruent(varY, varX), RSA.Congruent(varX, varY)),
-      // Transitivity
-      Rule.create(
-        RSA.Congruent(varX, varZ),
-        RSA.Congruent(varX, varY),
-        RSA.Congruent(varY, varZ)
-      )
-    )
-  }
-
   val (facts, rules): (List[TupleTableAtom], List[Rule]) = {
     // Compute rules from ontology axioms
     val (facts, rules) = {
@@ -156,7 +84,7 @@ class CanonicalModel(val ontology: RSAOntology) {
     }
     (
       facts.flatten,
-      rolesAdditionalRules ::: topAxioms ::: equalityAxioms ::: rules.flatten
+      rolesAdditionalRules ::: rules.flatten
     )
   }
 
