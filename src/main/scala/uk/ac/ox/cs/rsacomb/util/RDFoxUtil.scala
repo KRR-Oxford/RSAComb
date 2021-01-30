@@ -105,8 +105,16 @@ object RDFoxUtil {
     */
   def addRules(data: DataStoreConnection, rules: Seq[Rule]): Unit =
     Logger.timed(
-      data addRules rules,
-      "Loading rules",
+      if (rules.length > 0) {
+        data.importData(
+          UpdateType.ADDITION,
+          RSA.Prefixes,
+          rules
+            .map(_.toString(Prefixes.s_emptyPrefixes))
+            .mkString("\n")
+        )
+      },
+      s"Loading ${rules.length} rules",
       Logger.DEBUG
     )
 
@@ -117,12 +125,18 @@ object RDFoxUtil {
     */
   def addFacts(data: DataStoreConnection, facts: Seq[TupleTableAtom]): Unit =
     Logger.timed(
-      data.importData(
-        UpdateType.ADDITION,
-        RSA.Prefixes,
-        facts.map(_.toString(Prefixes.s_emptyPrefixes)).mkString("", ".\n", ".")
-      ),
-      "Loading facts",
+      if (facts.length > 0) {
+        data.importData(
+          UpdateType.ADDITION,
+          RSA.Prefixes,
+          facts
+            .map(_.toString(Prefixes.s_emptyPrefixes))
+            .mkString("", ".\n", ".")
+        )
+      },
+      s"Loading ${facts.length} facts",
+      Logger.DEBUG
+    )
 
   /** Imports a sequence of files directly into a datastore.
     *
