@@ -32,6 +32,8 @@ print_help() {
     echo "    -q | --queries <path>:"
     echo "        path to a folder containing SPARQL query files to be"
     echo "        executed against the ontology and data."
+    echo "    -j | --jar <path>:"
+    echo "        path to the fat jar to be executed."
     echo "    -p | --prefix <path>:"
     echo "        provides a folder to prefix to the output files."
     echo "        Defaults to './results'."
@@ -43,6 +45,7 @@ print_help() {
 ONTOLOGY=""
 DATA=""
 QUERIES=""
+JAR=""
 PREFIX="./results"
 
 while [[ $# -gt 0 ]]
@@ -69,6 +72,14 @@ do
             QUERIES="$1"
             [ ! -d "$QUERIES" ] && \
                 msg_error "'$QUERIES' is not a directory" && \
+                print_help && \
+                exit 2
+            ;;
+        -j|--jar)
+            shift
+            JAR="$1"
+            [ ! -r "$JAR" ] && \
+                msg_error "Unable to read jar '$JAR'" && \
                 print_help && \
                 exit 2
             ;;
@@ -104,12 +115,17 @@ done
     print_help && \
     exit 3
 
+[ -z "$JAR" ] && \
+    msg_error "Use -j | --jar to provide a jar file" && \
+    print_help && \
+    exit 3
 
 DATAS=`\ls $DATA/*`
 mkdir -p "$PREFIX"
-for QUERY in "$QUERIES"/*.sparql
+for QUERY in "$QUERIES"/query*.sparql
 do
-    sbt "run $QUERY $ONTOLOGY $DATAS" 2>&1 | tee "$PREFIX/answers_$(basename $QUERY .sparql).txt"
+    #sbt "run $QUERY $ONTOLOGY $DATAS" 2>&1 | tee "$PREFIX/answers_$(basename $QUERY .sparql).txt"
+    java -cp ./lib/JRDFox.jar:"$JAR" uk.ac.ox.cs.rsacomb.RSAComb -q "$QUERY" "$ONTOLOGY" "$DATA"/* 2>&1 | tee "$PREFIX/answers_$(basename $QUERY .sparql).txt"
 done
 
 OUTPUT="$PREFIX/results.csv"
