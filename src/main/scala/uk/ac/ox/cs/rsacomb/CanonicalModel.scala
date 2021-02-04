@@ -79,7 +79,9 @@ class CanonicalModel(val ontology: RSAOntology) {
       val term = RSAOntology.genFreshVariable()
       val unsafe = ontology.unsafeRoles
       ontology.axioms
-        .map(CanonicalModelConverter.convert(_, term, unsafe, NoSkolem, Empty))
+        .map(a =>
+          CanonicalModelConverter.convert(a, term, unsafe, Constant(a), Empty)
+        )
         .unzip
     }
     (

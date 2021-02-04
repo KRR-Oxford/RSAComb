@@ -99,6 +99,8 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
   private val reasoner =
     (new StructuralReasonerFactory()).createReasoner(ontology)
 
+  private val normalizer = new Normalizer()
+
   /** Imported knowledge base. */
   //lazy val kbase: OWLOntology = {
   //  val merger = new OWLOntologyMerger(manager)
@@ -112,6 +114,7 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
       .tboxAxioms(Imports.INCLUDED)
       .collect(Collectors.toList())
       .collect { case a: OWLLogicalAxiom => a }
+      .flatMap(normalizer.normalize)
   Logger.print(s"Original TBox: ${tbox.length}", Logger.DEBUG)
 
   /** RBox axioms */
@@ -120,6 +123,7 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
       .rboxAxioms(Imports.INCLUDED)
       .collect(Collectors.toList())
       .collect { case a: OWLLogicalAxiom => a }
+      .flatMap(normalizer.normalize)
   Logger.print(s"Original RBox: ${rbox.length}", Logger.DEBUG)
 
   /** ABox axioms
@@ -134,7 +138,8 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
       .aboxAxioms(Imports.INCLUDED)
       .collect(Collectors.toList())
       .collect { case a: OWLLogicalAxiom => a }
-  Logger.print(s"Original RBox: ${abox.length}", Logger.DEBUG)
+      .flatMap(normalizer.normalize)
+  Logger.print(s"Original ABox: ${abox.length}", Logger.DEBUG)
 
   /** Collection of logical axioms in the input ontology */
   lazy val axioms: List[OWLLogicalAxiom] = abox ::: tbox ::: rbox
