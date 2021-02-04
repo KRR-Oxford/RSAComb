@@ -410,7 +410,7 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
 
   def filteringProgram(query: ConjunctiveQuery): FilteringProgram =
     Logger.timed(
-      FilteringProgram(FilterType.FILTER_NAIVE)(query),
+      FilteringProgram(FilterType.REVISED)(query),
       "Generating filtering program",
       Logger.DEBUG
     )
@@ -491,7 +491,7 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
       //}
 
       val answers = {
-        val ans = RDFoxUtil.buildDescriptionQuery("Ans", query.answer.size)
+        val ans = filter.answerQuery
         RDFoxUtil
           .submitQuery(data, ans, RSA.Prefixes)
           .map(new ConjunctiveQueryAnswers(query.bcq, query.variables, _))

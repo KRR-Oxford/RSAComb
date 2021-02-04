@@ -6,8 +6,8 @@ import uk.ac.ox.cs.rsacomb.util.Versioned
 
 sealed trait FilterType
 object FilterType {
-  case object FILTER_NAIVE extends FilterType
-  case object FILTER_REVISED_V1 extends FilterType
+  case object NAIVE extends FilterType
+  case object REVISED extends FilterType
 }
 
 object FilteringProgram extends Versioned[FilterType] {
@@ -18,8 +18,8 @@ object FilteringProgram extends Versioned[FilterType] {
 
   def apply(t: FilterType): (ConjunctiveQuery) => FilteringProgram =
     t match {
-      case FILTER_NAIVE      => NaiveFilteringProgram(_)
-      case FILTER_REVISED_V1 => NaiveFilteringProgram(_)
+      case NAIVE   => NaiveFilteringProgram(_)
+      case REVISED => RevisedFilteringProgram(_)
     }
 }
 
@@ -35,6 +35,9 @@ trait FilteringProgram {
 
   /** Collection of filtering program rules. */
   def rules: List[Rule]
+
+  /** Query to be used to retrieve the answers */
+  def answerQuery: String
 
   /** Pretty-print filtering rule */
   override def toString(): String = rules mkString "\n"
