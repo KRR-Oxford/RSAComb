@@ -1,4 +1,4 @@
-package uk.ac.ox.cs.rsacomb
+package uk.ac.ox.cs.rsacomb.filtering
 
 //import scala.collection.JavaConverters._
 import tech.oxfordsemantic.jrdfox.logic.Datatype
@@ -14,17 +14,14 @@ import uk.ac.ox.cs.rsacomb.suffix.{Forward, Backward}
 import uk.ac.ox.cs.rsacomb.util.{RSA, RDFoxUtil}
 
 /** Factory for [[uk.ac.ox.cs.rsacomb.FilteringProgram FilteringProgram]] */
-object FilteringProgram {
+object NaiveFilteringProgram {
 
   /** Create a new FilteringProgram instance.
     *
     * @param query CQ to be converted into logic rules.
-    * @param constants constants in the original ontology. They will be
-    * used to initialize predicate `rsa:Named`.
     */
   def apply(query: ConjunctiveQuery): FilteringProgram =
-    new FilteringProgram(query)
-
+    new NaiveFilteringProgram(query)
 }
 
 /** Filtering Program generator
@@ -34,7 +31,8 @@ object FilteringProgram {
   *
   * Instances can be created using the companion object.
   */
-class FilteringProgram(query: ConjunctiveQuery) {
+class NaiveFilteringProgram(val query: ConjunctiveQuery)
+    extends FilteringProgram {
 
   /** Extends capabilities of
     * [[tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom TupleTableAtom]]
@@ -306,8 +304,4 @@ class FilteringProgram(query: ConjunctiveQuery) {
         r8a ::: r8b :: r8c :::
         r9 :: List()) map RDFoxUtil.reify
     }
-
-  /** Pretty-print filtering rule */
-  override def toString(): String = rules mkString "\n"
-
 }

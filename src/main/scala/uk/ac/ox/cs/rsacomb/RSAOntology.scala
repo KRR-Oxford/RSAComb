@@ -58,6 +58,7 @@ import tech.oxfordsemantic.jrdfox.logic._
 import org.semanticweb.owlapi.model.OWLObjectInverseOf
 
 import uk.ac.ox.cs.rsacomb.converter._
+import uk.ac.ox.cs.rsacomb.filtering.{FilteringProgram, FilterType}
 import uk.ac.ox.cs.rsacomb.suffix._
 import uk.ac.ox.cs.rsacomb.sparql._
 import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
@@ -409,7 +410,7 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
 
   def filteringProgram(query: ConjunctiveQuery): FilteringProgram =
     Logger.timed(
-      new FilteringProgram(query),
+      FilteringProgram(FilterType.FILTER_NAIVE)(query),
       "Generating filtering program",
       Logger.DEBUG
     )
