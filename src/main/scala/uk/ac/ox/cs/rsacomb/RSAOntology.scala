@@ -454,6 +454,8 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
       /* Upload data from data file */
       RDFoxUtil.addData(data, datafiles: _*)
 
+      RDFoxUtil printStatisticsFor data
+
       /* Top / equality axiomatization */
       RDFoxUtil.addRules(data, topAxioms ++ equalityAxioms)
 
@@ -471,24 +473,24 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
       Logger print s"Canonical model facts: ${canon.facts.length}"
       RDFoxUtil.addFacts(data, canon.facts)
 
+      //{
+      //  import java.io.{PrintStream, FileOutputStream, File}
+      //  val rules1 = new FileOutputStream(new File("rules1-lubm200.dlog"))
+      //  val facts1 = new FileOutputStream(new File("facts1-lubm200.ttl"))
+      //  RDFoxUtil.export(data, rules1, facts1)
+      //  val rules2 = new PrintStream(new File("rules2-q34.dlog"))
+      //  rules2.print(filter.rules.mkString("\n"))
+      //}
+
       //canon.facts.foreach(println)
-      //canon.rules.foreach(println)
+      //filter.rules.foreach(println)
 
       RDFoxUtil printStatisticsFor data
 
       Logger print s"Filtering program rules: ${filter.rules.length}"
       RDFoxUtil.addRules(data, filter.rules)
 
-      //data.commitTransaction()
-
       RDFoxUtil printStatisticsFor data
-
-      //{
-      //  import java.io.{FileOutputStream, File}
-      //  val rules = new FileOutputStream(new File("rules2.dlog"))
-      //  val facts = new FileOutputStream(new File("facts2.ttl"))
-      //  RDFoxUtil.export(data, rules, facts)
-      //}
 
       val answers = {
         val ans = filter.answerQuery

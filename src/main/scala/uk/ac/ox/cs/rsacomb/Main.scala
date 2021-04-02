@@ -128,6 +128,7 @@ object RSAComb extends App {
 
   val ontology =
     RSAOntology(config('ontology).get[File], config('data).get[List[File]]: _*)
+
   if (ontology.isRSA) {
 
     Logger print "Ontology is RSA!"
@@ -139,7 +140,7 @@ object RSAComb extends App {
       ConjunctiveQuery.parse(query) match {
         case Some(query) => {
           val answers = ontology ask query
-          Logger.print(s"$answers", Logger.QUIET)
+          //Logger.print(s"$answers", Logger.QUIET)
           Logger print s"Number of answers: ${answers.length} (${answers.lengthWithMultiplicity})"
 
           //    /* Additional DEBUG information */
