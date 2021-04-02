@@ -30,6 +30,9 @@ object RSA {
   Prefixes.declarePrefix("rsa:", "http://www.cs.ox.ac.uk/isg/rsa/")
   Prefixes.declarePrefix("owl:", "http://www.w3.org/2002/07/owl#")
 
+  val CONGRUENT = RSA("congruent")
+  val NAMED = RSA("Named")
+
   private def atom(name: IRI, vars: List[Term]): TupleTableAtom =
     TupleTableAtom.create(TupleTableName.create(name.getIRI), vars: _*)
 

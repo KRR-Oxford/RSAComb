@@ -3,6 +3,7 @@ package uk.ac.ox.cs.rsacomb.filtering
 //import scala.collection.JavaConverters._
 import tech.oxfordsemantic.jrdfox.logic.Datatype
 import tech.oxfordsemantic.jrdfox.logic.datalog.{
+  Atom,
   FilterAtom,
   Rule,
   TupleTableAtom,
@@ -20,6 +21,16 @@ import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Forward, Backward}
 import uk.ac.ox.cs.rsacomb.util.{RSA, RDFoxUtil}
 
+object RDFoxDSL {
+
+  import scala.collection.JavaConverters._
+
+  implicit class MyVariable(private val str: StringContext) extends AnyVal {
+    def v(args: Any*): Variable = Variable.create(s"${str.s(args: _*)}i")
+  }
+
+}
+
 /** Factory for [[uk.ac.ox.cs.rsacomb.FilteringProgram FilteringProgram]] */
 object RevisedFilteringProgram {
 
@@ -29,6 +40,7 @@ object RevisedFilteringProgram {
     */
   def apply(query: ConjunctiveQuery): RevisedFilteringProgram =
     new RevisedFilteringProgram(query)
+
 }
 
 /** Filtering Program generator
@@ -40,6 +52,8 @@ object RevisedFilteringProgram {
   */
 class RevisedFilteringProgram(val query: ConjunctiveQuery)
     extends FilteringProgram {
+
+  import RDFoxDSL._
 
   /** Extends capabilities of
     * [[tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom TupleTableAtom]]
@@ -54,11 +68,15 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
 
   /** Helpers */
 
-  private def ?(name: String): Term = Variable.create(s"${name}i")
+  //private def v(name: String): Term = Variable.create(s"${name}i")
   private def not(atom: TupleTableAtom): BodyFormula = Negation.create(atom)
-  private def skolem(terms: List[Term]): TupleTableAtom =
-    TupleTableAtom.create(TupleTableName.SKOLEM, terms: _*)
 
+  private def named(x: Term): TupleTableAtom =
+    TupleTableAtom.rdf(x, IRI.RDF_TYPE, RSA.NAMED)
+  private def congruent(x: Term, y: Term): TupleTableAtom =
+    TupleTableAtom.rdf(x, RSA.CONGRUENT, y)
+  private def skolem(skolem: Term, terms: List[Term]): TupleTableAtom =
+    TupleTableAtom.create(TupleTableName.SKOLEM, (terms :+ skolem): _*)
   private def QM(x: Term): TupleTableAtom =
     TupleTableAtom.rdf(x, IRI.RDF_TYPE, RSA("QM"))
   private def FK(x: Term): TupleTableAtom =
@@ -91,8 +109,7 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
     * predicate, this is not feasible, and the instances are instead
     * generate in the filtering program using a logic rule.
     */
-  val nis: Rule =
-    Rule.create(NI(?("X")), RSA.Congruent(?("X"), ?("Y")), RSA.Named(?("Y")))
+  val nis: Rule = Rule.create(NI(v"X"), named(v"Y"), congruent(v"X", v"Y"))
 
   /** Collection of filtering program rules. */
   val rules: List[Rule] =
@@ -105,10 +122,7 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
         * @note corresponds to rule 1 in Table 3 in the paper.
         */
       val r1 =
-        Rule.create(
-          QM(?("K")),
-          (query.atoms :+ skolem(variables :+ ?("K"))): _*
-        )
+        Rule.create(QM(v"K"), (query.atoms :+ skolem(v"K", variables)): _*)
 
       /** Initializes instances of `rsa:ID`.
         *
@@ -121,28 +135,28 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
       val r3a =
         for ((v, i) <- query.bounded.zipWithIndex)
           yield Rule.create(
-            ID(?("K"), ?("S")),
-            QM(?("K")),
-            skolem(variables :+ ?("K")),
+            ID(v"K", v"S"),
+            QM(v"K"),
+            skolem(v"K", variables),
             not(NI(v)),
-            skolem(variables :+ RSA(i) :+ RSA(i) :+ ?("S"))
+            skolem(v"S", variables :+ RSA(i) :+ RSA(i))
           )
       val r3b = Rule.create(
-        ID(?("K"), ?("T")),
-        ID(?("K"), ?("S")),
-        skolem(variables :+ ?("U") :+ ?("V") :+ ?("S")),
-        skolem(variables :+ ?("V") :+ ?("U") :+ ?("T"))
+        ID(v"K", v"T"),
+        ID(v"K", v"S"),
+        skolem(v"S", variables :+ v"U" :+ v"V"),
+        skolem(v"T", variables :+ v"V" :+ v"U")
       )
       val r3c = Rule.create(
-        ID(?("K1"), ?("Q")),
-        QM(?("K1")),
-        ID(?("K2"), ?("S")),
-        FilterAtom.create(FunctionCall.equal(?("K1"), ?("K2"))),
-        skolem(variables :+ ?("U") :+ ?("V") :+ ?("S")),
-        ID(?("K3"), ?("T")),
-        FilterAtom.create(FunctionCall.equal(?("K1"), ?("K3"))),
-        skolem(variables :+ ?("V") :+ ?("W") :+ ?("T")),
-        skolem(variables :+ ?("U") :+ ?("W") :+ ?("Q"))
+        ID(v"K1", v"Q"),
+        QM(v"K1"),
+        ID(v"K2", v"S"),
+        FilterAtom.create(FunctionCall.equal(v"K1", v"K2")),
+        skolem(v"S", variables :+ v"U" :+ v"V"),
+        ID(v"K3", v"T"),
+        FilterAtom.create(FunctionCall.equal(v"K1", v"K3")),
+        skolem(v"T", variables :+ v"V" :+ v"W"),
+        skolem(v"Q", variables :+ v"U" :+ v"W")
       )
 
       /** Detects forks in the canonical model.
@@ -157,9 +171,9 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
         index2 = query.bounded indexOf (role2.getArguments get 2)
         if index2 >= 0
       } yield Rule.create(
-        FK(?("K")),
-        ID(?("K"), ?("S")),
-        skolem(variables :+ RSA(index1) :+ RSA(index2) :+ ?("S")),
+        FK(v"K"),
+        ID(v"K", v"S"),
+        skolem(v"S", variables :+ RSA(index1) :+ RSA(index2)),
         role1 << Forward,
         role2 << Forward,
         not(RSA.Congruent(role1.getArguments get 0, role2.getArguments get 0))
@@ -172,9 +186,9 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
         index2 = query.bounded indexOf (role2.getArguments get 0)
         if index2 >= 0
       } yield Rule.create(
-        FK(?("K")),
-        ID(?("K"), ?("S")),
-        skolem(variables :+ RSA(index1) :+ RSA(index2) :+ ?("S")),
+        FK(v"K"),
+        ID(v"K", v"S"),
+        skolem(v"S", variables :+ RSA(index1) :+ RSA(index2)),
         role1 << Forward,
         role2 << Backward,
         not(RSA.Congruent(role1.getArguments get 0, role2.getArguments get 2))
@@ -187,9 +201,9 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
         index2 = query.bounded indexOf (role2.getArguments get 0)
         if index2 >= 0
       } yield Rule.create(
-        FK(?("K")),
-        ID(?("K"), ?("S")),
-        skolem(variables :+ RSA(index1) :+ RSA(index2) :+ ?("S")),
+        FK(v"K"),
+        ID(v"K", v"S"),
+        skolem(v"S", variables :+ RSA(index1) :+ RSA(index2)),
         role1 << Backward,
         role2 << Backward,
         not(RSA.Congruent(role1.getArguments get 2, role2.getArguments get 2))
@@ -211,23 +225,23 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
         r2arg2 = role2.getArguments get 2
         if query.bounded contains r2arg2
       } yield Rule.create(
-        ID(?("K"), ?("T")),
-        ID(?("K"), ?("S")),
+        ID(v"K", v"T"),
+        ID(v"K", v"S"),
         skolem(
+          v"S",
           variables :+
             RSA(query.bounded indexOf r1arg2) :+
-            RSA(query.bounded indexOf r2arg2) :+
-            ?("S")
+            RSA(query.bounded indexOf r2arg2)
         ),
         RSA.Congruent(r1arg0, r2arg0),
         role1 << Forward,
         role2 << Forward,
         not(NI(r1arg0)),
         skolem(
+          v"T",
           variables :+
             RSA(query.bounded indexOf r1arg0) :+
-            RSA(query.bounded indexOf r2arg0) :+
-            ?("T")
+            RSA(query.bounded indexOf r2arg0)
         )
       )
       val r5b = for {
@@ -242,23 +256,23 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
         r2arg2 = role2.getArguments get 2
         if query.bounded contains r2arg2
       } yield Rule.create(
-        ID(?("K"), ?("T")),
-        ID(?("K"), ?("S")),
+        ID(v"K", v"T"),
+        ID(v"K", v"S"),
         skolem(
+          v"S",
           variables :+
             RSA(query.bounded indexOf r1arg2) :+
-            RSA(query.bounded indexOf r2arg0) :+
-            ?("S")
+            RSA(query.bounded indexOf r2arg0)
         ),
         RSA.Congruent(r1arg0, r2arg2),
         role1 << Forward,
         role2 << Backward,
         not(RSA.NI(r1arg0)),
         skolem(
+          v"T",
           variables :+
             RSA(query.bounded indexOf r1arg0) :+
-            RSA(query.bounded indexOf r2arg2) :+
-            ?("T")
+            RSA(query.bounded indexOf r2arg2)
         )
       )
       val r5c = for {
@@ -273,23 +287,23 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
         r2arg2 = role2.getArguments get 2
         if query.bounded contains r2arg2
       } yield Rule.create(
-        ID(?("K"), ?("T")),
-        ID(?("K"), ?("S")),
+        ID(v"K", v"T"),
+        ID(v"K", v"S"),
         skolem(
+          v"S",
           variables :+
             RSA(query.bounded indexOf r1arg0) :+
-            RSA(query.bounded indexOf r2arg0) :+
-            ?("S")
+            RSA(query.bounded indexOf r2arg0)
         ),
         RSA.Congruent(r1arg2, r2arg2),
         role1 << Backward,
         role2 << Backward,
         not(RSA.NI(r1arg2)),
         skolem(
+          v"T",
           variables :+
             RSA(query.bounded indexOf r1arg2) :+
-            RSA(query.bounded indexOf r2arg2) :+
-            ?("T")
+            RSA(query.bounded indexOf r2arg2)
         )
       )
 
@@ -309,31 +323,31 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
         if index2 >= 0
         suffix <- Seq(Forward, Backward)
       } yield Rule.create(
-        AQ(suffix, ?("K1"), ?("Q")),
-        ID(?("K1"), ?("S")),
-        skolem(variables :+ RSA(index0) :+ ?("V") :+ ?("S")),
-        ID(?("K2"), ?("T")),
-        FilterAtom.create(FunctionCall.equal(?("K1"), ?("K2"))),
-        skolem(variables :+ RSA(index2) :+ ?("W") :+ ?("T")),
+        AQ(suffix, v"K1", v"Q"),
+        ID(v"K1", v"S"),
+        skolem(v"S", variables :+ RSA(index0) :+ v"V"),
+        ID(v"K2", v"T"),
+        FilterAtom.create(FunctionCall.equal(v"K1", v"K2")),
+        skolem(v"T", variables :+ RSA(index2) :+ v"W"),
         role << suffix,
-        skolem(variables :+ ?("V") :+ ?("W") :+ ?("Q"))
+        skolem(v"Q", variables :+ v"V" :+ v"W")
       )
       val r7a =
         for (suffix <- List(Forward, Backward))
           yield Rule.create(
-            TQ(suffix, ?("K"), ?("S")),
-            AQ(suffix, ?("K"), ?("S"))
+            TQ(suffix, v"K", v"S"),
+            AQ(suffix, v"K", v"S")
           )
       val r7b =
         for (suffix <- List(Forward, Backward))
           yield Rule.create(
-            TQ(suffix, ?("K1"), ?("Q")),
-            AQ(suffix, ?("K1"), ?("S")),
-            skolem(variables :+ ?("U") :+ ?("V") :+ ?("S")),
-            TQ(suffix, ?("K2"), ?("T")),
-            FilterAtom.create(FunctionCall.equal(?("K1"), ?("K2"))),
-            skolem(variables :+ ?("V") :+ ?("W") :+ ?("T")),
-            skolem(variables :+ ?("U") :+ ?("W") :+ ?("Q"))
+            TQ(suffix, v"K1", v"Q"),
+            AQ(suffix, v"K1", v"S"),
+            skolem(v"S", variables :+ v"U" :+ v"V"),
+            TQ(suffix, v"K2", v"T"),
+            FilterAtom.create(FunctionCall.equal(v"K1", v"K2")),
+            skolem(v"T", variables :+ v"V" :+ v"W"),
+            skolem(v"Q", variables :+ v"U" :+ v"W")
           )
 
       /** Flag spurious answers.
@@ -343,21 +357,21 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
       val r8a =
         for (v <- query.answer)
           yield Rule.create(
-            SP(?("K")),
-            QM(?("K")),
-            skolem(variables :+ ?("K")),
+            SP(v"K"),
+            QM(v"K"),
+            skolem(v"K", variables),
             not(RSA.Named(v))
           )
       val r8b = Rule.create(
-        SP(?("K")),
-        FK(?("K"))
+        SP(v"K"),
+        FK(v"K")
       )
       val r8c =
         for (suffix <- List(Forward, Backward))
           yield Rule.create(
-            SP(?("K")),
-            TQ(suffix, ?("K"), ?("S")),
-            skolem(variables :+ ?("V") :+ ?("V") :+ ?("S"))
+            SP(v"K"),
+            TQ(suffix, v"K", v"S"),
+            skolem(v"S", variables :+ v"V" :+ v"V")
           )
 
       /** Determine answers to the query
@@ -376,9 +390,9 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
         * @note corresponds to rule 9 in Table 3.
         */
       val r9 = Rule.create(
-        Ans(?("K")),
-        QM(?("K")),
-        not(SP(?("K")))
+        Ans(v"K"),
+        QM(v"K"),
+        not(SP(v"K"))
       )
 
       (r1 :: r3a ::: r3b :: r3c :: r4a ::: r4b ::: r4c ::: r5a ::: r5b ::: r5c ::: r6 ::: r7b ::: r7a ::: r8a ::: r8b :: r8c ::: r9 :: List())
