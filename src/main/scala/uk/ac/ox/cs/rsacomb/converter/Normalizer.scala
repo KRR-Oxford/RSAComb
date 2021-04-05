@@ -26,7 +26,10 @@ class Normalizer() {
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
 
   private var counter = -1
-  def freshOWLClass(): OWLClass = factory.getOWLClass(s"X${counter += 1}")
+  def freshOWLClass(): OWLClass = {
+    counter += 1
+    factory.getOWLClass(s"X$counter")
+  }
 
   /** Normalizes a
     * [[org.semanticweb.owlapi.model.OWLLogicalAxiom OWLLogicalAxiom]]
