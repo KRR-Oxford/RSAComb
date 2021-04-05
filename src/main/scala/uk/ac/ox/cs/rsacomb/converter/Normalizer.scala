@@ -31,6 +31,10 @@ class Normalizer() {
     factory.getOWLClass(s"X$counter")
   }
 
+  /** Statistics */
+  private var discarted = 0
+  private var shifted = 0
+
   /** Normalizes a
     * [[org.semanticweb.owlapi.model.OWLLogicalAxiom OWLLogicalAxiom]]
     *
@@ -122,8 +126,12 @@ class Normalizer() {
               )
             }
           }
-          /** Disjunction on the rhs is not supported */
-          case (_, sup: OWLObjectUnionOf) => notInHornALCHOIQ(a)
+          /** Disjunction on the rhs is not supported directly
+            *
+            * Instead we `shift` the rule to eliminate the disjunction.
+            */
+          case (_, sup: OWLObjectUnionOf) =>
+            shift(sub, sup) flatMap normalize
           /** Complex class expression on existential restriction on the lhs
             *
             *   exists R . C c D -> { C c X, exists R . X c D }
@@ -515,6 +523,50 @@ class Normalizer() {
       case a => Seq(a)
     }
 
+  /** Shift an axiom with disjunction on the rhs */
+  private def shift(
+      sub: OWLClassExpression,
+      sup: OWLObjectUnionOf
+  ): Seq[OWLLogicalAxiom] = {
+    val body = sub.asConjunctSet.map((atom) => (atom, freshOWLClass()))
+    val head = sup.asDisjunctSet.map((atom) => (atom, freshOWLClass()))
+
+    /* Update statistics */
+    shifted += 1
+
+    val r1 =
+      factory.getOWLSubClassOfAxiom(
+        factory.getOWLObjectIntersectionOf(
+          (body.map(_._1) ++ head.map(_._2)): _*
+        ),
+        factory.getOWLNothing
+      )
+
+    val r2s =
+      for {
+        (a, na) <- head
+        hs = head.map(_._2).filterNot(_ equals na)
+      } yield factory.getOWLSubClassOfAxiom(
+        factory.getOWLObjectIntersectionOf(
+          (body.map(_._1) ++ hs): _*
+        ),
+        a
+      )
+
+    val r3s =
+      for {
+        (a, na) <- body
+        bs = body.map(_._1).filterNot(_ equals a)
+      } yield factory.getOWLSubClassOfAxiom(
+        factory.getOWLObjectIntersectionOf(
+          (bs ++ head.map(_._2)): _*
+        ),
+        na
+      )
+
+    Seq(r1) ++ r2s ++ r3s
+  }
+
   /** Approximation function for axioms out of Horn-ALCHOIQ
     *
     * By default discards the axiom, which guarantees a lower bound
@@ -523,6 +575,8 @@ class Normalizer() {
   protected def notInHornALCHOIQ(
       axiom: OWLLogicalAxiom
   ): Seq[OWLLogicalAxiom] = {
+    /* Update statistics */
+    discarted += 1
     Logger print s"'$axiom' has been ignored because it is not in Horn-ALCHOIQ"
     Seq()
   }

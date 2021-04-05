@@ -73,6 +73,27 @@ class NormalizerSpec extends AnyFlatSpec with Matchers with LoneElement {
       ).flatMap(normalizer.normalize)
   }
 
+  "Disjunction on the rhs" should "be shifted" in {
+    def cls(n: Int) = factory.getOWLClass(s"_:class$n")
+    val axiom1 =
+      factory.getOWLSubClassOfAxiom(
+        factory.getOWLObjectIntersectionOf(cls(1), cls(2), cls(3)),
+        factory.getOWLObjectUnionOf(cls(4), cls(5))
+      )
+    val axiom2 =
+      factory.getOWLSubClassOfAxiom(
+        cls(1),
+        factory.getOWLObjectUnionOf(cls(2), cls(3), cls(4))
+      )
+    val axiom3 =
+      factory.getOWLSubClassOfAxiom(
+        factory.getOWLObjectIntersectionOf(cls(1), cls(2), cls(3)),
+        factory.getOWLObjectUnionOf(cls(4))
+      )
+    normalizer.normalize(axiom1) should have length 5
+    normalizer.normalize(axiom2) should have length 5
+    normalizer.normalize(axiom3) should have length 4
+  }
   //"A class name" should "be converted into a single atom" in {
   //  val cls = factory.getOWLClass(iriString0)
   //  val atom = TupleTableAtom.rdf(term0, IRI.RDF_TYPE, IRI.create(iriString0))
