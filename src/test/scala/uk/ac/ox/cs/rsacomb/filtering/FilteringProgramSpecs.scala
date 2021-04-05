@@ -8,7 +8,7 @@ import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 
 object NaiveFilteringProgramSpec {
 
-  val naive: FilterType = FilterType.FILTER_NAIVE
+  val naive: FilterType = FilterType.NAIVE
 
   val constants =
     List(IRI.create("_:iri1"), IRI.create("_:iri2"), IRI.create("_:iri3"))
