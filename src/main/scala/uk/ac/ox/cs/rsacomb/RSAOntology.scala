@@ -21,7 +21,6 @@ import org.semanticweb.owlapi.model.{
 }
 import org.semanticweb.owlapi.model.parameters.Imports
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory
-import org.semanticweb.owlapi.model.{IRI => OWLIRI}
 import uk.ac.manchester.cs.owl.owlapi.OWLObjectPropertyImpl
 
 import tech.oxfordsemantic.jrdfox.client.{
@@ -48,9 +47,10 @@ import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 /* Scala imports */
 import scala.util.{Try, Success, Failure}
 import scala.collection.JavaConverters._
-import scala.collection.mutable.Set
-import scalax.collection.immutable.Graph
-import scalax.collection.GraphEdge.UnDiEdge
+import scala.collection.mutable.{Set, Map}
+import scalax.collection.Graph
+import scalax.collection.GraphPredef._, scalax.collection.GraphEdge._
+import scalax.collection.GraphTraversal._
 
 /* Debug only */
 import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
@@ -170,103 +170,6 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
       .flatMap(_.objectPropertyExpressionsInSignature)
       .distinct
 
-  /* Steps for RSA check
-   * 1) convert ontology axioms into LP rules
-   * 2) call RDFox on the onto and compute materialization
-   * 3) build graph from E(x,y) facts
-   * 4) check if the graph is tree-like
-   *    ideally this annotates the graph with info about the reasons
-   *    why the ontology might not be RSA. This could help a second
-   *    step of approximation of an Horn-ALCHOIQ to RSA
-   *
-   * TODO: Implement additional checks (taking into account equality)
-   *
-   * To check if the graph is tree-like we check for acyclicity in a
-   * undirected graph.
-   */
-  lazy val isRSA: Boolean = Logger.timed(
-    {
-      val unsafe = this.unsafeRoles
-
-      object RSAConverter extends RDFoxConverter {
-
-        override def convert(
-            expr: OWLClassExpression,
-            term: Term,
-            unsafe: List[OWLObjectPropertyExpression],
-            skolem: SkolemStrategy,
-            suffix: RSASuffix
-        ): Shards =
-          (expr, skolem) match {
-
-            case (e: OWLObjectSomeValuesFrom, c: Constant)
-                if unsafe contains e.getProperty => {
-              val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
-              (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
-            }
-
-            case (e: OWLDataSomeValuesFrom, c: Constant)
-                if unsafe contains e.getProperty => {
-              val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
-              (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
-            }
-
-            case _ => super.convert(expr, term, unsafe, skolem, suffix)
-          }
-      }
-
-      /* Ontology convertion into LP rules */
-      val term = RSAOntology.genFreshVariable()
-      val conversion = Try(
-        axioms.map(a =>
-          RSAConverter.convert(a, term, unsafe, new Constant(a), Empty)
-        )
-      )
-
-      conversion match {
-        case Success(result) => {
-          val datalog = result.unzip
-          val facts = datalog._1.flatten
-          var rules = datalog._2.flatten
-
-          /* Open connection with RDFox */
-          val (server, data) = RDFoxUtil.openConnection("RSACheck")
-
-          /* Add additional built-in rules */
-          val varX = Variable.create("X")
-          val varY = Variable.create("Y")
-          rules = Rule.create(
-            RSA.E(varX, varY),
-            RSA.PE(varX, varY),
-            RSA.U(varX),
-            RSA.U(varY)
-          ) :: rules
-
-          /* Load facts and rules from ontology */
-          RDFoxUtil.addFacts(data, facts)
-          RDFoxUtil.addRules(data, rules)
-          /* Load data files */
-          RDFoxUtil.addData(data, datafiles: _*)
-
-          /* Build graph */
-          val graph = this.rsaGraph(data);
-
-          /* Close connection to RDFox */
-          RDFoxUtil.closeConnection(server, data)
-
-          /* Acyclicity test */
-          graph.isAcyclic
-        }
-        case Failure(e) => {
-          Logger print s"Unsupported axiom: $e"
-          false
-        }
-      }
-    },
-    "RSA check",
-    Logger.DEBUG
-  )
-
   /** Unsafe roles of a given ontology.
     *
     * Unsafety conditions are the following:
@@ -321,15 +224,164 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
     (unsafe1 ++ unsafe2).toList
   }
 
-  private def rsaGraph(
-      data: DataStoreConnection
-  ): Graph[Resource, UnDiEdge] = {
+  /** RSA dependency graph
+    *
+    * This is used to check whether the input ontology is RSA. This also
+    * helps us determine a suitable approximation of the ontology to
+    * RSA.
+    */
+  private lazy val dependencyGraph: Graph[Resource, DiEdge] = {
+    val unsafe = this.unsafeRoles
+    var nodemap = Map.empty[String, OWLAxiom]
+
+    object RSAConverter extends RDFoxConverter {
+
+      override def convert(
+          expr: OWLClassExpression,
+          term: Term,
+          unsafe: List[OWLObjectPropertyExpression],
+          skolem: SkolemStrategy,
+          suffix: RSASuffix
+      ): Shards =
+        (expr, skolem) match {
+
+          case (e: OWLObjectSomeValuesFrom, c: Constant) => {
+            nodemap.update(c.iri.getIRI, c.axiom)
+            val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
+            if (unsafe contains e.getProperty)
+              (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
+            else
+              (RSA.PE(term, c.iri) :: res, ext)
+          }
+
+          case (e: OWLDataSomeValuesFrom, c: Constant) => {
+            nodemap.update(c.iri.getIRI, c.axiom)
+            val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
+            if (unsafe contains e.getProperty)
+              (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
+            else
+              (RSA.PE(term, c.iri) :: res, ext)
+          }
+
+          case _ => super.convert(expr, term, unsafe, skolem, suffix)
+        }
+    }
+
+    /* Ontology convertion into LP rules */
+    val term = RSAOntology.genFreshVariable()
+    val result = axioms.map(a =>
+      RSAConverter.convert(a, term, unsafe, new Constant(a), Empty)
+    )
+
+    val datalog = result.unzip
+    val facts = datalog._1.flatten
+    var rules = datalog._2.flatten
+
+    /* Open connection with RDFox */
+    val (server, data) = RDFoxUtil.openConnection("RSACheck")
+
+    /* Add additional built-in rules */
+    val varX = Variable.create("X")
+    val varY = Variable.create("Y")
+    rules = Rule.create(
+      RSA.E(varX, varY),
+      RSA.PE(varX, varY),
+      RSA.U(varX),
+      RSA.U(varY)
+    ) :: rules
+
+    /* Load facts and rules from ontology */
+    RDFoxUtil.addFacts(data, facts)
+    RDFoxUtil.addRules(data, rules)
+    /* Load data files */
+    RDFoxUtil.addData(data, datafiles: _*)
+
+    /* Build graph */
     val query = "SELECT ?X ?Y WHERE { ?X rsa:E ?Y }"
     val answers = RDFoxUtil.submitQuery(data, query, RSA.Prefixes).get
-    var edges: Seq[UnDiEdge[Resource]] =
-      answers.collect { case (_, Seq(n1, n2)) => UnDiEdge(n1, n2) }
-    Graph(edges: _*)
+    var edges: Seq[DiEdge[Resource]] =
+      answers.collect { case (_, Seq(n1, n2)) => n1 ~> n2 }
+    val graph = Graph(edges: _*)
+
+    /* Close connection to RDFox */
+    RDFoxUtil.closeConnection(server, data)
+
+    /* Approximate the ontology to RSA */
+    approximate(graph, nodemap)
+
+    graph
   }
+
+  /** Approximate a Horn-ALCHOIQ ontology to RSA
+    *
+    * This is done by gathering those axioms that prevent the ontology
+    * dependency graph `dependencyGraph` from being tree-shaped, and
+    * removing them.
+    *
+    * @param graph the graph used to compute the axioms to remove.
+    * @param nodemap map from graph nodes to ontology axioms.
+    */
+  private def approximate(
+      graph: Graph[Resource, DiEdge],
+      nodemap: Map[String, OWLAxiom]
+  ): Unit = {
+
+    /* Define node colors for the graph visit */
+    sealed trait NodeColor
+    case object Unvisited extends NodeColor
+    case object Visited extends NodeColor
+    case object ToDelete extends NodeColor
+
+    /* Keep track of node colors during graph visit */
+    var color = Map.from[Resource, NodeColor](
+      graph.nodes.toOuter.map(k => (k, Unvisited))
+    )
+
+    for {
+      component <- graph.componentTraverser().map(_ to Graph)
+      edge <- component
+        .outerEdgeTraverser(component.nodes.head)
+        .withKind(BreadthFirst)
+    } yield {
+      val source = edge._1
+      val target = edge._2
+      color(source) match {
+        case Unvisited | Visited => {
+          color(target) match {
+            case Unvisited =>
+              color(source) = Visited;
+              color(target) = Visited
+            case Visited =>
+              color(source) = ToDelete
+            case ToDelete =>
+              color(source) = Visited
+          }
+        }
+        case ToDelete =>
+      }
+    }
+
+    val toDelete = color.iterator.collect { case (resource: IRI, ToDelete) =>
+      nodemap(resource.getIRI)
+    }.toSeq
+    ontology.removeAxioms(toDelete: _*)
+  }
+  // val edges1 = Seq('A ~> 'B, 'B ~> 'C, 'C ~> 'D, 'D ~> 'H, 'H ~>
+  // 'G, 'G ~> 'F, 'E ~> 'A, 'E ~> 'F, 'B ~> 'E, 'F ~> 'G, 'B ~> 'F,
+  // 'C ~> 'G, 'D ~> 'C, 'H ~> 'D)
+  // val edges2 = Seq('I ~> 'M, 'I ~> 'L, 'L ~> 'N, 'M ~> 'N)
+  // val edges3 = Seq('P ~> 'O)
+  // val graph = Graph.from(edges = edges1 ++ edges2 ++ edges3)
+
+  /** RSA check
+    *
+    * Acyclicity check over *undirected* dependency graph.
+    * NOTE: at the moment we are using the direct version of the graph.
+    *
+    * @deprecated
+    */
+  lazy val isRSA: Boolean =
+    Logger.timed(dependencyGraph.isAcyclic, "RSA check", Logger.DEBUG)
 
   /** Top axiomatization rules
     *
