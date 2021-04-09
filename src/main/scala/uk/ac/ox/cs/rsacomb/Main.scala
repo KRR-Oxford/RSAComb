@@ -29,11 +29,9 @@ object RSAConfig {
       -h | -? | --help
           print this help message
 
-      --rsacheck-only
-          only perform the RSA check without performing any query answering.
-
       -q <file> | --query <file>
-          path to a file containing a single SPARQL query
+          path to a file containing a single SPARQL query. If no query
+          is provided, only the approximation to RSA will be performed.
 
       <ontology>
           file containing the ontology
@@ -44,9 +42,7 @@ object RSAConfig {
   """
 
   /** Default config values */
-  private val default = Map(
-    'rsacheckonly -> RSAOption[Boolean](false)
-  )
+  private val default: Config = Map.empty
 
   /** Utility to exit the program with a custom message on stderr.
     *
@@ -79,8 +75,6 @@ object RSAConfig {
         println(help)
         sys.exit(0)
       }
-      case "--rsacheck-only" :: tail =>
-        parse(tail, config ++ Map('rsacheckonly -> true))
       case flag @ ("-q" | "--query") :: _query :: tail => {
         val query = new File(_query)
         if (!query.isFile)
@@ -101,80 +95,34 @@ object RSAConfig {
   }
 
   /** Perform final checks on parsed options */
-  private def finalise(config: Config): Config = {
-    // Query file is mandatory unless only the RSA check is required.
-    if (!config('rsacheckonly).get[Boolean] && !config.contains('query))
-      exit(s"Query file was not provided.")
-
-    config
-  }
+  private def finalise(config: Config): Config = config
 }
 
-/** Entry point of the program.
-  *
-  * The executable expects a SPARQL query and a non-empty sequence of
-  * ontology files as arguments. The query file is expected to contain
-  * exactly one query, while the ontology files will be programmatically
-  * merged in a single ontology.
-  *
-  * @todo better arguments handling is needed. Look into some library
-  * for this.
-  * @todo at the moment the input ontology is assumed to be Horn-ALCHOIQ.
-  * This might not be the case.
-  */
+/** Main entry point to the program */
 object RSAComb extends App {
 
+  /* Command-line options */
   val config = RSAConfig.parse(args.toList)
 
-  val ontology =
-    RSAOntology(config('ontology).get[File], config('data).get[List[File]]: _*)
+  val ontology = RSAOntology(
+    config('ontology).get[File],
+    config('data).get[List[File]]: _*
+  )
+  val rsa = ontology.toRSA()
+  ontology.statistics()
 
-  if (ontology.isRSA) {
+  if (config contains 'query) {
+    val query =
+      RDFoxUtil.loadQueryFromFile(config('query).get[File].getAbsoluteFile)
 
-    Logger print "Ontology is RSA!"
-
-    if (!config('rsacheckonly).get[Boolean]) {
-      val query =
-        RDFoxUtil.loadQueryFromFile(config('query).get[File].getAbsoluteFile)
-
-      ConjunctiveQuery.parse(query) match {
-        case Some(query) => {
-          val answers = ontology ask query
-          //Logger.print(s"$answers", Logger.QUIET)
-          Logger print s"Number of answers: ${answers.length} (${answers.lengthWithMultiplicity})"
-
-          //    /* Additional DEBUG information */
-          //    if (Logger.level >= Logger.DEBUG) {
-          //      /* Unfiltered rules */
-          //      val unfiltered = ontology askUnfiltered query
-          //      unfiltered map { u =>
-          //        Logger print s"Number of unfiltered answers: ${u.length} (${u.map(_._1).sum})."
-
-          //        /* Spurious answers */
-          //        val spurious = {
-          //          val variables = query.variables.length
-          //          val sp = RDFoxUtil.buildDescriptionQuery("SP", variables)
-          //          ontology.queryDataStore(query, sp, RSA.Prefixes)
-          //        }
-          //        spurious map { s =>
-          //          Logger print s"Number of spurious answers: ${s.length} (${s.map(_._1).sum})"
-
-          //          /* Spurious/unfiltered percentage */
-          //          val perc =
-          //            if (u.length > 0) (s.length / u.length.toFloat) * 100 else 0
-          //          Logger print s"Percentage of spurious answers: $perc%"
-          //        }
-          //      }
-          //    }
-        }
-        case None =>
-          throw new RuntimeException("Submitted query is not conjunctive")
+    ConjunctiveQuery.parse(query) match {
+      case Some(query) => {
+        val answers = rsa ask query
+        Logger.print(s"$answers", Logger.VERBOSE)
+        Logger print s"Number of answers: ${answers.length} (${answers.lengthWithMultiplicity})"
       }
+      case None =>
+        throw new RuntimeException("Submitted query is not conjunctive")
     }
-
-  } else {
-
-    Logger print "Ontology is not RSA!"
-
   }
 }

@@ -1,5 +1,6 @@
 package uk.ac.ox.cs.rsacomb.implicits
 
+import java.util.stream.{Collectors, Stream}
 import scala.collection.JavaConverters._
 
 object JavaCollections {
@@ -12,6 +13,11 @@ object JavaCollections {
 
   implicit def javaSetToScalaList[A](set: java.util.Set[A]): List[A] =
     set.asScala.toList
+
+  implicit def javaStreamToScalaSeq[A](
+      stream: java.util.stream.Stream[A]
+  ): Seq[A] =
+    stream.collect(Collectors.toList()).asScala.toSeq
 
   implicit def javaCollectionToScalaList[A](
       set: java.util.Collection[A]

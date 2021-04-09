@@ -32,8 +32,8 @@ class Normalizer() {
   }
 
   /** Statistics */
-  private var discarted = 0
-  private var shifted = 0
+  var discarded = 0
+  var shifted = 0
 
   /** Normalizes a
     * [[org.semanticweb.owlapi.model.OWLLogicalAxiom OWLLogicalAxiom]]
@@ -576,7 +576,7 @@ class Normalizer() {
       axiom: OWLLogicalAxiom
   ): Seq[OWLLogicalAxiom] = {
     /* Update statistics */
-    discarted += 1
+    discarded += 1
     Logger print s"'$axiom' has been ignored because it is not in Horn-ALCHOIQ"
     Seq()
   }

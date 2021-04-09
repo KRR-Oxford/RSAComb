@@ -66,66 +66,67 @@ import uk.ac.ox.cs.rsacomb.util.Logger
 
 object RSAOntology {
 
-  // Counter used to implement a simple fresh variable generator
-  private var counter = -1;
-
   /** Name of the RDFox data store used for CQ answering */
   private val DataStore = "answer_computation"
 
-  def apply(ontology: File, data: File*): RSAOntology =
-    new RSAOntology(ontology, data: _*)
-
+  /** Simple fresh variable generator */
+  private var counter = -1;
   def genFreshVariable(): Variable = {
     counter += 1
-    Variable.create(f"I$counter%03d")
+    Variable.create(f"I$counter%05d")
   }
 
+  /** Manager instance to interface with OWLAPI */
+  val manager = OWLManager.createOWLOntologyManager()
+
+  def apply(ontology: File, data: File*): RSAOntology =
+    new RSAOntology(
+      manager.loadOntologyFromOntologyDocument(ontology),
+      data: _*
+    )
+
+  def apply(ontology: OWLOntology, data: File*): RSAOntology =
+    new RSAOntology(ontology, data: _*)
 }
 
-class RSAOntology(_ontology: File, val datafiles: File*) {
+/** Wrapper class for an ontology in RSA
+  *
+  * @param ontology the input OWL2 ontology.
+  * @param datafiles additinal data (treated as part of the ABox)
+  */
+class RSAOntology(val original: OWLOntology, val datafiles: File*) {
 
   /** Simplify conversion between OWLAPI and RDFox concepts */
   import implicits.RDFox._
   import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom._
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
 
-  /** Manager instance to interface with OWLAPI */
-  private val manager = OWLManager.createOWLOntologyManager()
+  /** Set of axioms removed during the approximation to RSA */
+  private var removed: Seq[OWLAxiom] = Seq.empty
 
-  /** TBox + RBox of the input knowledge base. */
-  val ontology: OWLOntology =
-    manager.loadOntologyFromOntologyDocument(_ontology)
-
-  /** OWLAPI internal reasoner some preliminary reasoning task. */
-  private val reasoner =
-    (new StructuralReasonerFactory()).createReasoner(ontology)
-
+  /** The normalizer normalizes the ontology and approximate it to
+    * Horn-ALCHOIQ. A further step is needed to obtain an RSA
+    * approximation of the input ontology `original`.
+    */
   private val normalizer = new Normalizer()
 
-  /** Imported knowledge base. */
-  //lazy val kbase: OWLOntology = {
-  //  val merger = new OWLOntologyMerger(manager)
-  //  _data.foreach { manager.loadOntologyFromOntologyDocument(_) }
-  //  merger.createMergedOntology(manager, OWLIRI.create("_:merged"))
-  //}
-
   /** TBox axioms */
-  val tbox: List[OWLLogicalAxiom] =
-    ontology
+  var tbox: List[OWLLogicalAxiom] =
+    original
       .tboxAxioms(Imports.INCLUDED)
       .collect(Collectors.toList())
       .collect { case a: OWLLogicalAxiom => a }
       .flatMap(normalizer.normalize)
-  Logger.print(s"Original TBox: ${tbox.length}", Logger.DEBUG)
+  //Logger.print(s"Normalized TBox: ${tbox.length}", Logger.DEBUG)
 
   /** RBox axioms */
-  val rbox: List[OWLLogicalAxiom] =
-    ontology
+  var rbox: List[OWLLogicalAxiom] =
+    original
       .rboxAxioms(Imports.INCLUDED)
       .collect(Collectors.toList())
       .collect { case a: OWLLogicalAxiom => a }
       .flatMap(normalizer.normalize)
-  Logger.print(s"Original RBox: ${rbox.length}", Logger.DEBUG)
+  //Logger.print(s"Normalized RBox: ${rbox.length}", Logger.DEBUG)
 
   /** ABox axioms
     *
@@ -134,18 +135,27 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
     * imported in RDFox due to performance issues when trying to import
     * large data files via OWLAPI.
     */
-  val abox: List[OWLLogicalAxiom] =
-    ontology
+  var abox: List[OWLLogicalAxiom] =
+    original
       .aboxAxioms(Imports.INCLUDED)
       .collect(Collectors.toList())
       .collect { case a: OWLLogicalAxiom => a }
       .flatMap(normalizer.normalize)
-  Logger.print(s"Original ABox: ${abox.length}", Logger.DEBUG)
+  //Logger.print(s"Normalized ABox: ${abox.length}", Logger.DEBUG)
 
   /** Collection of logical axioms in the input ontology */
-  lazy val axioms: List[OWLLogicalAxiom] = abox ::: tbox ::: rbox
+  var axioms: List[OWLLogicalAxiom] = abox ::: tbox ::: rbox
 
-  /* Retrieve individuals in the original ontology */
+  /** Normalized Horn-ALCHOIQ ontology */
+  val ontology = RSAOntology.manager.createOntology(
+    axioms.asInstanceOf[List[OWLAxiom]].asJava
+  )
+
+  /** OWLAPI internal reasoner instantiated over the approximated ontology */
+  private val reasoner =
+    (new StructuralReasonerFactory()).createReasoner(ontology)
+
+  /** Retrieve individuals/literals in the ontology */
   val individuals: List[IRI] =
     ontology
       .getIndividualsInSignature()
@@ -153,18 +163,15 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
       .map(_.getIRI)
       .map(implicits.RDFox.owlapiToRdfoxIri)
       .toList
-
   val literals: List[Literal] =
     axioms
       .collect { case a: OWLDataPropertyAssertionAxiom => a }
       .map(_.getObject)
       .map(implicits.RDFox.owlapiToRdfoxLiteral)
 
+  /** Retrieve concepts/roles in the ontology */
   val concepts: List[OWLClass] =
     ontology.getClassesInSignature().asScala.toList
-
-  // This is needed in the computation of rules in the canonical model.
-  // Can we avoid this using RDFox built-in functions?
   val roles: List[OWLObjectPropertyExpression] =
     (tbox ++ rbox)
       .flatMap(_.objectPropertyExpressionsInSignature)
@@ -182,26 +189,19 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
     *    if there exists a role p2 appearing in an axiom of type T4 and
     *    p1 is a subproperty of either p2 or the inverse of p2.
     */
-  lazy val unsafeRoles: List[OWLObjectPropertyExpression] = {
-
-    /* DEBUG: print rules in DL syntax */
-    //val renderer = new DLSyntaxObjectRenderer()
+  val unsafeRoles: List[OWLObjectPropertyExpression] = {
 
     /* Checking for unsafety condition (1) */
     val unsafe1 = for {
       axiom <- tbox
       if axiom.isT5
       role1 <- axiom.objectPropertyExpressionsInSignature
-      roleSuper =
-        role1 +: reasoner
-          .superObjectProperties(role1)
-          .collect(Collectors.toList())
-          .asScala
+      roleSuper = role1 +: reasoner.superObjectProperties(role1)
       roleSuperInv = roleSuper.map(_.getInverseProperty)
       axiom <- tbox
       if axiom.isT3 && !axiom.isT3top
       role2 <- axiom.objectPropertyExpressionsInSignature
-      if roleSuperInv.contains(role2)
+      if roleSuperInv contains role2
     } yield role1
 
     /* Checking for unsafety condition (2) */
@@ -209,11 +209,7 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
       axiom <- tbox
       if axiom.isT5
       role1 <- axiom.objectPropertyExpressionsInSignature
-      roleSuper =
-        role1 +: reasoner
-          .superObjectProperties(role1)
-          .collect(Collectors.toList())
-          .asScala
+      roleSuper = role1 +: reasoner.superObjectProperties(role1)
       roleSuperInv = roleSuper.map(_.getInverseProperty)
       axiom <- tbox
       if axiom.isT4
@@ -221,16 +217,19 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
       if roleSuper.contains(role2) || roleSuperInv.contains(role2)
     } yield role1
 
-    (unsafe1 ++ unsafe2).toList
+    unsafe1 ++ unsafe2
   }
 
-  /** RSA dependency graph
+  /** Compute the RSA dependency graph
     *
-    * This is used to check whether the input ontology is RSA. This also
-    * helps us determine a suitable approximation of the ontology to
-    * RSA.
+    * This is used to approximate the input ontology to RSA.
+    *
+    * @return a tuple containing the dependency graph and a map between
+    * the constants newly introduced and the corresponding axioms in the
+    * ontology.
     */
-  private lazy val dependencyGraph: Graph[Resource, DiEdge] = {
+  private def dependencyGraph()
+      : (Graph[Resource, DiEdge], Map[String, OWLAxiom]) = {
     val unsafe = this.unsafeRoles
     var nodemap = Map.empty[String, OWLAxiom]
 
@@ -278,7 +277,7 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
     var rules = datalog._2.flatten
 
     /* Open connection with RDFox */
-    val (server, data) = RDFoxUtil.openConnection("RSACheck")
+    val (server, data) = RDFoxUtil.openConnection("rsa_dependency_graph")
 
     /* Add additional built-in rules */
     val varX = Variable.create("X")
@@ -289,14 +288,13 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
       RSA.U(varX),
       RSA.U(varY)
     ) :: rules
-
     /* Load facts and rules from ontology */
     RDFoxUtil.addFacts(data, facts)
     RDFoxUtil.addRules(data, rules)
     /* Load data files */
     RDFoxUtil.addData(data, datafiles: _*)
 
-    /* Build graph */
+    /* Build the graph */
     val query = "SELECT ?X ?Y WHERE { ?X rsa:E ?Y }"
     val answers = RDFoxUtil.submitQuery(data, query, RSA.Prefixes).get
     var edges: Seq[DiEdge[Resource]] =
@@ -306,10 +304,7 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
     /* Close connection to RDFox */
     RDFoxUtil.closeConnection(server, data)
 
-    /* Approximate the ontology to RSA */
-    approximate(graph, nodemap)
-
-    graph
+    (graph, nodemap)
   }
 
   /** Approximate a Horn-ALCHOIQ ontology to RSA
@@ -321,10 +316,10 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
     * @param graph the graph used to compute the axioms to remove.
     * @param nodemap map from graph nodes to ontology axioms.
     */
-  private def approximate(
-      graph: Graph[Resource, DiEdge],
-      nodemap: Map[String, OWLAxiom]
-  ): Unit = {
+  def toRSA(): RSAOntology = {
+
+    /* Compute the dependency graph for the ontology */
+    val (graph, nodemap) = this.dependencyGraph()
 
     /* Define node colors for the graph visit */
     sealed trait NodeColor
@@ -364,7 +359,13 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
     val toDelete = color.iterator.collect { case (resource: IRI, ToDelete) =>
       nodemap(resource.getIRI)
     }.toSeq
+
+    /* Remove axioms from approximated ontology */
     ontology.removeAxioms(toDelete: _*)
+    this.removed = toDelete
+
+    /* Return RSA ontology */
+    RSAOntology(ontology, datafiles: _*)
   }
   // val edges1 = Seq('A ~> 'B, 'B ~> 'C, 'C ~> 'D, 'D ~> 'H, 'H ~>
   // 'G, 'G ~> 'F, 'E ~> 'A, 'E ~> 'F, 'B ~> 'E, 'F ~> 'G, 'B ~> 'F,
@@ -372,16 +373,6 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
   // val edges2 = Seq('I ~> 'M, 'I ~> 'L, 'L ~> 'N, 'M ~> 'N)
   // val edges3 = Seq('P ~> 'O)
   // val graph = Graph.from(edges = edges1 ++ edges2 ++ edges3)
-
-  /** RSA check
-    *
-    * Acyclicity check over *undirected* dependency graph.
-    * NOTE: at the moment we are using the direct version of the graph.
-    *
-    * @deprecated
-    */
-  lazy val isRSA: Boolean =
-    Logger.timed(dependencyGraph.isAcyclic, "RSA check", Logger.DEBUG)
 
   /** Top axiomatization rules
     *
@@ -687,4 +678,29 @@ class RSAOntology(_ontology: File, val datafiles: File*) {
   def unfold(axiom: OWLSubClassOfAxiom): Set[Term] =
     this.self(axiom) | this.cycle(axiom)
 
-} // implicit class RSAOntology
+  /** Log normalization/approximation statistics */
+  def statistics(level: Logger.Level = Logger.DEBUG): Unit = {
+    Logger.print(
+      s"Logical axioms in original input ontology: ${original.getLogicalAxiomCount(true)}",
+      level
+    )
+    Logger.print(
+      s"Logical axioms discarded in Horn-ALCHOIQ approximation: ${normalizer.discarded}",
+      level
+    )
+    Logger.print(
+      s"Logical axioms shifted in Horn-ALCHOIQ approximation: ${normalizer.shifted}",
+      level
+    )
+    Logger.print(
+      s"Logical axioms in Horn-ALCHOIQ ontology: ${ontology
+        .getLogicalAxiomCount(true)} (${tbox.length}/${rbox.length}/${abox.length})",
+      level
+    )
+    Logger.print(
+      s"Logical axioms discarded in RSA approximation: ${removed.length}",
+      level
+    )
+  }
+
+} // class RSAOntology
