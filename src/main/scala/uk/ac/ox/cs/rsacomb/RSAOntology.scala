@@ -117,7 +117,6 @@ class RSAOntology(val original: OWLOntology, val datafiles: File*) {
       .collect(Collectors.toList())
       .collect { case a: OWLLogicalAxiom => a }
       .flatMap(normalizer.normalize)
-  //Logger.print(s"Normalized TBox: ${tbox.length}", Logger.DEBUG)
 
   /** RBox axioms */
   var rbox: List[OWLLogicalAxiom] =
@@ -126,7 +125,6 @@ class RSAOntology(val original: OWLOntology, val datafiles: File*) {
       .collect(Collectors.toList())
       .collect { case a: OWLLogicalAxiom => a }
       .flatMap(normalizer.normalize)
-  //Logger.print(s"Normalized RBox: ${rbox.length}", Logger.DEBUG)
 
   /** ABox axioms
     *
@@ -141,7 +139,6 @@ class RSAOntology(val original: OWLOntology, val datafiles: File*) {
       .collect(Collectors.toList())
       .collect { case a: OWLLogicalAxiom => a }
       .flatMap(normalizer.normalize)
-  //Logger.print(s"Normalized ABox: ${abox.length}", Logger.DEBUG)
 
   /** Collection of logical axioms in the input ontology */
   var axioms: List[OWLLogicalAxiom] = abox ::: tbox ::: rbox
@@ -316,57 +313,61 @@ class RSAOntology(val original: OWLOntology, val datafiles: File*) {
     * @param graph the graph used to compute the axioms to remove.
     * @param nodemap map from graph nodes to ontology axioms.
     */
-  def toRSA(): RSAOntology = {
+  def toRSA(): RSAOntology = Logger.timed(
+    {
 
-    /* Compute the dependency graph for the ontology */
-    val (graph, nodemap) = this.dependencyGraph()
+      /* Compute the dependency graph for the ontology */
+      val (graph, nodemap) = this.dependencyGraph()
 
-    /* Define node colors for the graph visit */
-    sealed trait NodeColor
-    case object Unvisited extends NodeColor
-    case object Visited extends NodeColor
-    case object ToDelete extends NodeColor
+      /* Define node colors for the graph visit */
+      sealed trait NodeColor
+      case object Unvisited extends NodeColor
+      case object Visited extends NodeColor
+      case object ToDelete extends NodeColor
 
-    /* Keep track of node colors during graph visit */
-    var color = Map.from[Resource, NodeColor](
-      graph.nodes.toOuter.map(k => (k, Unvisited))
-    )
+      /* Keep track of node colors during graph visit */
+      var color = Map.from[Resource, NodeColor](
+        graph.nodes.toOuter.map(k => (k, Unvisited))
+      )
 
-    for {
-      component <- graph.componentTraverser().map(_ to Graph)
-      edge <- component
-        .outerEdgeTraverser(component.nodes.head)
-        .withKind(BreadthFirst)
-    } yield {
-      val source = edge._1
-      val target = edge._2
-      color(source) match {
-        case Unvisited | Visited => {
-          color(target) match {
-            case Unvisited =>
-              color(source) = Visited;
-              color(target) = Visited
-            case Visited =>
-              color(source) = ToDelete
-            case ToDelete =>
-              color(source) = Visited
+      for {
+        component <- graph.componentTraverser().map(_ to Graph)
+        edge <- component
+          .outerEdgeTraverser(component.nodes.head)
+          .withKind(BreadthFirst)
+      } yield {
+        val source = edge._1
+        val target = edge._2
+        color(source) match {
+          case Unvisited | Visited => {
+            color(target) match {
+              case Unvisited =>
+                color(source) = Visited;
+                color(target) = Visited
+              case Visited =>
+                color(source) = ToDelete
+              case ToDelete =>
+                color(source) = Visited
+            }
           }
+          case ToDelete =>
         }
-        case ToDelete =>
       }
-    }
 
-    val toDelete = color.iterator.collect { case (resource: IRI, ToDelete) =>
-      nodemap(resource.getIRI)
-    }.toSeq
+      val toDelete = color.iterator.collect { case (resource: IRI, ToDelete) =>
+        nodemap(resource.getIRI)
+      }.toSeq
 
-    /* Remove axioms from approximated ontology */
-    ontology.removeAxioms(toDelete: _*)
-    this.removed = toDelete
+      /* Remove axioms from approximated ontology */
+      ontology.removeAxioms(toDelete: _*)
+      this.removed = toDelete
 
-    /* Return RSA ontology */
-    RSAOntology(ontology, datafiles: _*)
-  }
+      /* Return RSA ontology */
+      RSAOntology(ontology, datafiles: _*)
+    },
+    "Horn-ALCHOIQ to RSA approximation:",
+    Logger.DEBUG
+  )
   // val edges1 = Seq('A ~> 'B, 'B ~> 'C, 'C ~> 'D, 'D ~> 'H, 'H ~>
   // 'G, 'G ~> 'F, 'E ~> 'A, 'E ~> 'F, 'B ~> 'E, 'F ~> 'G, 'B ~> 'F,
   // 'C ~> 'G, 'D ~> 'C, 'H ~> 'D)

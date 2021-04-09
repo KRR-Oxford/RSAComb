@@ -401,6 +401,10 @@ class Normalizer() {
                 factory.getOWLNothing
               )
             )
+          /** Self-restriction over an object property */
+          case (sub: OWLObjectHasSelf, _) => notInHornALCHOIQ(a)
+          case (_, sup: OWLObjectHasSelf) => notInHornALCHOIQ(a)
+
           /** Axiom is already normalized */
           case _ => Seq(a)
         }
@@ -507,7 +511,7 @@ class Normalizer() {
 
       /** Unsupported */
 
-      case a: OWLAsymmetricObjectPropertyAxiom => notSupported(a)
+      case a: OWLAsymmetricObjectPropertyAxiom => notInHornALCHOIQ(a)
 
       case a: OWLDatatypeDefinitionAxiom => notSupported(a)
 
@@ -577,7 +581,10 @@ class Normalizer() {
   ): Seq[OWLLogicalAxiom] = {
     /* Update statistics */
     discarded += 1
-    Logger print s"'$axiom' has been ignored because it is not in Horn-ALCHOIQ"
+    Logger.print(
+      s"'$axiom' has been ignored because it is not in Horn-ALCHOIQ",
+      Logger.VERBOSE
+    )
     Seq()
   }
 
