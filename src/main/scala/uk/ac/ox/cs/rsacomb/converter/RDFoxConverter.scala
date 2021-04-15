@@ -23,13 +23,6 @@ import uk.ac.ox.cs.rsacomb.util.{RSA, RDFoxUtil}
   * @note the input axioms are assumed to be normalized. Trying to
   * convert non normalized axioms might result in undefined behavious.
   * We use the normalization defined in the main paper.
-  *
-  * @see [[https://github.com/KRR-Oxford/RSA-combined-approach GitHub repository]]
-  * for more information on the theoretical aspects of the system.
-  *
-  * @todo this is not ideal and it would be more sensible to prepend a
-  * normalization procedure that will prevent errors or unexpected
-  * results.
   */
 trait RDFoxConverter {
 
@@ -358,7 +351,6 @@ trait RDFoxConverter {
         */
       case e: OWLDataSomeValuesFrom => {
         val role = e.getProperty()
-        // TODO: simplify this:
         // Computes the result of rule skolemization. Depending on the used
         // technique it might involve the introduction of additional atoms,
         // and/or fresh constants and variables.

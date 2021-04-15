@@ -118,10 +118,6 @@ class CanonicalModel(val ontology: RSAOntology) {
           .getIRI
         TupleTableAtom.rdf(v0, IRI.RDF_TYPE, cls)
       }
-      // TODO: To be consistent with the specifics of the visitor we are
-      // returning facts as `Rule`s with true body. While this is correct
-      // there is an easier way to import facts into RDFox. Are we able to
-      // do that?
       val facts = unfold map RSA.In
       val rules = List(
         Rule.create(roleRf, atomA, RSA.NotIn(varX)),

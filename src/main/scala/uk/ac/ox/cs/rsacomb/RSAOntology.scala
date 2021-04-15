@@ -459,7 +459,6 @@ class RSAOntology(val original: OWLOntology, val datafiles: File*) {
       Logger.DEBUG
     )
 
-  // TODO: the following functions needs testing
   def confl(
       role: OWLObjectPropertyExpression
   ): Set[OWLObjectPropertyExpression] = {
@@ -655,7 +654,6 @@ class RSAOntology(val original: OWLOntology, val datafiles: File*) {
     // We just need the TBox to find
     val terms = for {
       axiom1 <- tbox
-      // TODO: is this an optimization or an error?
       if axiom1.isT5
       // We expect only one role coming out of a T5 axiom
       roleS <- axiom1.objectPropertyExpressionsInSignature

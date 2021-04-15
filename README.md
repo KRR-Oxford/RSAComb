@@ -21,7 +21,7 @@ We assume you followed [these steps](https://docs.oxfordsemantic.tech/getting-st
 
 The [documentation](https://docs.oxfordsemantic.tech/features-and-requirements.html#license-key), describes several ways to provide the license to RDFox.
 
-One easy way is to put your license key in a file `RDFox.lic` in `$HOME/.RDFox/`, with adeguate read permissions for the user executing the program.
+One easy way is to put your license key in a file `RDFox.lic` in `$HOME/.RDFox/`, with adequate read permissions for the user executing the program.
 
 ### Compiling and running the project
 
@@ -48,20 +48,20 @@ Note that the fat jar file distributed with this repository excludes the RDFox a
 java -cp <path/to/JRDFox.jar>:<path/to/fat.jar> uk.ac.ox.cs.rsacomb.RSAComb [<option> ...]
 ```
 
-### Running tests and examples
+### Running tests
 
-TODO
+To run the suit of unit test provided along with the code run
+```
+sbt test
+```
 
 ## Changes introduced
 
 We tried to implement the system as close as possible to the theoretical description provided in [[1](#references)].
 Regardless, we had to deal with the fact that we where using different tools to carry out reasoning tasks and we where probably using a different language to implement the system.
-The following is a summary of fixes (🔧), changes (🔄) and improvements (⚡), we introduced along the way:
+The following is a (non exhaustive) summary of fixes (🔧), changes (🔄) and improvements (⚡), we introduced along the way:
 
 + 🔄 [RDFox](https://www.oxfordsemantic.tech/product) is used instead of DLV as the underlying LP engine.
-
-+ 🔄 While the system is described as a two-step process (computing the canonical model and applying the filtering program), the adoption of RDFox allows us to abstract from the underlying engine implementation.
-    Materialisation is handled by RDFox, possibly computing answers in one go, without splitting the process in two separate steps.
 
 + 🔧 In Def.4, the definition of built-in predicate `notIn` is wrong and should reflect the implicit semantics implied by the name, i.e.,
 
@@ -83,7 +83,6 @@ The following is a summary of fixes (🔧), changes (🔄) and improvements (⚡
         rsa:congruent[?X, ?Z] :- rsa:congruent[?X, ?Y], rsa:congruent[?Y, ?Z] .
     ```
     defining equivalence as a congruence relation over terms in the ontology.
-    *Substitution rules have not been entroduced yet.*
 
 + 🔧 In Def. 4, the definition of built-in predicate `NI` is not consistent with its use in Table 3 and related description in Sec. 4.2.
   We redefined `NI` as the set of all constants that are *equal* to a constant in the original ontology (according to the internal equality predicate `rsa:congruent`).
@@ -94,11 +93,12 @@ The following is a summary of fixes (🔧), changes (🔄) and improvements (⚡
   ```
   where `rsa:named` is an internal predicate keeping track of all constants in the original ontology.
 
-+ ⚡ In Def. 3, regarding the generation of the logic program used for the RSA checkk, only T5 axioms involving an unsafe role will introduce the internal predicates `PE` and `U`.
++ ⚡ In Def. 3, regarding the generation of the logic program used for the RSA check, only T5 axioms involving an unsafe role will introduce the internal predicates `PE` and `U`.
 
 + ⚡ Both in the canonical model and the filtering program computations, rules without a body are loaded into RDFox as facts.
 
 + ⚡ The `cycle` function introduced in Def.4 establishing the direction of the *unraveling* of loops is defined over triples `(A,R,B)`. We are currently limiting the triple only to those appearing in a T5 axiom `A ⊑ ∃R.B`. Note that this greatly limits the size of cycle for a given triple, and as a consequence limits the number of rules used to compute the canonical model.
+
 
 ## References
 
@@ -109,12 +109,12 @@ The following is a summary of fixes (🔧), changes (🔄) and improvements (⚡
 
 ## Acknowledgements
 
-TODO
+*temporarily redacted*
 
 ## Credits
 
-TODO
+*temporarily redacted*
 
 ## License
 
-TODO
+*temporarily redacted*
