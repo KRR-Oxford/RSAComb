@@ -61,6 +61,7 @@ object RSAConfig {
   /** Parse arguments with default options
     *
     * @param args arguments list
+    * @return map of config options
     */
   def parse(args: List[String]): Config = parse(args, default)
 
@@ -68,6 +69,7 @@ object RSAConfig {
     *
     * @param args arguments list
     * @param config default configuration
+    * @return map of config options
     */
   def parse(args: List[String], config: Config): Config = {
     args match {
