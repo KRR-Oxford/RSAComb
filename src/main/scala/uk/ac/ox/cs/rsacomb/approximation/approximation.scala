@@ -1,7 +1,7 @@
 package uk.ac.ox.cs.rsacomb.approximation
 
 import java.io.File
-import org.semanticweb.owlapi.model.OWLAxiom
+import org.semanticweb.owlapi.model.OWLLogicalAxiom
 
 /** Ontology approximation technique. */
 trait Approximation {
@@ -11,6 +11,9 @@ trait Approximation {
     * @param ontology input ontology
     * @return a new approximated ontology
     */
-  def approximate(ontology: Seq[OWLAxiom], datafiles: Seq[File]): Seq[OWLAxiom]
+  def approximate(
+      ontology: List[OWLLogicalAxiom],
+      datafiles: List[File]
+  ): List[OWLLogicalAxiom]
 
 }

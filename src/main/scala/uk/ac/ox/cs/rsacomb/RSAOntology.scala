@@ -50,13 +50,13 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.{Set, Map}
 import scalax.collection.Graph
 import scalax.collection.GraphPredef._, scalax.collection.GraphEdge._
-import scalax.collection.GraphTraversal._
 
 /* Debug only */
 import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
 import tech.oxfordsemantic.jrdfox.logic._
 import org.semanticweb.owlapi.model.OWLObjectInverseOf
 
+import uk.ac.ox.cs.rsacomb.approximation.Approximation
 import uk.ac.ox.cs.rsacomb.converter._
 import uk.ac.ox.cs.rsacomb.filtering.{FilteringProgram, FilterType}
 import uk.ac.ox.cs.rsacomb.suffix._
@@ -66,10 +66,10 @@ import uk.ac.ox.cs.rsacomb.util.Logger
 
 object RSAUtil {
 
-  implicit def axiomsToOntology(axioms: Seq[OWLAxiom]) = {
-    val manager = OWLManager.createOWLOntologyManager()
-    manager.createOntology(axioms.asJava)
-  }
+  // implicit def axiomsToOntology(axioms: Seq[OWLAxiom]) = {
+  //   val manager = OWLManager.createOWLOntologyManager()
+  //   manager.createOntology(axioms.asJava)
+  // }
 
   /** Compute the RSA dependency graph for a set of axioms
     *
@@ -81,10 +81,10 @@ object RSAUtil {
     * input axioms are assumed to be normalized.
     */
   private def dependencyGraph(
-      axioms: Seq[OWLAxiom],
-      datafiles: Seq[File]
+      axioms: List[OWLLogicalAxiom],
+      datafiles: List[File]
   ): (Graph[Resource, DiEdge], Map[String, OWLAxiom]) = {
-    val unsafe = this.unsafeRoles
+    val unsafe = RSAOntology(axioms, datafiles).unsafeRoles
     var nodemap = Map.empty[String, OWLAxiom]
 
     object RSAConverter extends RDFoxConverter {
@@ -164,6 +164,8 @@ object RSAUtil {
 
 object RSAOntology {
 
+  import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
+
   /** Name of the RDFox data store used for CQ answering */
   private val DataStore = "answer_computation"
 
@@ -178,9 +180,14 @@ object RSAOntology {
   val manager = OWLManager.createOWLOntologyManager()
 
   def apply(
+      axioms: List[OWLLogicalAxiom],
+      datafiles: List[File]
+  ): RSAOntology = new RSAOntology(axioms, datafiles: _*)
+
+  def apply(
       ontofile: File,
-      datafiles: Seq[File],
-      approx: Option[Approximation] = None
+      datafiles: List[File],
+      approx: Option[Approximation]
   ): RSAOntology = {
     val ontology = manager.loadOntologyFromOntologyDocument(ontofile)
     RSAOntology(ontology, datafiles, approx)
@@ -188,14 +195,14 @@ object RSAOntology {
 
   def apply(
       ontology: OWLOntology,
-      datafiles: Seq[File],
-      approx: Option[Approximation] = None
+      datafiles: List[File],
+      approx: Option[Approximation]
   ): RSAOntology = {
     val normalizer = new Normalizer()
 
     /** TBox axioms */
     var tbox: List[OWLLogicalAxiom] =
-      original
+      ontology
         .tboxAxioms(Imports.INCLUDED)
         .collect(Collectors.toList())
         .collect { case a: OWLLogicalAxiom => a }
@@ -203,7 +210,7 @@ object RSAOntology {
 
     /** RBox axioms */
     var rbox: List[OWLLogicalAxiom] =
-      original
+      ontology
         .rboxAxioms(Imports.INCLUDED)
         .collect(Collectors.toList())
         .collect { case a: OWLLogicalAxiom => a }
@@ -217,7 +224,7 @@ object RSAOntology {
       * large data files via OWLAPI.
       */
     var abox: List[OWLLogicalAxiom] =
-      original
+      ontology
         .aboxAxioms(Imports.INCLUDED)
         .collect(Collectors.toList())
         .collect { case a: OWLLogicalAxiom => a }
@@ -231,9 +238,10 @@ object RSAOntology {
         case Some(a) => a.approximate(axioms, datafiles)
         case None    => axioms
       },
-      datafiles
+      datafiles: _*
     )
   }
+
 }
 
 /** Wrapper class for an ontology in RSA
@@ -241,7 +249,7 @@ object RSAOntology {
   * @param ontology the input OWL2 ontology.
   * @param datafiles additinal data (treated as part of the ABox)
   */
-class RSAOntology(val axioms: Seq[OWLAxiom], val datafiles: File*) {
+class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
 
   /** Simplify conversion between OWLAPI and RDFox concepts */
   import implicits.RDFox._
@@ -697,28 +705,28 @@ class RSAOntology(val axioms: Seq[OWLAxiom], val datafiles: File*) {
     this.self(axiom) | this.cycle(axiom)
 
   /** Log normalization/approximation statistics */
-  def statistics(level: Logger.Level = Logger.DEBUG): Unit = {
-    Logger.print(
-      s"Logical axioms in original input ontology: ${original.getLogicalAxiomCount(true)}",
-      level
-    )
-    Logger.print(
-      s"Logical axioms discarded in Horn-ALCHOIQ approximation: ${normalizer.discarded}",
-      level
-    )
-    Logger.print(
-      s"Logical axioms shifted in Horn-ALCHOIQ approximation: ${normalizer.shifted}",
-      level
-    )
-    Logger.print(
-      s"Logical axioms in Horn-ALCHOIQ ontology: ${ontology
-        .getLogicalAxiomCount(true)} (${axioms.length}/${axioms.length}/${axioms.length})",
-      level
-    )
-    Logger.print(
-      s"Logical axioms discarded in RSA approximation: ${removed.length}",
-      level
-    )
-  }
+  // def statistics(level: Logger.Level = Logger.DEBUG): Unit = {
+  //   Logger.print(
+  //     s"Logical axioms in original input ontology: ${original.getLogicalAxiomCount(true)}",
+  //     level
+  //   )
+  //   Logger.print(
+  //     s"Logical axioms discarded in Horn-ALCHOIQ approximation: ${normalizer.discarded}",
+  //     level
+  //   )
+  //   Logger.print(
+  //     s"Logical axioms shifted in Horn-ALCHOIQ approximation: ${normalizer.shifted}",
+  //     level
+  //   )
+  //   Logger.print(
+  //     s"Logical axioms in Horn-ALCHOIQ ontology: ${ontology
+  //       .getLogicalAxiomCount(true)} (${axioms.length}/${axioms.length}/${axioms.length})",
+  //     level
+  //   )
+  //   Logger.print(
+  //     s"Logical axioms discarded in RSA approximation: ${removed.length}",
+  //     level
+  //   )
+  // }
 
 } // class RSAOntology

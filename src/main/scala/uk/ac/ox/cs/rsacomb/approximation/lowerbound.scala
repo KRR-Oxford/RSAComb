@@ -1,5 +1,16 @@
 package uk.ac.ox.cs.rsacomb.approximation
 
+import java.io.File
+
+import org.semanticweb.owlapi.model._
+
+import scala.collection.mutable.{Set, Map}
+import scalax.collection.Graph
+import scalax.collection.GraphPredef._, scalax.collection.GraphEdge._
+import scalax.collection.GraphTraversal._
+
+import uk.ac.ox.cs.rsacomb.converter.Normalizer
+
 /** Approximation algorithm that mantains soundness for CQ answering.
   *
   * The input OWL 2 ontology is assumed to be normalized and the output
@@ -21,11 +32,11 @@ class LowerBound extends Approximation {
 
   /** Main entry point for the approximation algorithm */
   def approximate(
-      ontology: Seq[OWLAxiom],
-      datafiles: Seq[File]
-  ): Seq[OWLAxiom] = {
+      ontology: List[OWLLogicalAxiom],
+      datafiles: List[File]
+  ): List[OWLLogicalAxiom] = {
     /* Normalize axioms */
-    val axioms1 = axioms flatMap normalizer.normalize
+    val axioms1 = axioms flatMap normalizer.normalize(_)
     /* Delete any axiom outside of ALCHOIQ */
     val axioms2 = axioms1 filterNot inHornLACHOIQ
     /* Shift any axiom with disjunction on the rhs */
@@ -95,7 +106,7 @@ class LowerBound extends Approximation {
     *   where nA, nB1, nB2, nB3 are fresh predicates "corresponding" to
     *   the negation of A, B1, B2, B3 respectively.
     */
-  def shift(axiom: OWLLogicalAxiom): Seq[OWLLogicalAxiom] =
+  def shift(axiom: OWLLogicalAxiom): List[OWLLogicalAxiom] =
     axiom match {
       case a: OWLSubClassOfAxiom => {
         val sub = a.getSubClass.getNNF
@@ -135,12 +146,12 @@ class LowerBound extends Approximation {
                 na
               )
 
-            Seq(r1) ++ r2s ++ r3s
+            List(r1) ++ r2s ++ r3s
           }
-          case _ => Seq(axiom)
+          case _ => List(axiom)
         }
       }
-      case _ => Seq(axiom)
+      case _ => List(axiom)
     }
 
   /** Approximate a Horn-ALCHOIQ ontology to RSA
@@ -151,7 +162,10 @@ class LowerBound extends Approximation {
     * @param axioms the set of axioms to approximate.
     * @return the approximated set of axioms.
     */
-  def toRSA(axioms: Seq[OWLAxiom], datafiles: Seq[File]): Seq[OWLAxiom] = {
+  def toRSA(
+      axioms: List[OWLLogicalAxiom],
+      datafiles: List[File]
+  ): List[OWLLogicalAxiom] = {
     /* Compute the dependency graph for the ontology */
     val (graph, nodemap) = RSAUtil.dependencyGraph(axioms, datafiles)
 
@@ -192,11 +206,12 @@ class LowerBound extends Approximation {
 
     val toDelete = color.iterator.collect { case (resource: IRI, ToDelete) =>
       nodemap(resource.getIRI)
-    }.toSeq
+    }.toList
 
     /* Remove axioms from approximated ontology */
     axioms diff toDelete
   }
+
   // val edges1 = Seq('A ~> 'B, 'B ~> 'C, 'C ~> 'D, 'D ~> 'H, 'H ~>
   // 'G, 'G ~> 'F, 'E ~> 'A, 'E ~> 'F, 'B ~> 'E, 'F ~> 'G, 'B ~> 'F,
   // 'C ~> 'G, 'D ~> 'C, 'H ~> 'D)

@@ -108,10 +108,10 @@ object RSAComb extends App {
 
   val ontology = RSAOntology(
     config('ontology).get[File],
-    config('data).get[List[File]]: _*
+    config('data).get[List[File]],
+    None
   )
   val rsa = ontology.toRSA()
-  ontology.statistics()
 
   if (config contains 'query) {
     val query =
