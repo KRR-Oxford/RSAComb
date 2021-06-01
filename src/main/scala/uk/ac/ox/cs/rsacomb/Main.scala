@@ -106,12 +106,11 @@ object RSAComb extends App {
   /* Command-line options */
   val config = RSAConfig.parse(args.toList)
 
-  val ontology = RSAOntology(
+  val rsa = RSAOntology(
     config('ontology).get[File],
     config('data).get[List[File]],
     None
   )
-  val rsa = ontology.toRSA()
 
   if (config contains 'query) {
     val query =

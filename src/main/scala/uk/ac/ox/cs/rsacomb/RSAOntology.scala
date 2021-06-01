@@ -80,7 +80,7 @@ object RSAUtil {
     * construction of the dependency graph is computed regardless. The
     * input axioms are assumed to be normalized.
     */
-  private def dependencyGraph(
+  def dependencyGraph(
       axioms: List[OWLLogicalAxiom],
       datafiles: List[File]
   ): (Graph[Resource, DiEdge], Map[String, OWLAxiom]) = {
@@ -166,18 +166,23 @@ object RSAOntology {
 
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
 
+  /** Manager instance to interface with OWLAPI */
+  val manager = OWLManager.createOWLOntologyManager()
+  val factory = manager.getOWLDataFactory()
+
   /** Name of the RDFox data store used for CQ answering */
   private val DataStore = "answer_computation"
 
-  /** Simple fresh variable generator */
+  /** Simple fresh variable/class generator */
   private var counter = -1;
   def genFreshVariable(): Variable = {
     counter += 1
     Variable.create(f"I$counter%05d")
   }
-
-  /** Manager instance to interface with OWLAPI */
-  val manager = OWLManager.createOWLOntologyManager()
+  def getFreshOWLClass(): OWLClass = {
+    counter += 1
+    factory.getOWLClass(s"X$counter")
+  }
 
   def apply(
       axioms: List[OWLLogicalAxiom],
@@ -254,13 +259,16 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
   /** Simplify conversion between OWLAPI and RDFox concepts */
   import implicits.RDFox._
   import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom._
+
+  /** Simplify conversion between Java and Scala collections */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
 
   /** Set of axioms removed during the approximation to RSA */
   private var removed: Seq[OWLAxiom] = Seq.empty
 
   /** Normalized Horn-ALCHOIQ ontology */
-  val ontology = RSAOntology.manager.createOntology(axioms.asJava)
+  val ontology =
+    RSAOntology.manager.createOntology((axioms: List[OWLAxiom]).asJava)
 
   /** OWLAPI internal reasoner instantiated over the approximated ontology */
   private val reasoner =
@@ -340,61 +348,61 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
     * @param graph the graph used to compute the axioms to remove.
     * @param nodemap map from graph nodes to ontology axioms.
     */
-  def toRSA(): RSAOntology = Logger.timed(
-    {
+  // def toRSA(): RSAOntology = Logger.timed(
+  //   {
 
-      /* Compute the dependency graph for the ontology */
-      val (graph, nodemap) = this.dependencyGraph()
+  //     /* Compute the dependency graph for the ontology */
+  //     val (graph, nodemap) = this.dependencyGraph()
 
-      /* Define node colors for the graph visit */
-      sealed trait NodeColor
-      case object Unvisited extends NodeColor
-      case object Visited extends NodeColor
-      case object ToDelete extends NodeColor
+  //     /* Define node colors for the graph visit */
+  //     sealed trait NodeColor
+  //     case object Unvisited extends NodeColor
+  //     case object Visited extends NodeColor
+  //     case object ToDelete extends NodeColor
 
-      /* Keep track of node colors during graph visit */
-      var color = Map.from[Resource, NodeColor](
-        graph.nodes.toOuter.map(k => (k, Unvisited))
-      )
+  //     /* Keep track of node colors during graph visit */
+  //     var color = Map.from[Resource, NodeColor](
+  //       graph.nodes.toOuter.map(k => (k, Unvisited))
+  //     )
 
-      for {
-        component <- graph.componentTraverser().map(_ to Graph)
-        edge <- component
-          .outerEdgeTraverser(component.nodes.head)
-          .withKind(BreadthFirst)
-      } yield {
-        val source = edge._1
-        val target = edge._2
-        color(source) match {
-          case Unvisited | Visited => {
-            color(target) match {
-              case Unvisited =>
-                color(source) = Visited;
-                color(target) = Visited
-              case Visited =>
-                color(source) = ToDelete
-              case ToDelete =>
-                color(source) = Visited
-            }
-          }
-          case ToDelete =>
-        }
-      }
+  //     for {
+  //       component <- graph.componentTraverser().map(_ to Graph)
+  //       edge <- component
+  //         .outerEdgeTraverser(component.nodes.head)
+  //         .withKind(BreadthFirst)
+  //     } yield {
+  //       val source = edge._1
+  //       val target = edge._2
+  //       color(source) match {
+  //         case Unvisited | Visited => {
+  //           color(target) match {
+  //             case Unvisited =>
+  //               color(source) = Visited;
+  //               color(target) = Visited
+  //             case Visited =>
+  //               color(source) = ToDelete
+  //             case ToDelete =>
+  //               color(source) = Visited
+  //           }
+  //         }
+  //         case ToDelete =>
+  //       }
+  //     }
 
-      val toDelete = color.iterator.collect { case (resource: IRI, ToDelete) =>
-        nodemap(resource.getIRI)
-      }.toSeq
+  //     val toDelete = color.iterator.collect { case (resource: IRI, ToDelete) =>
+  //       nodemap(resource.getIRI)
+  //     }.toSeq
 
-      /* Remove axioms from approximated ontology */
-      ontology.removeAxioms(toDelete: _*)
-      this.removed = toDelete
+  //     /* Remove axioms from approximated ontology */
+  //     ontology.removeAxioms(toDelete: _*)
+  //     this.removed = toDelete
 
-      /* Return RSA ontology */
-      RSAOntology(ontology, datafiles: _*)
-    },
-    "Horn-ALCHOIQ to RSA approximation:",
-    Logger.DEBUG
-  )
+  //     /* Return RSA ontology */
+  //     RSAOntology(ontology, datafiles: _*)
+  //   },
+  //   "Horn-ALCHOIQ to RSA approximation:",
+  //   Logger.DEBUG
+  // )
   // val edges1 = Seq('A ~> 'B, 'B ~> 'C, 'C ~> 'D, 'D ~> 'H, 'H ~>
   // 'G, 'G ~> 'F, 'E ~> 'A, 'E ~> 'F, 'B ~> 'E, 'F ~> 'G, 'B ~> 'F,
   // 'C ~> 'G, 'D ~> 'C, 'H ~> 'D)

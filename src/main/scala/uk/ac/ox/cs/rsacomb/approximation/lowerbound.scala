@@ -2,13 +2,18 @@ package uk.ac.ox.cs.rsacomb.approximation
 
 import java.io.File
 
-import org.semanticweb.owlapi.model._
+import org.semanticweb.owlapi.apibinding.OWLManager
+import org.semanticweb.owlapi.model.{IRI => _, _}
+
+import tech.oxfordsemantic.jrdfox.logic.expression.{Resource, IRI}
 
 import scala.collection.mutable.{Set, Map}
 import scalax.collection.Graph
 import scalax.collection.GraphPredef._, scalax.collection.GraphEdge._
 import scalax.collection.GraphTraversal._
 
+import uk.ac.ox.cs.rsacomb.RSAOntology
+import uk.ac.ox.cs.rsacomb.RSAUtil
 import uk.ac.ox.cs.rsacomb.converter.Normalizer
 
 /** Approximation algorithm that mantains soundness for CQ answering.
@@ -28,6 +33,16 @@ import uk.ac.ox.cs.rsacomb.converter.Normalizer
   */
 class LowerBound extends Approximation {
 
+  /** Simplify conversion between Java and Scala collections */
+  import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
+
+  /** Simplify conversion between OWLAPI and RDFox concepts */
+  import uk.ac.ox.cs.rsacomb.implicits.RDFox._
+
+  /** Manager instance to interface with OWLAPI */
+  val manager = OWLManager.createOWLOntologyManager()
+  val factory = manager.getOWLDataFactory()
+
   val normalizer = new Normalizer()
 
   /** Main entry point for the approximation algorithm */
@@ -36,14 +51,14 @@ class LowerBound extends Approximation {
       datafiles: List[File]
   ): List[OWLLogicalAxiom] = {
     /* Normalize axioms */
-    val axioms1 = axioms flatMap normalizer.normalize(_)
+    val axioms1 = ontology flatMap normalizer.normalize
     /* Delete any axiom outside of ALCHOIQ */
-    val axioms2 = axioms1 filterNot inHornLACHOIQ
+    val axioms2 = axioms1 filterNot inALCHOIQ
     /* Shift any axiom with disjunction on the rhs */
     val axioms3 = for {
       a1 <- axioms1
       a2 <- shift(a1)
-      a3 <- normalize(a2)
+      a3 <- normalizer.normalize(a2)
     } yield a3
     /* Approximate to RSA */
     toRSA(axioms3, datafiles)
@@ -113,8 +128,12 @@ class LowerBound extends Approximation {
         val sup = a.getSuperClass.getNNF
         sup match {
           case sup: OWLObjectUnionOf => {
-            val body = sub.asConjunctSet.map((atom) => (atom, freshOWLClass()))
-            val head = sup.asDisjunctSet.map((atom) => (atom, freshOWLClass()))
+            val body = sub.asConjunctSet.map((atom) =>
+              (atom, RSAOntology.getFreshOWLClass())
+            )
+            val head = sup.asDisjunctSet.map((atom) =>
+              (atom, RSAOntology.getFreshOWLClass())
+            )
 
             val r1 =
               factory.getOWLSubClassOfAxiom(
