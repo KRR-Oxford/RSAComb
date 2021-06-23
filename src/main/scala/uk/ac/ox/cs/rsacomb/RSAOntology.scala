@@ -591,7 +591,6 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
     * [[uk.ac.ox.cs.rsacomb.RSAOntology.ask RSAOntology.ask]].
     * @note This method has been introduced mostly for debugging purposes.
     *
-    * @param cq a CQ used to compute the environment.
     * @param query query to be executed against the environment
     * @param prefixes additional prefixes for the query. It defaults to
     * an empty set.
@@ -599,7 +598,6 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
     * @return a collection of answers to the input query.
     */
   def queryDataStore(
-      cq: ConjunctiveQuery,
       query: String,
       prefixes: Prefixes = new Prefixes(),
       opts: ju.Map[String, String] = new ju.HashMap[String, String]()
@@ -623,7 +621,7 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
       cq: ConjunctiveQuery
   ): Option[Seq[(Long, Seq[Resource])]] = {
     val query = RDFoxUtil.buildDescriptionQuery("QM", cq.variables.length)
-    queryDataStore(cq, query, RSA.Prefixes)
+    queryDataStore(query, RSA.Prefixes)
   }
 
   def self(axiom: OWLSubClassOfAxiom): Set[Term] = {
