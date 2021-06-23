@@ -401,13 +401,14 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
   val answerQuery: String = {
     val arity = query.answer.size
     if (arity > 0) {
-      val variables = (0 until arity).mkString("?X", " ?X", "")
+      val answer = query.answer mkString " "
+      val bounded = query.bounded mkString " "
       s"""
-      SELECT ${query.answer mkString ""}
-      WHERE {
-          ?K a rsa:Ans .
-          TT <http://oxfordsemantic.tech/RDFox#SKOLEM> { ${query.answer mkString ""} ${query.bounded mkString ""} ?K } .
-      }
+        SELECT $answer
+        WHERE {
+            ?K a rsa:Ans .
+            TT <http://oxfordsemantic.tech/RDFox#SKOLEM> { $answer $bounded ?K } .
+        }
       """
     } else {
       "ASK { ?X a rsa:Ans }"

@@ -275,12 +275,16 @@ object RDFoxUtil {
       arity: Int
   ): String = {
     if (arity > 0) {
-      (0 until arity).mkString("SELECT ?X", " ?X", "\n") +
-        (0 until arity)
-          .map(i => s"?S rsa:${pred :: Nth(i)} ?X$i .")
-          .mkString("WHERE {\n", "\n", "\n}")
+      val variables = (0 until arity).mkString("?X", " ?X", "")
+      s"""
+      SELECT $variables
+      WHERE {
+          ?K a rsa:$pred.
+          TT <http://oxfordsemantic.tech/RDFox#SKOLEM> { $variables ?K } .
+      }
+      """
     } else {
-      s"ASK { ?X a rsa:$pred }"
+      "ASK { ?X a rsa:Ans }"
     }
   }
 
