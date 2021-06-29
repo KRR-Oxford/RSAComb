@@ -107,13 +107,23 @@ The following is a (non exhaustive) summary of fixes (🔧), changes (🔄) and 
     In Proceedings of the Twenty-Fourth International Joint Conference on Artificial Intelligence, IJCAI 2015, Buenos Aires, Argentina, July 25-31, 2015, 2971–2977, 2015.
     http://ijcai.org/Abstract/15/420.
 
+[2] Horridge, Matthew and Bechhofer, Sean.
+    *The OWL API: A Java API for OWL Ontologies*.
+    Semantic Web Journal 2(1), Special Issue on Semantic Web Tools and Systems, pp. 11-21, 2011.
+
 ## Acknowledgements
 
-*temporarily redacted*
+- OWLAPI [[2]](#references)
+- [RDFox](https://www.oxfordsemantic.tech/product)
+- [Graph for Scala](https://github.com/scala-graph/scala-graph)
 
 ## Credits
 
-*temporarily redacted*
+- Federico Igne
+- Stefano Germano
+- Ian Horrocks (*Scientific Supervisor*)
+
+From the [Knowledge Representation and Reasoning research group](https://www.cs.ox.ac.uk/isg/krr/) in the [Department of Computer Science](https://www.cs.ox.ac.uk/) of the [University of Oxford](https://www.ox.ac.uk/).
 
 ## License
 
