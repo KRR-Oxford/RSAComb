@@ -3,10 +3,10 @@
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@base <file:/home/fedgne/git/RSA-combined-approach/examples/example1.ttl> .
+@base <file:examples/example1.ttl> .
 
-<file:/home/fedgne/git/RSA-combined-approach/examples/example1.ttl> rdf:type owl:Ontology ;
-                                                                    owl:imports <file:/home/fedgne/git/RSA-combined-approach/examples/example1.owl> .
+<file:examples/example1.ttl> rdf:type owl:Ontology ;
+    owl:imports <file:examples/example1.owl> .
 
 :a rdf:type :A .
 
