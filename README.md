@@ -1,6 +1,62 @@
-# Combined approach for RSA
+<!-- TITLE -->
+<p align="center">
 
-Re-implementation of the combined approach for CQ answering over RSA ontologies described in [[1](#references)].
+<!--
+<a href="https://github.com/">
+<img src="resources/logo.png" alt="Logo" width="80" height="80">
+</a>
+-->
+
+<h1 align="center">&middot; RSAComb &middot;</h1>
+
+<p align="center">
+Combined approach for Conjunctive Query answering in RSA
+<br/>
+<a href="https://github.com/">Read the paper</a>
+&middot;
+<a href="https://github.com/">Read the technical report</a>
+&middot;
+<a href="https://github.com/KRR-Oxford/RSAComb/issues">Report bug</a>
+<!--
+<br/><br/>
+<a href="https://github.com/KRR-Oxford/RSAComb/releases/latest">
+<img src="https://img.shields.io/github/release/KRR-Oxford/RSAComb.svg?style=for-the-badge" alt="Release badge">
+</a>
+<a href="https://github.com/KRR-Oxford/RSAComb/issues">
+<img src="https://img.shields.io/github/issues/KRR-Oxford/RSAComb.svg?style=for-the-badge" alt="Issues badge">
+</a>
+<a href="LICENSE">
+<img src="https://img.shields.io/github/license/KRR-Oxford/RSAComb.svg?style=for-the-badge" alt="License badge">
+</a>
+-->
+</p>
+
+</p>
+
+<!-- TABLE OF CONTENTS -->
+<details close="close">
+<summary>Table of Contents</summary>
+<ol>
+    <li><a href="#about">About</a></li>
+    <li><a href="#preliminaries">Preliminaries</a></li>
+    <li>
+        <a href="#using-the-software">Using the software</a>
+        <ul>
+            <li><a href="#provide-rdfox-license">Provide RDFox license</a></li>
+            <li><a href="#compiling-and-running-the-project">Compiling and running the project</a></li>
+            <li><a href="#running-tests">Running tests</a></li>
+        </ul>
+    </li>
+    <li><a href="#changes-introduced">Changes introduced</a></li>
+    <li><a href="#acknowledgements">Acknowledgements</a></li>
+    <li><a href="#credits">Credits</a></li>
+    <li><a href="#license">License</a></li>
+</ol>
+</details>
+
+## About
+
+This is a re-implementation of the combined approach for CQ answering over RSA ontologies described in [[1](#references)].
 
 > Please note that the prototype mentioned in [[1](#references)] is not available (and the contributors of this repository have never seen it);
 > therefore, this "re-implementation" could be completely different from that prototype (potentially using different tools and programming language).
