@@ -7,7 +7,7 @@ Re-implementation of the combined approach for CQ answering over RSA ontologies 
 
 ## Preliminaries
 
-In order to use this program you need to have [RDFox](https://www.oxfordsemantic.tech/product) available in your system, along with a valid license.
+In order to use this program you need to have [RDFox](https://www.oxfordsemantic.tech/product) available in your system, along with *a valid license*.
 RDFox is proprietary software and as such we are not able to distribute it along with our code.
 Please refer to [this link](https://www.oxfordsemantic.tech/tryrdfoxforfree) to request a free trial.
 
@@ -16,6 +16,17 @@ This software has been developed and tested with RDFox v.4.1
 ## Using the software
 
 We assume you followed [these steps](https://docs.oxfordsemantic.tech/getting-started.html#getting-started) in order to setup RDFox on your personal machine and in particular you know the path to the `JRDFox.jar` library that comes with the distribution.
+
+Alternatively, run the following commands from the root of the project to install RDFox locally.
+Download links for specific versions and operating systems can be found [here](https://www.oxfordsemantic.tech/downloads).
+
+```{.bash}
+mkdir -p lib && pushd lib
+wget https://rdfox-distribution.s3.eu-west-2.amazonaws.com/release/v4.2.0/RDFox-linux-4.2.0.zip
+unzip RDFox-linux-4.2.0.zip
+ln -s RDFox-linux-4.2.0.zip/lib/JRDFox.jar
+popd
+```
 
 ### Provide RDFox license
 

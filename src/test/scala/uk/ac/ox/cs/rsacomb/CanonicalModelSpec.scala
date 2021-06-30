@@ -158,7 +158,7 @@ class Ontology1_CanonicalModelSpec
 
   renderer.render(
     AsomeValuesFromSiC
-  ) should "produce 1 rule" in {
+  ) should "produce 1 rule" ignore {
     val term = Variable.create("X")
     val unsafe = ontology.unsafeRoles
     val (facts, rules) =
