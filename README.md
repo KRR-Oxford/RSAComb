@@ -17,7 +17,6 @@ Combined approach for Conjunctive Query answering in RSA
 <a href="https://github.com/">Read the technical report</a>
 &middot;
 <a href="https://github.com/KRR-Oxford/RSAComb/issues">Report bug</a>
-<!--
 <br/><br/>
 <a href="https://github.com/KRR-Oxford/RSAComb/releases/latest">
 <img src="https://img.shields.io/github/release/KRR-Oxford/RSAComb.svg?style=for-the-badge" alt="Release badge">
@@ -28,7 +27,9 @@ Combined approach for Conjunctive Query answering in RSA
 <a href="LICENSE">
 <img src="https://img.shields.io/github/license/KRR-Oxford/RSAComb.svg?style=for-the-badge" alt="License badge">
 </a>
--->
+<a href="https://doi.org/10.5281/zenodo.5047811">
+    <img src="https://img.shields.io/badge/DOI-10.5281/zenodo.5047811-blue?style=for-the-badge" alt="DOI badge">
+</a>
 </p>
 
 </p>
