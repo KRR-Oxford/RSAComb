@@ -12,9 +12,9 @@
 <p align="center">
 Combined approach for Conjunctive Query answering in RSA
 <br/>
-<a href="https://github.com/">Read the paper</a>
+<a href="https://arxiv.org/abs/2107.00369">Read the paper</a>
 &middot;
-<a href="https://github.com/">Read the technical report</a>
+<a href="https://arxiv.org/abs/2107.00369">Read the technical report</a>
 &middot;
 <a href="https://github.com/KRR-Oxford/RSAComb/issues">Report bug</a>
 <br/><br/>
