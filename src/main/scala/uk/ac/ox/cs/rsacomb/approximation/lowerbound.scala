@@ -129,10 +129,10 @@ class LowerBound extends Approximation {
         sup match {
           case sup: OWLObjectUnionOf => {
             val body = sub.asConjunctSet.map((atom) =>
-              (atom, RSAOntology.getFreshOWLClass())
+              (atom, RSAUtil.getFreshOWLClass())
             )
             val head = sup.asDisjunctSet.map((atom) =>
-              (atom, RSAOntology.getFreshOWLClass())
+              (atom, RSAUtil.getFreshOWLClass())
             )
 
             val r1 =

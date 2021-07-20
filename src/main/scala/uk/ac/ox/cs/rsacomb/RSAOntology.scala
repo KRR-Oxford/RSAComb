@@ -71,95 +71,21 @@ object RSAUtil {
   //   manager.createOntology(axioms.asJava)
   // }
 
-  /** Compute the RSA dependency graph for a set of axioms
-    *
-    * @return a tuple containing the dependency graph and a map between
-    * the newly introduced constants and the corresponding input axioms.
-    *
-    * @note no check on the ontology language is performed since the
-    * construction of the dependency graph is computed regardless. The
-    * input axioms are assumed to be normalized.
-    */
-  def dependencyGraph(
-      axioms: List[OWLLogicalAxiom],
-      datafiles: List[File]
-  ): (Graph[Resource, DiEdge], Map[String, OWLAxiom]) = {
-    val unsafe = RSAOntology(axioms, datafiles).unsafeRoles
-    var nodemap = Map.empty[String, OWLAxiom]
+  /** Manager instance to interface with OWLAPI */
+  val manager = OWLManager.createOWLOntologyManager()
+  val factory = manager.getOWLDataFactory()
 
-    object RSAConverter extends RDFoxConverter {
-
-      override def convert(
-          expr: OWLClassExpression,
-          term: Term,
-          unsafe: List[OWLObjectPropertyExpression],
-          skolem: SkolemStrategy,
-          suffix: RSASuffix
-      ): Shards =
-        (expr, skolem) match {
-
-          case (e: OWLObjectSomeValuesFrom, c: Constant) => {
-            nodemap.update(c.iri.getIRI, c.axiom)
-            val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
-            if (unsafe contains e.getProperty)
-              (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
-            else
-              (RSA.PE(term, c.iri) :: res, ext)
-          }
-
-          case (e: OWLDataSomeValuesFrom, c: Constant) => {
-            nodemap.update(c.iri.getIRI, c.axiom)
-            val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
-            if (unsafe contains e.getProperty)
-              (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
-            else
-              (RSA.PE(term, c.iri) :: res, ext)
-          }
-
-          case _ => super.convert(expr, term, unsafe, skolem, suffix)
-        }
-    }
-
-    /* Ontology convertion into LP rules */
-    val term = RSAOntology.genFreshVariable()
-    val result = axioms.map(a =>
-      RSAConverter.convert(a, term, unsafe, new Constant(a), Empty)
-    )
-
-    val datalog = result.unzip
-    val facts = datalog._1.flatten
-    var rules = datalog._2.flatten
-
-    /* Open connection with RDFox */
-    val (server, data) = RDFoxUtil.openConnection("rsa_dependency_graph")
-
-    /* Add additional built-in rules */
-    val varX = Variable.create("X")
-    val varY = Variable.create("Y")
-    rules = Rule.create(
-      RSA.E(varX, varY),
-      RSA.PE(varX, varY),
-      RSA.U(varX),
-      RSA.U(varY)
-    ) :: rules
-    /* Load facts and rules from ontology */
-    RDFoxUtil.addFacts(data, facts)
-    RDFoxUtil.addRules(data, rules)
-    /* Load data files */
-    RDFoxUtil.addData(data, datafiles: _*)
-
-    /* Build the graph */
-    val query = "SELECT ?X ?Y WHERE { ?X rsa:E ?Y }"
-    val answers = RDFoxUtil.submitQuery(data, query, RSA.Prefixes).get
-    var edges: Seq[DiEdge[Resource]] =
-      answers.collect { case (_, Seq(n1, n2)) => n1 ~> n2 }
-    val graph = Graph(edges: _*)
-
-    /* Close connection to RDFox */
-    RDFoxUtil.closeConnection(server, data)
-
-    (graph, nodemap)
+  /** Simple fresh variable/class generator */
+  private var counter = -1;
+  def genFreshVariable(): Variable = {
+    counter += 1
+    Variable.create(f"I$counter%05d")
   }
+  def getFreshOWLClass(): OWLClass = {
+    counter += 1
+    factory.getOWLClass(s"X$counter")
+  }
+
 }
 
 object RSAOntology {
@@ -172,17 +98,6 @@ object RSAOntology {
 
   /** Name of the RDFox data store used for CQ answering */
   private val DataStore = "answer_computation"
-
-  /** Simple fresh variable/class generator */
-  private var counter = -1;
-  def genFreshVariable(): Variable = {
-    counter += 1
-    Variable.create(f"I$counter%05d")
-  }
-  def getFreshOWLClass(): OWLClass = {
-    counter += 1
-    factory.getOWLClass(s"X$counter")
-  }
 
   def apply(
       axioms: List[OWLLogicalAxiom],

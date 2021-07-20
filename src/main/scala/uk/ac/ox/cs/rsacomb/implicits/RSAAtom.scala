@@ -9,6 +9,7 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
 }
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI}
 
+import uk.ac.ox.cs.rsacomb.RSAUtil
 import uk.ac.ox.cs.rsacomb.RSAOntology
 import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Nth}
 import uk.ac.ox.cs.rsacomb.util.RDFoxUtil
@@ -78,7 +79,7 @@ object RSAAtom {
       if (isRDF) {
         (None, List(atom))
       } else {
-        val varS = RSAOntology.genFreshVariable()
+        val varS = RSAUtil.genFreshVariable()
         val skolem = RDFoxUtil.skolem(name, (args :+ varS): _*)
         val atom = TupleTableAtom.rdf(varS, IRI.RDF_TYPE, name)
         val atoms = args.zipWithIndex

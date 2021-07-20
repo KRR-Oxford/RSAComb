@@ -103,6 +103,16 @@ object RSAConfig {
 /** Main entry point to the program */
 object RSAComb extends App {
 
+  /*
+   * TODO: Aiming for this workflow:
+   *
+   *    implicit val manager = new Manager(...)
+   *    val original = manager.importFromFile("ontology.owl")
+   *    val axioms = original.getAxioms.filter(isLogicalAxiom).normalize(normalizer)
+   *    val ontology = new Ontology(axioms, data)
+   *    val rsa = ontology.toRSA(approximator)
+   */
+
   /* Command-line options */
   val config = RSAConfig.parse(args.toList)
 

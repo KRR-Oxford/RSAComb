@@ -76,7 +76,7 @@ class CanonicalModel(val ontology: RSAOntology) {
   val (facts, rules): (List[TupleTableAtom], List[Rule]) = {
     // Compute rules from ontology axioms
     val (facts, rules) = {
-      val term = RSAOntology.genFreshVariable()
+      val term = RSAUtil.genFreshVariable()
       val unsafe = ontology.unsafeRoles
       ontology.axioms
         .map(a =>
