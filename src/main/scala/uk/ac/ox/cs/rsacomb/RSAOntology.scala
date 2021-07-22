@@ -209,9 +209,9 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
       .map(implicits.RDFox.owlapiToRdfoxLiteral)
 
   /** Retrieve concepts/roles in the ontology */
-  private val concepts: List[OWLClass] =
+  val concepts: List[OWLClass] =
     ontology.getClassesInSignature().asScala.toList
-  private val roles: List[OWLObjectPropertyExpression] =
+  val roles: List[OWLObjectPropertyExpression] =
     axioms
       .flatMap(_.objectPropertyExpressionsInSignature)
       .distinct

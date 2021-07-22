@@ -17,12 +17,14 @@
 package uk.ac.ox.cs.rsacomb.ontology
 
 import java.io.File
+import java.util.stream.Collectors
 
 import scala.collection.mutable.Map
 import scala.collection.JavaConverters._
 import scalax.collection.Graph
 import scalax.collection.GraphPredef._, scalax.collection.GraphEdge._
 
+import org.semanticweb.owlapi.model.parameters.Imports
 import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model.{OWLOntology, OWLAxiom, OWLLogicalAxiom}
 import org.semanticweb.owlapi.model.{OWLObjectPropertyExpression}
@@ -38,6 +40,9 @@ import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
 import uk.ac.ox.cs.rsacomb.RSAUtil
 
 object Ontology {
+
+  /** Simplify conversion between Java and Scala collections */
+  import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
 
   /** Type wrapper representing a dependency graph for the ontology.
     *
@@ -155,6 +160,47 @@ object Ontology {
 
     (graph, nodemap)
   }
+
+  def apply(axioms: List[OWLLogicalAxiom], datafiles: List[File]): Ontology =
+    new Ontology(axioms, datafiles)
+
+  def apply(ontology: OWLOntology, datafiles: List[File]): Ontology = {
+
+    /** TBox axioms */
+    var tbox: List[OWLLogicalAxiom] =
+      ontology
+        .tboxAxioms(Imports.INCLUDED)
+        .collect(Collectors.toList())
+        .collect { case a: OWLLogicalAxiom => a }
+
+    /** RBox axioms */
+    var rbox: List[OWLLogicalAxiom] =
+      ontology
+        .rboxAxioms(Imports.INCLUDED)
+        .collect(Collectors.toList())
+        .collect { case a: OWLLogicalAxiom => a }
+
+    /** ABox axioms
+      *
+      * @note this represents only the set of assertions contained in the
+      * ontology file. Data files specified in `datafiles` are directly
+      * imported in RDFox due to performance issues when trying to import
+      * large data files via OWLAPI.
+      */
+    var abox: List[OWLLogicalAxiom] =
+      ontology
+        .aboxAxioms(Imports.INCLUDED)
+        .collect(Collectors.toList())
+        .collect { case a: OWLLogicalAxiom => a }
+
+    Ontology(abox ::: tbox ::: rbox, datafiles)
+  }
+
+  def apply(ontofile: File, datafiles: List[File]): Ontology = {
+    val ontology = manager.loadOntologyFromOntologyDocument(ontofile)
+    Ontology(ontology, datafiles)
+  }
+
 }
 
 /** A wrapper for a generic OWL2 ontology

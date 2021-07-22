@@ -10,6 +10,10 @@ import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 import util.{Logger, RDFoxUtil, RSA}
 import sparql.ConjunctiveQuery
 
+import uk.ac.ox.cs.rsacomb.ontology.Ontology
+import uk.ac.ox.cs.rsacomb.converter.Normalizer
+import uk.ac.ox.cs.rsacomb.approximation.LowerBound
+
 case class RSAOption[+T](opt: T) {
   def get[T]: T = opt.asInstanceOf[T]
 }
@@ -103,24 +107,18 @@ object RSAConfig {
 /** Main entry point to the program */
 object RSAComb extends App {
 
-  /*
-   * TODO: Aiming for this workflow:
-   *
-   *    implicit val manager = new Manager(...)
-   *    val original = manager.importFromFile("ontology.owl")
-   *    val axioms = original.getAxioms.filter(isLogicalAxiom).normalize(normalizer)
-   *    val ontology = new Ontology(axioms, data)
-   *    val rsa = ontology.toRSA(approximator)
-   */
-
   /* Command-line options */
   val config = RSAConfig.parse(args.toList)
 
-  val rsa = RSAOntology(
+  /* Load original ontology and normalize it */
+  val ontology = Ontology(
     config('ontology).get[File],
-    config('data).get[List[File]],
-    None
-  )
+    config('data).get[List[File]]
+  ).normalize(new Normalizer)
+
+  /* Approximate the ontology to RSA */
+  val toRSA = new LowerBound
+  val rsa = ontology approximate toRSA
 
   if (config contains 'query) {
     val query =
