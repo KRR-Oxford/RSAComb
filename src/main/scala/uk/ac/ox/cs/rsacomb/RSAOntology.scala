@@ -63,6 +63,7 @@ import uk.ac.ox.cs.rsacomb.suffix._
 import uk.ac.ox.cs.rsacomb.sparql._
 import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
 import uk.ac.ox.cs.rsacomb.util.Logger
+import uk.ac.ox.cs.rsacomb.ontology.Ontology
 
 object RSAUtil {
 
@@ -94,82 +95,94 @@ object RSAOntology {
 
   /** Manager instance to interface with OWLAPI */
   val manager = OWLManager.createOWLOntologyManager()
-  val factory = manager.getOWLDataFactory()
 
   /** Name of the RDFox data store used for CQ answering */
   private val DataStore = "answer_computation"
 
+  /** Filtering program for a given query
+    *
+    * @param query the query to derive the filtering program
+    * @return the filtering program for the given query
+    */
+  def filteringProgram(query: ConjunctiveQuery): FilteringProgram =
+    Logger.timed(
+      FilteringProgram(FilterType.REVISED)(query),
+      "Generating filtering program",
+      Logger.DEBUG
+    )
+
   def apply(
       axioms: List[OWLLogicalAxiom],
       datafiles: List[File]
-  ): RSAOntology = new RSAOntology(axioms, datafiles: _*)
+  ): RSAOntology = new RSAOntology(axioms, datafiles)
 
-  def apply(
-      ontofile: File,
-      datafiles: List[File],
-      approx: Option[Approximation]
-  ): RSAOntology = {
-    val ontology = manager.loadOntologyFromOntologyDocument(ontofile)
-    RSAOntology(ontology, datafiles, approx)
-  }
+  // def apply(
+  //     ontofile: File,
+  //     datafiles: List[File],
+  //     approx: Option[Approximation]
+  // ): RSAOntology = {
+  //   val ontology = manager.loadOntologyFromOntologyDocument(ontofile)
+  //   RSAOntology(ontology, datafiles, approx)
+  // }
 
-  def apply(
-      ontology: OWLOntology,
-      datafiles: List[File],
-      approx: Option[Approximation]
-  ): RSAOntology = {
-    val normalizer = new Normalizer()
+  // def apply(
+  //     ontology: OWLOntology,
+  //     datafiles: List[File],
+  //     approx: Option[Approximation]
+  // ): RSAOntology = {
+  //   val normalizer = new Normalizer()
 
-    /** TBox axioms */
-    var tbox: List[OWLLogicalAxiom] =
-      ontology
-        .tboxAxioms(Imports.INCLUDED)
-        .collect(Collectors.toList())
-        .collect { case a: OWLLogicalAxiom => a }
-        .flatMap(normalizer.normalize)
+  //   /** TBox axioms */
+  //   var tbox: List[OWLLogicalAxiom] =
+  //     ontology
+  //       .tboxAxioms(Imports.INCLUDED)
+  //       .collect(Collectors.toList())
+  //       .collect { case a: OWLLogicalAxiom => a }
+  //       .flatMap(normalizer.normalize)
 
-    /** RBox axioms */
-    var rbox: List[OWLLogicalAxiom] =
-      ontology
-        .rboxAxioms(Imports.INCLUDED)
-        .collect(Collectors.toList())
-        .collect { case a: OWLLogicalAxiom => a }
-        .flatMap(normalizer.normalize)
+  //   /** RBox axioms */
+  //   var rbox: List[OWLLogicalAxiom] =
+  //     ontology
+  //       .rboxAxioms(Imports.INCLUDED)
+  //       .collect(Collectors.toList())
+  //       .collect { case a: OWLLogicalAxiom => a }
+  //       .flatMap(normalizer.normalize)
 
-    /** ABox axioms
-      *
-      * @note this represents only the set of assertions contained in the
-      * ontology file. Data files specified in `datafiles` are directly
-      * imported in RDFox due to performance issues when trying to import
-      * large data files via OWLAPI.
-      */
-    var abox: List[OWLLogicalAxiom] =
-      ontology
-        .aboxAxioms(Imports.INCLUDED)
-        .collect(Collectors.toList())
-        .collect { case a: OWLLogicalAxiom => a }
-        .flatMap(normalizer.normalize)
+  //   /** ABox axioms
+  //     *
+  //     * @note this represents only the set of assertions contained in the
+  //     * ontology file. Data files specified in `datafiles` are directly
+  //     * imported in RDFox due to performance issues when trying to import
+  //     * large data files via OWLAPI.
+  //     */
+  //   var abox: List[OWLLogicalAxiom] =
+  //     ontology
+  //       .aboxAxioms(Imports.INCLUDED)
+  //       .collect(Collectors.toList())
+  //       .collect { case a: OWLLogicalAxiom => a }
+  //       .flatMap(normalizer.normalize)
 
-    /** Collection of logical axioms in the input ontology */
-    var axioms: List[OWLLogicalAxiom] = abox ::: tbox ::: rbox
+  //   /** Collection of logical axioms in the input ontology */
+  //   var axioms: List[OWLLogicalAxiom] = abox ::: tbox ::: rbox
 
-    new RSAOntology(
-      approx match {
-        case Some(a) => a.approximate(axioms, datafiles)
-        case None    => axioms
-      },
-      datafiles: _*
-    )
-  }
+  //   new RSAOntology(
+  //     approx match {
+  //       case Some(a) => a.approximate(axioms, datafiles)
+  //       case None    => axioms
+  //     },
+  //     datafiles: _*
+  //   )
+  // }
 
 }
 
-/** Wrapper class for an ontology in RSA
+/** A wrapper for an RSA ontology
   *
   * @param ontology the input OWL2 ontology.
   * @param datafiles additinal data (treated as part of the ABox)
   */
-class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
+class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
+    extends Ontology(axioms, datafiles) {
 
   /** Simplify conversion between OWLAPI and RDFox concepts */
   import implicits.RDFox._
@@ -179,34 +192,26 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
 
   /** Set of axioms removed during the approximation to RSA */
-  private var removed: Seq[OWLAxiom] = Seq.empty
-
-  /** Normalized Horn-ALCHOIQ ontology */
-  val ontology =
-    RSAOntology.manager.createOntology((axioms: List[OWLAxiom]).asJava)
-
-  /** OWLAPI internal reasoner instantiated over the approximated ontology */
-  private val reasoner =
-    (new StructuralReasonerFactory()).createReasoner(ontology)
+  //private var removed: Seq[OWLAxiom] = Seq.empty
 
   /** Retrieve individuals/literals in the ontology */
-  val individuals: List[IRI] =
+  private val individuals: List[IRI] =
     ontology
       .getIndividualsInSignature()
       .asScala
       .map(_.getIRI)
       .map(implicits.RDFox.owlapiToRdfoxIri)
       .toList
-  val literals: List[Literal] =
+  private val literals: List[Literal] =
     axioms
       .collect { case a: OWLDataPropertyAssertionAxiom => a }
       .map(_.getObject)
       .map(implicits.RDFox.owlapiToRdfoxLiteral)
 
   /** Retrieve concepts/roles in the ontology */
-  val concepts: List[OWLClass] =
+  private val concepts: List[OWLClass] =
     ontology.getClassesInSignature().asScala.toList
-  val roles: List[OWLObjectPropertyExpression] =
+  private val roles: List[OWLObjectPropertyExpression] =
     axioms
       .flatMap(_.objectPropertyExpressionsInSignature)
       .distinct
@@ -223,36 +228,36 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
     *    if there exists a role p2 appearing in an axiom of type T4 and
     *    p1 is a subproperty of either p2 or the inverse of p2.
     */
-  val unsafeRoles: List[OWLObjectPropertyExpression] = {
+  // val unsafeRoles: List[OWLObjectPropertyExpression] = {
 
-    /* Checking for unsafety condition (1) */
-    val unsafe1 = for {
-      axiom <- axioms
-      if axiom.isT5
-      role1 <- axiom.objectPropertyExpressionsInSignature
-      roleSuper = role1 +: reasoner.superObjectProperties(role1)
-      roleSuperInv = roleSuper.map(_.getInverseProperty)
-      axiom <- axioms
-      if axiom.isT3 && !axiom.isT3top
-      role2 <- axiom.objectPropertyExpressionsInSignature
-      if roleSuperInv contains role2
-    } yield role1
+  //   /* Checking for unsafety condition (1) */
+  //   val unsafe1 = for {
+  //     axiom <- axioms
+  //     if axiom.isT5
+  //     role1 <- axiom.objectPropertyExpressionsInSignature
+  //     roleSuper = role1 +: reasoner.superObjectProperties(role1)
+  //     roleSuperInv = roleSuper.map(_.getInverseProperty)
+  //     axiom <- axioms
+  //     if axiom.isT3 && !axiom.isT3top
+  //     role2 <- axiom.objectPropertyExpressionsInSignature
+  //     if roleSuperInv contains role2
+  //   } yield role1
 
-    /* Checking for unsafety condition (2) */
-    val unsafe2 = for {
-      axiom <- axioms
-      if axiom.isT5
-      role1 <- axiom.objectPropertyExpressionsInSignature
-      roleSuper = role1 +: reasoner.superObjectProperties(role1)
-      roleSuperInv = roleSuper.map(_.getInverseProperty)
-      axiom <- axioms
-      if axiom.isT4
-      role2 <- axiom.objectPropertyExpressionsInSignature
-      if roleSuper.contains(role2) || roleSuperInv.contains(role2)
-    } yield role1
+  //   /* Checking for unsafety condition (2) */
+  //   val unsafe2 = for {
+  //     axiom <- axioms
+  //     if axiom.isT5
+  //     role1 <- axiom.objectPropertyExpressionsInSignature
+  //     roleSuper = role1 +: reasoner.superObjectProperties(role1)
+  //     roleSuperInv = roleSuper.map(_.getInverseProperty)
+  //     axiom <- axioms
+  //     if axiom.isT4
+  //     role2 <- axiom.objectPropertyExpressionsInSignature
+  //     if roleSuper.contains(role2) || roleSuperInv.contains(role2)
+  //   } yield role1
 
-    unsafe1 ++ unsafe2
-  }
+  //   unsafe1 ++ unsafe2
+  // }
 
   /** Approximate a Horn-ALCHOIQ ontology to RSA
     *
@@ -396,31 +401,27 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
     )
   }
 
+  /** Canonical model of the ontology */
   lazy val canonicalModel = Logger.timed(
     new CanonicalModel(this),
     "Generating canonical model program",
     Logger.DEBUG
   )
 
-  def filteringProgram(query: ConjunctiveQuery): FilteringProgram =
-    Logger.timed(
-      FilteringProgram(FilterType.REVISED)(query),
-      "Generating filtering program",
-      Logger.DEBUG
-    )
-
+  /** Computes all roles conflicting with a given role
+    *
+    * @param role a role (object property expression).
+    * @return a set of roles conflicting with `role`.
+    */
   def confl(
       role: OWLObjectPropertyExpression
   ): Set[OWLObjectPropertyExpression] = {
-
-    val invSuperRoles = reasoner
+    reasoner
       .superObjectProperties(role)
       .collect(Collectors.toSet())
       .asScala
       .addOne(role)
       .map(_.getInverseProperty)
-
-    invSuperRoles
       .flatMap(x =>
         reasoner
           .subObjectProperties(x)
@@ -432,6 +433,77 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
       .filterNot(_.getInverseProperty.isOWLTopObjectProperty())
   }
 
+  /** Selfloop detection for a given axiom
+    *
+    * @param axiom an axiom of type [[OWLSubClassOfAxiom]]
+    * @return unfold set for the axiom
+    */
+  def self(axiom: OWLSubClassOfAxiom): Set[Term] = {
+    val role = axiom.objectPropertyExpressionsInSignature(0)
+    if (this.confl(role).contains(role)) {
+      Set(RSA("v0_" ++ axiom.hashed), RSA("v1_" ++ axiom.hashed))
+    } else {
+      Set()
+    }
+  }
+
+  /** Cycle detection for a give axiom
+    *
+    * @param axiom an axiom of type [[OWLSubClassOfAxiom]]
+    * @return unfold set for the axiom
+    *
+    * @todo we can actually use `toTriple` from `RSAAxiom` to get the
+    * classes and the role for a given axiom
+    */
+  def cycle(axiom: OWLSubClassOfAxiom): Set[Term] = {
+    val classes =
+      axiom.classesInSignature.collect(Collectors.toList()).asScala
+    val classA = classes(0)
+    val roleR = axiom
+      .objectPropertyExpressionsInSignature(0)
+      .asInstanceOf[OWLObjectProperty]
+    val classB = classes(1)
+    cycle_aux(classA, roleR, classB)
+  }
+
+  /** Auxiliary function for [[RSAOntology.cycle]] */
+  private def cycle_aux(
+      classA: OWLClass,
+      roleR: OWLObjectProperty,
+      classB: OWLClass
+  ): Set[Term] = {
+    val conflR = this.confl(roleR)
+    // TODO: technically we just need the TBox here
+    val terms = for {
+      axiom1 <- axioms
+      if axiom1.isT5
+      // We expect only one role coming out of a T5 axiom
+      roleS <- axiom1.objectPropertyExpressionsInSignature
+      // Triples ordering is among triples involving safe roles.
+      if !unsafe.contains(roleS)
+      if conflR.contains(roleS)
+      tripleARB = RSAAxiom.hashed(classA, roleR, classB)
+      tripleDSC = axiom1.hashed
+      individual =
+        if (tripleARB > tripleDSC) {
+          RSA("v1_" ++ tripleDSC)
+        } else {
+          // Note that this is also the case for
+          // `tripleARB == tripleDSC`
+          RSA("v0_" ++ tripleDSC)
+        }
+    } yield individual
+    terms to Set
+  }
+
+  /** Returns unfold set for self-loop and cycle for the input axiom
+    *
+    * @param axiom an axiom of type [[OWLSubClassOfAxiom]]
+    * @return unfold set for the axiom
+    */
+  def unfold(axiom: OWLSubClassOfAxiom): Set[Term] =
+    this.self(axiom) | this.cycle(axiom)
+
   /** Returns the answers to a query
     *
     *  @param query query to execute
@@ -439,10 +511,9 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
     */
   def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = Logger.timed(
     {
-      import implicits.JavaCollections._
       val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
       val canon = this.canonicalModel
-      val filter = this.filteringProgram(query)
+      val filter = RSAOntology.filteringProgram(query)
 
       /* Upload data from data file */
       RDFoxUtil.addData(data, datafiles: _*)
@@ -460,11 +531,14 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
         new java.util.HashMap[String, String]
       )
 
+      /* Add canonical model */
       Logger print s"Canonical model rules: ${canon.rules.length}"
       RDFoxUtil.addRules(data, canon.rules)
 
       Logger print s"Canonical model facts: ${canon.facts.length}"
       RDFoxUtil.addFacts(data, canon.facts)
+
+      RDFoxUtil printStatisticsFor data
 
       //{
       //  import java.io.{PrintStream, FileOutputStream, File}
@@ -475,16 +549,13 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
       //  rules2.print(filter.rules.mkString("\n"))
       //}
 
-      //canon.facts.foreach(println)
-      //filter.rules.foreach(println)
-
-      RDFoxUtil printStatisticsFor data
-
+      /* Add filtering program */
       Logger print s"Filtering program rules: ${filter.rules.length}"
       RDFoxUtil.addRules(data, filter.rules)
 
       RDFoxUtil printStatisticsFor data
 
+      /* Gather answers to the query */
       val answers = {
         val ans = filter.answerQuery
         RDFoxUtil
@@ -492,7 +563,9 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
           .map(new ConjunctiveQueryAnswers(query.bcq, query.variables, _))
           .get
       }
+
       RDFoxUtil.closeConnection(server, data)
+
       answers
     },
     "Answers computation",
@@ -503,14 +576,15 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
     *
     * @note This method does not add any facts or rules to the data
     * store. It is most useful after the execution of a query using
-    * [[uk.ac.ox.cs.rsacomb.RSAOntology.ask RSAOntology.ask]].
-    * @note This method has been introduced mostly for debugging purposes.
+    * [[RSAOntology.ask]].
     *
     * @param query query to be executed against the environment
     * @param prefixes additional prefixes for the query. It defaults to
     * an empty set.
     * @param opts additional options to RDFox.
     * @return a collection of answers to the input query.
+    *
+    * @note This method has been introduced mostly for debugging purposes.
     */
   def queryDataStore(
       query: String,
@@ -532,122 +606,11 @@ class RSAOntology(val axioms: List[OWLLogicalAxiom], val datafiles: File*) {
     * [[uk.ac.ox.cs.rsacomb.RSAOntology.ask RSAOntology.ask]]
     * for the corresponding query has been called.
     */
-  def askUnfiltered(
-      cq: ConjunctiveQuery
-  ): Option[Seq[(Long, Seq[Resource])]] = {
-    val query = RDFoxUtil.buildDescriptionQuery("QM", cq.variables.length)
-    queryDataStore(query, RSA.Prefixes)
-  }
-
-  def self(axiom: OWLSubClassOfAxiom): Set[Term] = {
-    // Assuming just one role in the signature of a T5 axiom
-    val role = axiom.objectPropertyExpressionsInSignature(0)
-    if (this.confl(role).contains(role)) {
-      Set(
-        RSA("v0_" ++ axiom.hashed),
-        RSA("v1_" ++ axiom.hashed)
-      )
-    } else {
-      Set()
-    }
-  }
-
-  def cycle(axiom: OWLSubClassOfAxiom): Set[Term] = {
-    // TODO: we can actually use `toTriple` from `RSAAxiom`
-    val classes =
-      axiom.classesInSignature.collect(Collectors.toList()).asScala
-    val classA = classes(0)
-    val roleR = axiom
-      .objectPropertyExpressionsInSignature(0)
-      .asInstanceOf[OWLObjectProperty]
-    val classB = classes(1)
-    cycle_aux1(classA, roleR, classB)
-  }
-
-  def cycle_aux0(
-      classA: OWLClass,
-      roleR: OWLObjectProperty,
-      classB: OWLClass
-  ): Set[Term] = {
-    val conflR = this.confl(roleR)
-    val classes = ontology
-      .classesInSignature(Imports.INCLUDED)
-      .collect(Collectors.toSet())
-      .asScala
-    for {
-      classD <- classes
-      roleS <- conflR
-      classC <- classes
-      // Keeping this check for now
-      if !unsafeRoles.contains(roleS)
-      tripleARB = RSAAxiom.hashed(classA, roleR, classB)
-      tripleDSC = RSAAxiom.hashed(classD, roleS, classC)
-      individual =
-        if (tripleARB > tripleDSC) {
-          RSA("v1_" ++ tripleDSC)
-        } else {
-          // Note that this is also the case for
-          // `tripleARB == tripleDSC`
-          RSA("v0_" ++ tripleDSC)
-        }
-    } yield individual
-  }
-
-  def cycle_aux1(
-      classA: OWLClass,
-      roleR: OWLObjectProperty,
-      classB: OWLClass
-  ): Set[Term] = {
-    val conflR = this.confl(roleR)
-    // We just need the TBox to find
-    val terms = for {
-      axiom1 <- axioms
-      if axiom1.isT5
-      // We expect only one role coming out of a T5 axiom
-      roleS <- axiom1.objectPropertyExpressionsInSignature
-      // Triples ordering is among triples involving safe roles.
-      if !unsafeRoles.contains(roleS)
-      if conflR.contains(roleS)
-      tripleARB = RSAAxiom.hashed(classA, roleR, classB)
-      tripleDSC = axiom1.hashed
-      individual =
-        if (tripleARB > tripleDSC) {
-          RSA("v1_" ++ tripleDSC)
-        } else {
-          // Note that this is also the case for
-          // `tripleARB == tripleDSC`
-          RSA("v0_" ++ tripleDSC)
-        }
-    } yield individual
-    terms to Set
-  }
-
-  def unfold(axiom: OWLSubClassOfAxiom): Set[Term] =
-    this.self(axiom) | this.cycle(axiom)
-
-  /** Log normalization/approximation statistics */
-  // def statistics(level: Logger.Level = Logger.DEBUG): Unit = {
-  //   Logger.print(
-  //     s"Logical axioms in original input ontology: ${original.getLogicalAxiomCount(true)}",
-  //     level
-  //   )
-  //   Logger.print(
-  //     s"Logical axioms discarded in Horn-ALCHOIQ approximation: ${normalizer.discarded}",
-  //     level
-  //   )
-  //   Logger.print(
-  //     s"Logical axioms shifted in Horn-ALCHOIQ approximation: ${normalizer.shifted}",
-  //     level
-  //   )
-  //   Logger.print(
-  //     s"Logical axioms in Horn-ALCHOIQ ontology: ${ontology
-  //       .getLogicalAxiomCount(true)} (${axioms.length}/${axioms.length}/${axioms.length})",
-  //     level
-  //   )
-  //   Logger.print(
-  //     s"Logical axioms discarded in RSA approximation: ${removed.length}",
-  //     level
-  //   )
+  // def askUnfiltered(
+  //     cq: ConjunctiveQuery
+  // ): Option[Seq[(Long, Seq[Resource])]] = {
+  //   val query = RDFoxUtil.buildDescriptionQuery("QM", cq.variables.length)
+  //   queryDataStore(query, RSA.Prefixes)
   // }
 
-} // class RSAOntology
+}

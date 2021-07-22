@@ -27,7 +27,15 @@ import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model.{OWLOntology, OWLAxiom, OWLLogicalAxiom}
 import org.semanticweb.owlapi.model.{OWLObjectPropertyExpression}
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory
-import tech.oxfordsemantic.jrdfox.logic.expression.Resource
+import tech.oxfordsemantic.jrdfox.logic.datalog.Rule
+import tech.oxfordsemantic.jrdfox.logic.expression.{Resource, Term, Variable}
+
+import uk.ac.ox.cs.rsacomb.approximation.Approximation
+import uk.ac.ox.cs.rsacomb.converter._
+import uk.ac.ox.cs.rsacomb.suffix._
+import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
+
+import uk.ac.ox.cs.rsacomb.RSAUtil
 
 object Ontology {
 
@@ -44,7 +52,6 @@ object Ontology {
     * TODO: turn this into an implicit class parameter.
     */
   val manager = OWLManager.createOWLOntologyManager()
-  //val factory = manager.getOWLDataFactory()
 
   /** Compute the RSA dependency graph for a set of axioms
     *
@@ -66,21 +73,16 @@ object Ontology {
       unsafe: List[OWLObjectPropertyExpression]
   ): DependencyGraph = {
 
-    import org.semanticweb.owlapi.model.{
-      OWLClassExpression,
-      OWLObjectSomeValuesFrom,
-      OWLDataSomeValuesFrom
-    }
-    import tech.oxfordsemantic.jrdfox.logic.datalog.Rule
-    import tech.oxfordsemantic.jrdfox.logic.expression.{Term, Variable}
-    import uk.ac.ox.cs.rsacomb.suffix._
-    import uk.ac.ox.cs.rsacomb.converter._
-    import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
-    import uk.ac.ox.cs.rsacomb.RSAUtil
-
     var nodemap = Map.empty[String, OWLAxiom]
 
+    /* Create custom converter */
     object RSAConverter extends RDFoxConverter {
+
+      import org.semanticweb.owlapi.model.{
+        OWLClassExpression,
+        OWLObjectSomeValuesFrom,
+        OWLDataSomeValuesFrom
+      }
 
       override def convert(
           expr: OWLClassExpression,
@@ -156,6 +158,9 @@ object Ontology {
 }
 
 /** A wrapper for a generic OWL2 ontology
+  *
+  * @param axioms list of axioms (roughly) corresponding to the TBox.
+  * @param datafiles files containing ABox data.
   */
 class Ontology(val axioms: List[OWLLogicalAxiom], val datafiles: List[File]) {
 
@@ -170,11 +175,11 @@ class Ontology(val axioms: List[OWLLogicalAxiom], val datafiles: List[File]) {
     * This is mainly used to instantiate a new reasoner to be used in
     * the computation of unsafe roles.
     */
-  private val ontology: OWLOntology =
+  protected val ontology: OWLOntology =
     Ontology.manager.createOntology((axioms: List[OWLAxiom]).asJava)
 
   /** OWLAPI internal reasoner for ontology */
-  private val reasoner =
+  protected val reasoner =
     (new StructuralReasonerFactory()).createReasoner(ontology)
 
   /** Unsafe roles in the ontology
@@ -219,7 +224,28 @@ class Ontology(val axioms: List[OWLLogicalAxiom], val datafiles: List[File]) {
     unsafe1 ++ unsafe2
   }
 
+  /** Compute the dependency graph for the ontology */
   lazy val dependencyGraph: Ontology.DependencyGraph =
     Ontology.dependencyGraph(axioms, datafiles, this.unsafe)
 
+  /** RSA check */
+  lazy val isRSA: Boolean = ???
+
+  /** Normalize the ontology according to the given normalizer
+    *
+    * @param normalizer the normalization technique to be used.
+    * @return a new normalized [[Ontology]].
+    */
+  def normalize(normalizer: Normalizer): Ontology = ???
+
+  /** Approximate the ontology according to the given approximation
+    * technique.
+    *
+    * @param approximation the approximation to be used on the ontology.
+    * @return a new approximated [[Ontology]].
+    */
+  def approximate(approximation: Approximation): Ontology = {
+    val approx = approximation.approximate(axioms, datafiles)
+    new Ontology(approx, datafiles)
+  }
 }

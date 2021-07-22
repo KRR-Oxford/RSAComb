@@ -8,8 +8,8 @@ trait Approximation {
 
   /** Approximate an ontology.
     *
-    * @param ontology input ontology
-    * @return a new approximated ontology
+    * @param ontology input ontology as a list of axioms
+    * @return the approximated ontology
     */
   def approximate(
       ontology: List[OWLLogicalAxiom],
