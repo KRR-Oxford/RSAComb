@@ -14,7 +14,6 @@ import scalax.collection.GraphTraversal._
 
 import uk.ac.ox.cs.rsacomb.RSAOntology
 import uk.ac.ox.cs.rsacomb.RSAUtil
-import uk.ac.ox.cs.rsacomb.converter.Normalizer
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
 
 object LowerBound {
@@ -47,23 +46,14 @@ class LowerBound extends Approximation[RSAOntology] {
   /** Simplify conversion between OWLAPI and RDFox concepts */
   import uk.ac.ox.cs.rsacomb.implicits.RDFox._
 
-  private val normalizer = new Normalizer()
-
   /** Main entry point for the approximation algorithm */
-  def approximate(ontology: Ontology): RSAOntology = {
-    /* Normalize axioms */
-    val axioms1 = ontology.axioms flatMap normalizer.normalize
-    /* Delete any axiom outside of ALCHOIQ */
-    val axioms2 = axioms1 filterNot inALCHOIQ
-    /* Shift any axiom with disjunction on the rhs */
-    val axioms3 = for {
-      a1 <- axioms1
-      a2 <- shift(a1)
-      a3 <- normalizer.normalize(a2)
-    } yield a3
-    /* Approximate to RSA */
-    toRSA(new Ontology(axioms3, ontology.datafiles))
-  }
+  def approximate(ontology: Ontology): RSAOntology =
+    toRSA(
+      new Ontology(
+        ontology.axioms filterNot inALCHOIQ flatMap shift,
+        ontology.datafiles
+      )
+    )
 
   /** Discards all axioms outside ALCHOIQ */
   private def inALCHOIQ(axiom: OWLLogicalAxiom): Boolean =
@@ -114,6 +104,7 @@ class LowerBound extends Approximation[RSAOntology] {
     *
     *   becomes
     *
+    *   A n nB1 n nB2 n nB3 -> bot .
     *   A n nB1 n nB2 -> B3 .
     *   A n nB1 n nB3 -> B2 .
     *   A n nB2 n nB3 -> B1 .
@@ -121,6 +112,8 @@ class LowerBound extends Approximation[RSAOntology] {
     *
     *   where nA, nB1, nB2, nB3 are fresh predicates "corresponding" to
     *   the negation of A, B1, B2, B3 respectively.
+    *
+    * @note this method maintains the normal form of the input axiom.
     */
   private def shift(axiom: OWLLogicalAxiom): List[OWLLogicalAxiom] =
     axiom match {

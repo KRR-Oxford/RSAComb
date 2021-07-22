@@ -282,7 +282,11 @@ class Ontology(val axioms: List[OWLLogicalAxiom], val datafiles: List[File]) {
     * @param normalizer the normalization technique to be used.
     * @return a new normalized [[Ontology]].
     */
-  def normalize(normalizer: Normalizer): Ontology = ???
+  def normalize(normalizer: Normalizer): Ontology =
+    new Ontology(
+      axioms flatMap normalizer.normalize,
+      datafiles
+    )
 
   /** Approximate the ontology according to the given approximation
     * technique.
