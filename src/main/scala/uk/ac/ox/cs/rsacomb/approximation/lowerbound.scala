@@ -15,6 +15,14 @@ import scalax.collection.GraphTraversal._
 import uk.ac.ox.cs.rsacomb.RSAOntology
 import uk.ac.ox.cs.rsacomb.RSAUtil
 import uk.ac.ox.cs.rsacomb.converter.Normalizer
+import uk.ac.ox.cs.rsacomb.ontology.Ontology
+
+object LowerBound {
+
+  private val manager = OWLManager.createOWLOntologyManager()
+  private val factory = manager.getOWLDataFactory()
+
+}
 
 /** Approximation algorithm that mantains soundness for CQ answering.
   *
@@ -31,7 +39,7 @@ import uk.ac.ox.cs.rsacomb.converter.Normalizer
   *
   * @see [[uk.ac.ox.cs.rsacomb.converter.Normalizer]]
   */
-class LowerBound extends Approximation {
+class LowerBound extends Approximation[RSAOntology] {
 
   /** Simplify conversion between Java and Scala collections */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
@@ -39,19 +47,12 @@ class LowerBound extends Approximation {
   /** Simplify conversion between OWLAPI and RDFox concepts */
   import uk.ac.ox.cs.rsacomb.implicits.RDFox._
 
-  /** Manager instance to interface with OWLAPI */
-  val manager = OWLManager.createOWLOntologyManager()
-  val factory = manager.getOWLDataFactory()
-
-  val normalizer = new Normalizer()
+  private val normalizer = new Normalizer()
 
   /** Main entry point for the approximation algorithm */
-  def approximate(
-      ontology: List[OWLLogicalAxiom],
-      datafiles: List[File]
-  ): List[OWLLogicalAxiom] = {
+  def approximate(ontology: Ontology): RSAOntology = {
     /* Normalize axioms */
-    val axioms1 = ontology flatMap normalizer.normalize
+    val axioms1 = ontology.axioms flatMap normalizer.normalize
     /* Delete any axiom outside of ALCHOIQ */
     val axioms2 = axioms1 filterNot inALCHOIQ
     /* Shift any axiom with disjunction on the rhs */
@@ -61,11 +62,11 @@ class LowerBound extends Approximation {
       a3 <- normalizer.normalize(a2)
     } yield a3
     /* Approximate to RSA */
-    toRSA(axioms3, datafiles)
+    toRSA(new Ontology(axioms3, ontology.datafiles))
   }
 
   /** Discards all axioms outside ALCHOIQ */
-  def inALCHOIQ(axiom: OWLLogicalAxiom): Boolean =
+  private def inALCHOIQ(axiom: OWLLogicalAxiom): Boolean =
     axiom match {
       case a: OWLSubClassOfAxiom => {
         val sub = a.getSubClass.getNNF
@@ -121,7 +122,7 @@ class LowerBound extends Approximation {
     *   where nA, nB1, nB2, nB3 are fresh predicates "corresponding" to
     *   the negation of A, B1, B2, B3 respectively.
     */
-  def shift(axiom: OWLLogicalAxiom): List[OWLLogicalAxiom] =
+  private def shift(axiom: OWLLogicalAxiom): List[OWLLogicalAxiom] =
     axiom match {
       case a: OWLSubClassOfAxiom => {
         val sub = a.getSubClass.getNNF
@@ -136,19 +137,19 @@ class LowerBound extends Approximation {
             )
 
             val r1 =
-              factory.getOWLSubClassOfAxiom(
-                factory.getOWLObjectIntersectionOf(
+              LowerBound.factory.getOWLSubClassOfAxiom(
+                LowerBound.factory.getOWLObjectIntersectionOf(
                   (body.map(_._1) ++ head.map(_._2)): _*
                 ),
-                factory.getOWLNothing
+                LowerBound.factory.getOWLNothing
               )
 
             val r2s =
               for {
                 (a, na) <- head
                 hs = head.map(_._2).filterNot(_ equals na)
-              } yield factory.getOWLSubClassOfAxiom(
-                factory.getOWLObjectIntersectionOf(
+              } yield LowerBound.factory.getOWLSubClassOfAxiom(
+                LowerBound.factory.getOWLObjectIntersectionOf(
                   (body.map(_._1) ++ hs): _*
                 ),
                 a
@@ -158,8 +159,8 @@ class LowerBound extends Approximation {
               for {
                 (a, na) <- body
                 bs = body.map(_._1).filterNot(_ equals a)
-              } yield factory.getOWLSubClassOfAxiom(
-                factory.getOWLObjectIntersectionOf(
+              } yield LowerBound.factory.getOWLSubClassOfAxiom(
+                LowerBound.factory.getOWLObjectIntersectionOf(
                   (bs ++ head.map(_._2)): _*
                 ),
                 na
@@ -179,14 +180,11 @@ class LowerBound extends Approximation {
     * dependency graph from being tree-shaped, and removing them.
     *
     * @param axioms the set of axioms to approximate.
-    * @return the approximated set of axioms.
+    * @return the approximated RSA ontology
     */
-  def toRSA(
-      axioms: List[OWLLogicalAxiom],
-      datafiles: List[File]
-  ): List[OWLLogicalAxiom] = {
+  private def toRSA(ontology: Ontology): RSAOntology = {
     /* Compute the dependency graph for the ontology */
-    val (graph, nodemap) = RSAUtil.dependencyGraph(axioms, datafiles)
+    val (graph, nodemap) = ontology.dependencyGraph
 
     /* Define node colors for the graph visit */
     sealed trait NodeColor
@@ -228,7 +226,7 @@ class LowerBound extends Approximation {
     }.toList
 
     /* Remove axioms from approximated ontology */
-    axioms diff toDelete
+    RSAOntology(ontology.axioms diff toDelete, ontology.datafiles)
   }
 
   // val edges1 = Seq('A ~> 'B, 'B ~> 'C, 'C ~> 'D, 'D ~> 'H, 'H ~>

@@ -242,10 +242,8 @@ class Ontology(val axioms: List[OWLLogicalAxiom], val datafiles: List[File]) {
     * technique.
     *
     * @param approximation the approximation to be used on the ontology.
-    * @return a new approximated [[Ontology]].
+    * @return the result of the approximation.
     */
-  def approximate(approximation: Approximation): Ontology = {
-    val approx = approximation.approximate(axioms, datafiles)
-    new Ontology(approx, datafiles)
-  }
+  def approximate[T](approximation: Approximation[T]): T =
+    approximation.approximate(this)
 }
