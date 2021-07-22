@@ -172,7 +172,7 @@ class LowerBound extends Approximation[RSAOntology] {
     * This is done by gathering those axioms that prevent the ontology
     * dependency graph from being tree-shaped, and removing them.
     *
-    * @param axioms the set of axioms to approximate.
+    * @param ontology the set of axioms to approximate.
     * @return the approximated RSA ontology
     */
   private def toRSA(ontology: Ontology): RSAOntology = {
@@ -214,7 +214,7 @@ class LowerBound extends Approximation[RSAOntology] {
       }
     }
 
-    val toDelete = color.iterator.collect { case (resource: IRI, ToDelete) =>
+    val toDelete = color.collect { case (resource: IRI, ToDelete) =>
       nodemap(resource.getIRI)
     }.toList
 
