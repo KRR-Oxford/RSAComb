@@ -50,7 +50,7 @@ class LowerBound extends Approximation[RSAOntology] {
   def approximate(ontology: Ontology): RSAOntology =
     toRSA(
       new Ontology(
-        ontology.axioms filterNot inALCHOIQ flatMap shift,
+        ontology.axioms filter inALCHOIQ flatMap shift,
         ontology.datafiles
       )
     )

@@ -216,6 +216,8 @@ class Ontology(val axioms: List[OWLLogicalAxiom], val datafiles: List[File]) {
   /** Simplify conversion between Java and Scala collections */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
 
+  println(s"Axioms: ${axioms.length}")
+
   /** OWLOntology based on input axioms
     *
     * This is mainly used to instantiate a new reasoner to be used in
