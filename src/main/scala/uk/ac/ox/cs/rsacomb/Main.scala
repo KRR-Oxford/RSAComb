@@ -26,6 +26,10 @@ import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 import util.{Logger, RDFoxUtil, RSA}
 import sparql.ConjunctiveQuery
 
+import uk.ac.ox.cs.rsacomb.ontology.Ontology
+import uk.ac.ox.cs.rsacomb.converter.Normalizer
+import uk.ac.ox.cs.rsacomb.approximation.LowerBound
+
 case class RSAOption[+T](opt: T) {
   def get[T]: T = opt.asInstanceOf[T]
 }
@@ -122,12 +126,15 @@ object RSAComb extends App {
   /* Command-line options */
   val config = RSAConfig.parse(args.toList)
 
-  val ontology = RSAOntology(
+  /* Load original ontology and normalize it */
+  val ontology = Ontology(
     config('ontology).get[File],
-    config('data).get[List[File]]: _*
-  )
-  val rsa = ontology.toRSA()
-  ontology.statistics()
+    config('data).get[List[File]]
+  ).normalize(new Normalizer)
+
+  /* Approximate the ontology to RSA */
+  val toRSA = new LowerBound
+  val rsa = ontology approximate toRSA
 
   if (config contains 'query) {
     val query =
@@ -140,18 +147,18 @@ object RSAComb extends App {
         Logger.print(s"$answers", Logger.VERBOSE)
         Logger print s"Number of answers: ${answers.length} (${answers.lengthWithMultiplicity})"
         // Retrieve unfiltered answers
-        val unfiltered = rsa.queryDataStore(
-          """
-            SELECT (count(?K) as ?COUNT)
-            WHERE {
-                ?K a rsa:QM .
-            }
-          """,
-          RSA.Prefixes
-        )
-        unfiltered.foreach((u) =>
-          Logger print s"Number of unfiltered answers: ${u.head._2}"
-        )
+        // val unfiltered = rsa.queryDataStore(
+        //   """
+        //     SELECT (count(?K) as ?COUNT)
+        //     WHERE {
+        //         ?K a rsa:QM .
+        //     }
+        //   """,
+        //   RSA.Prefixes
+        // )
+        // unfiltered.foreach((u) =>
+        //   Logger print s"Number of unfiltered answers: ${u.head._2}"
+        // )
       }
       case None =>
         throw new RuntimeException("Submitted query is not conjunctive")

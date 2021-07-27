@@ -27,6 +27,7 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
   TupleTableAtom
 }
 import tech.oxfordsemantic.jrdfox.logic.expression.{Term, IRI, FunctionCall}
+import uk.ac.ox.cs.rsacomb.RSAUtil
 import uk.ac.ox.cs.rsacomb.RSAOntology
 import uk.ac.ox.cs.rsacomb.suffix.{Empty, Inverse, RSASuffix}
 import uk.ac.ox.cs.rsacomb.util.{RSA, RDFoxUtil}
@@ -159,14 +160,14 @@ trait RDFoxConverter {
       }
 
       case a: OWLSubObjectPropertyOfAxiom => {
-        val term1 = RSAOntology.genFreshVariable()
+        val term1 = RSAUtil.genFreshVariable()
         val body = convert(a.getSubProperty, term, term1, suffix)
         val head = convert(a.getSuperProperty, term, term1, suffix)
         ResultR(List(Rule.create(head, body)))
       }
 
       case a: OWLSubDataPropertyOfAxiom => {
-        val term1 = RSAOntology.genFreshVariable()
+        val term1 = RSAUtil.genFreshVariable()
         val body = convert(a.getSubProperty, term, term1, suffix)
         val head = convert(a.getSuperProperty, term, term1, suffix)
         ResultR(List(Rule.create(head, body)))
@@ -176,7 +177,7 @@ trait RDFoxConverter {
         convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)
 
       case a: OWLObjectPropertyRangeAxiom => {
-        val term1 = RSAOntology.genFreshVariable()
+        val term1 = RSAUtil.genFreshVariable()
         val (res, ext) = convert(a.getRange, term, unsafe, skolem, suffix)
         val prop = convert(a.getProperty, term1, term, suffix)
         ResultR(List(Rule.create(res, prop :: ext)))
@@ -343,7 +344,7 @@ trait RDFoxConverter {
       case e: OWLObjectSomeValuesFrom => {
         val cls = e.getFiller()
         val role = e.getProperty()
-        val varX = RSAOntology.genFreshVariable
+        val varX = RSAUtil.genFreshVariable
         val (bind, term1) = skolem match {
           case NoSkolem    => (None, varX)
           case c: Constant => (None, c.iri)
@@ -370,7 +371,7 @@ trait RDFoxConverter {
         // Computes the result of rule skolemization. Depending on the used
         // technique it might involve the introduction of additional atoms,
         // and/or fresh constants and variables.
-        val varX = RSAOntology.genFreshVariable
+        val varX = RSAUtil.genFreshVariable
         val (bind, term1) = skolem match {
           case NoSkolem    => (None, varX)
           case c: Constant => (None, c.iri)
@@ -395,7 +396,7 @@ trait RDFoxConverter {
             s"Class expression '$e' has cardinality restriction != 1."
           )
         val vars @ (y :: z :: _) =
-          Seq(RSAOntology.genFreshVariable(), RSAOntology.genFreshVariable())
+          Seq(RSAUtil.genFreshVariable(), RSAUtil.genFreshVariable())
         val cls = e.getFiller
         val role = e.getProperty
         val (res, ext) = vars.map(convert(cls, _, unsafe, skolem, suffix)).unzip

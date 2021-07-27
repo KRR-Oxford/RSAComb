@@ -20,6 +20,8 @@ import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model._
 
 import uk.ac.ox.cs.rsacomb.util.Logger
+import uk.ac.ox.cs.rsacomb.RSAOntology
+import uk.ac.ox.cs.rsacomb.RSAUtil
 
 object Normalizer {
 
@@ -40,12 +42,6 @@ class Normalizer() {
 
   /** Simplify conversion between Java and Scala collections */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
-
-  private var counter = -1
-  def freshOWLClass(): OWLClass = {
-    counter += 1
-    factory.getOWLClass(s"X$counter")
-  }
 
   /** Statistics */
   var discarded = 0
@@ -74,7 +70,7 @@ class Normalizer() {
             *   C c D -> { C c X, X c D }
             */
           case _ if !sub.isOWLClass && !sup.isOWLClass => {
-            val cls = freshOWLClass()
+            val cls = RSAUtil.getFreshOWLClass()
             Seq(
               factory.getOWLSubClassOfAxiom(sub, cls),
               factory.getOWLSubClassOfAxiom(cls, sup)
@@ -95,7 +91,7 @@ class Normalizer() {
                   if (conj.isOWLClass)
                     (acc1 :+ conj, acc2)
                   else {
-                    val cls = freshOWLClass()
+                    val cls = RSAUtil.getFreshOWLClass()
                     (
                       acc1 :+ cls,
                       acc2 :+ factory.getOWLSubClassOfAxiom(conj, cls)
@@ -154,7 +150,7 @@ class Normalizer() {
             */
           case (sub: OWLObjectSomeValuesFrom, _)
               if !sub.getFiller.isOWLClass => {
-            val cls = freshOWLClass()
+            val cls = RSAUtil.getFreshOWLClass()
             Seq(
               factory.getOWLSubClassOfAxiom(sub.getFiller, cls),
               factory.getOWLSubClassOfAxiom(
@@ -169,7 +165,7 @@ class Normalizer() {
             */
           case (_, sup: OWLObjectSomeValuesFrom)
               if !sup.getFiller.isOWLClass => {
-            val cls = freshOWLClass()
+            val cls = RSAUtil.getFreshOWLClass()
             Seq(
               factory.getOWLSubClassOfAxiom(cls, sup.getFiller),
               factory.getOWLSubClassOfAxiom(
@@ -314,7 +310,7 @@ class Normalizer() {
             )
           case (_, sup: OWLObjectMaxCardinality)
               if sup.getCardinality == 1 && !sup.getFiller.isOWLClass => {
-            val cls = freshOWLClass()
+            val cls = RSAUtil.getFreshOWLClass()
             Seq(
               factory.getOWLSubClassOfAxiom(cls, sup.getFiller),
               factory.getOWLSubClassOfAxiom(
@@ -504,7 +500,7 @@ class Normalizer() {
         * C(a) -> { X(a), X c C }
         */
       case a: OWLClassAssertionAxiom if !a.getClassExpression.isOWLClass => {
-        val cls = freshOWLClass()
+        val cls = RSAUtil.getFreshOWLClass()
         Seq(
           factory.getOWLClassAssertionAxiom(cls, a.getIndividual),
           factory.getOWLSubClassOfAxiom(cls, a.getClassExpression)
@@ -548,8 +544,10 @@ class Normalizer() {
       sub: OWLClassExpression,
       sup: OWLObjectUnionOf
   ): Seq[OWLLogicalAxiom] = {
-    val body = sub.asConjunctSet.map((atom) => (atom, freshOWLClass()))
-    val head = sup.asDisjunctSet.map((atom) => (atom, freshOWLClass()))
+    val body =
+      sub.asConjunctSet.map((atom) => (atom, RSAUtil.getFreshOWLClass()))
+    val head =
+      sup.asDisjunctSet.map((atom) => (atom, RSAUtil.getFreshOWLClass()))
 
     /* Update statistics */
     shifted += 1
