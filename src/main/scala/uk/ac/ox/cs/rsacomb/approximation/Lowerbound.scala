@@ -16,7 +16,7 @@ import uk.ac.ox.cs.rsacomb.RSAOntology
 import uk.ac.ox.cs.rsacomb.RSAUtil
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
 
-object LowerBound {
+object Lowerbound {
 
   private val manager = OWLManager.createOWLOntologyManager()
   private val factory = manager.getOWLDataFactory()
@@ -38,7 +38,7 @@ object LowerBound {
   *
   * @see [[uk.ac.ox.cs.rsacomb.converter.Normalizer]]
   */
-class LowerBound extends Approximation[RSAOntology] {
+class Lowerbound extends Approximation[RSAOntology] {
 
   /** Simplify conversion between Java and Scala collections */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
@@ -130,19 +130,19 @@ class LowerBound extends Approximation[RSAOntology] {
             )
 
             val r1 =
-              LowerBound.factory.getOWLSubClassOfAxiom(
-                LowerBound.factory.getOWLObjectIntersectionOf(
+              Lowerbound.factory.getOWLSubClassOfAxiom(
+                Lowerbound.factory.getOWLObjectIntersectionOf(
                   (body.map(_._1) ++ head.map(_._2)): _*
                 ),
-                LowerBound.factory.getOWLNothing
+                Lowerbound.factory.getOWLNothing
               )
 
             val r2s =
               for {
                 (a, na) <- head
                 hs = head.map(_._2).filterNot(_ equals na)
-              } yield LowerBound.factory.getOWLSubClassOfAxiom(
-                LowerBound.factory.getOWLObjectIntersectionOf(
+              } yield Lowerbound.factory.getOWLSubClassOfAxiom(
+                Lowerbound.factory.getOWLObjectIntersectionOf(
                   (body.map(_._1) ++ hs): _*
                 ),
                 a
@@ -152,8 +152,8 @@ class LowerBound extends Approximation[RSAOntology] {
               for {
                 (a, na) <- body
                 bs = body.map(_._1).filterNot(_ equals a)
-              } yield LowerBound.factory.getOWLSubClassOfAxiom(
-                LowerBound.factory.getOWLObjectIntersectionOf(
+              } yield Lowerbound.factory.getOWLSubClassOfAxiom(
+                Lowerbound.factory.getOWLObjectIntersectionOf(
                   (bs ++ head.map(_._2)): _*
                 ),
                 na
