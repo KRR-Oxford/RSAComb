@@ -43,21 +43,7 @@ class Normalizer() {
   /** Simplify conversion between Java and Scala collections */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
 
-  /** Statistics */
-  var discarded = 0
-  var shifted = 0
-
-  /** Normalizes a
-    * [[org.semanticweb.owlapi.model.OWLLogicalAxiom OWLLogicalAxiom]]
-    *
-    * @note not all possible axioms are supported. Following is a list
-    * of all unhandled class expressions:
-    * - [[org.semanticweb.owlapi.model.OWLAsymmetricObjectPropertyAxiom OWLAsymmetricObjectPropertyAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLDatatypeDefinitionAxiom OWLDatatypeDefinitionAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLDisjointDataPropertiesAxiom OWLDisjointDataPropertiesAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLDisjointObjectPropertiesAxiom OWLDisjointObjectPropertiesAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLHasKeyAxiom OWLHasKeyAxiom]]
-    * - [[org.semanticweb.owlapi.model.SWRLRule SWRLRule]]
+  /** Normalizes a [[OWLLogicalAxiom]]
     */
   def normalize(axiom: OWLLogicalAxiom): Seq[OWLLogicalAxiom] =
     axiom match {
@@ -138,12 +124,37 @@ class Normalizer() {
               )
             }
           }
-          /** Disjunction on the rhs is not supported directly
+          /** Disjunction on the rhs
             *
-            * Instead we `shift` the rule to eliminate the disjunction.
+            *   B c A1 u ... u C u ... u An -> { X c C, B c A1 u ... u X u ... u An }
             */
-          case (_, sup: OWLObjectUnionOf) =>
-            shift(sub, sup) flatMap normalize
+          case (_, sup: OWLObjectUnionOf)
+              if sup.asDisjunctSet.exists(c => !c.isOWLClass) => {
+            var additional = Seq()
+            val disjuncts = sup.asDisjunctSet
+            // BUG: why test for legth if this branch gets triggered only
+            // when there exists a ClassExpression in the disjuncts?
+            if (disjuncts.length > 0) {
+              val acc = (Seq[OWLClassExpression](), Seq[OWLLogicalAxiom]())
+              val (acc1, acc2) = disjuncts.foldLeft(acc)(
+                { case ((acc1, acc2), disj: OWLClass) => (acc1 :+ disj, acc2)
+                  case ((acc1, acc2), disj) => {
+                    val cls = RSAUtil.getFreshOWLClass()
+                    (
+                      acc1 :+ cls,
+                      acc2 :+ factory.getOWLSubClassOfAxiom(cls, disj)
+                    )
+                  }
+                }
+              )
+              (acc2 :+ factory.getOWLSubClassOfAxiom(
+                sub,
+                factory.getOWLObjectUnionOf(acc1: _*)
+              )).flatMap(normalize)
+            } else {
+              normalize(factory.getOWLSubClassOfAxiom(sub, factory.getOWLNothing))
+            }
+          }
           /** Complex class expression on existential restriction on the lhs
             *
             *   exists R . C c D -> { C c X, exists R . X c D }
@@ -174,9 +185,35 @@ class Normalizer() {
               )
             ).flatMap(normalize)
           }
-          /** Object/Data universal quantification on the lhs not supported */
-          case (sub: OWLObjectAllValuesFrom, _) => notInHornALCHOIQ(a)
-          case (sub: OWLDataAllValuesFrom, _)   => notInHornALCHOIQ(a)
+          /** Object universal quantification on the lhs
+            *
+            *   forall R . B c A
+            *   ¬ A c ¬∀forall R . B
+            *   ¬ A c exists R . ¬ B
+            *   ¬ A c C, C c R . ¬ B
+            *   top c A u C, D c ¬ B, C c exists R . D
+            *   top c A u C, D n B c bot, C c exists R . D
+            */
+          case (sub: OWLObjectAllValuesFrom, _) => {
+            val role = sub.getProperty
+            val filler = sub.getFiller
+            val (c, d) = (RSAUtil.getFreshOWLClass, RSAUtil.getFreshOWLClass)
+            Seq(
+              factory.getOWLSubClassOfAxiom(
+                factory.getOWLThing,
+                factory.getOWLObjectUnionOf(sup, c)
+              ),
+              factory.getOWLSubClassOfAxiom(
+                factory.getOWLObjectIntersectionOf(d, filler),
+                factory.getOWLNothing
+              ),
+              factory.getOWLSubClassOfAxiom(
+                c, factory.getOWLObjectSomeValuesFrom(role, d)
+              )
+            )
+          }
+          /** Object/Data universal quantification on the lhs */
+          case (sub: OWLDataAllValuesFrom, _)   => notSupported(a)
           /** Object universal quantification on the rhs
             *
             *   C c forall R . D -> exists R- . C c D
@@ -193,7 +230,7 @@ class Normalizer() {
               )
             )
           /** Object universal quantification on the rhs not supported */
-          case (_, sup: OWLDataAllValuesFrom) => notInHornALCHOIQ(a)
+          case (_, sup: OWLDataAllValuesFrom) => notSupported(a)
           /** Exact object/data cardinality restriction on the lhs/rhs
             *
             *   = i R . C -> <= i R . C n >= i R . X
@@ -237,7 +274,7 @@ class Normalizer() {
                     sup
                   )
                 )
-              case _ => notInHornALCHOIQ(a)
+              case _ => notSupported(a)
             }
           case (sub: OWLDataMinCardinality, _) =>
             sub.getCardinality match {
@@ -255,7 +292,7 @@ class Normalizer() {
                     sup
                   )
                 )
-              case _ => notInHornALCHOIQ(a)
+              case _ => notSupported(a)
             }
           case (_, sup: OWLObjectMinCardinality) =>
             sup.getCardinality match {
@@ -270,7 +307,7 @@ class Normalizer() {
                     )
                   )
                 )
-              case _ => notInHornALCHOIQ(a)
+              case _ => notSupported(a)
             }
           case (_, sup: OWLDataMinCardinality) =>
             sup.getCardinality match {
@@ -285,11 +322,11 @@ class Normalizer() {
                     )
                   )
                 )
-              case _ => notInHornALCHOIQ(a)
+              case _ => notSupported(a)
             }
           /** Max object/data cardinality restriction on the lhs not supported */
-          case (sub: OWLObjectMaxCardinality, _) => notInHornALCHOIQ(a)
-          case (sub: OWLDataMaxCardinality, _)   => notInHornALCHOIQ(a)
+          case (sub: OWLObjectMaxCardinality, _) => notSupported(a)
+          case (sub: OWLDataMaxCardinality, _)   => notSupported(a)
           /** Max object/data cardinality restriction on the rhs
             *
             *   C c <= 0 R . D -> C n exists R . D -> bot
@@ -320,7 +357,7 @@ class Normalizer() {
             ).flatMap(normalize)
           }
           case (_, sup: OWLObjectMaxCardinality) if sup.getCardinality >= 2 =>
-            notInHornALCHOIQ(a)
+            notSupported(a)
           case (_, sup: OWLDataMaxCardinality) if sup.getCardinality == 0 =>
             normalize(
               factory.getOWLSubClassOfAxiom(
@@ -333,7 +370,7 @@ class Normalizer() {
               )
             )
           case (_, sup: OWLDataMaxCardinality) if sup.getCardinality >= 1 =>
-            notInHornALCHOIQ(a)
+            notSupported(a)
           /** HasValue expression on the lhs/rhs
             *
             * HasValue(R, a) -> exists R . {a}
@@ -385,21 +422,27 @@ class Normalizer() {
           case (sub: OWLObjectOneOf, _) =>
             sub.getIndividuals.map(factory.getOWLClassAssertionAxiom(sup, _))
           /** Enumeration of individuals on the rhs
-            * It's supported only when of cardinality < 2.
+            *
+            *   A c {a1, ... ,an} -> { A c {a1} u ... u {an} }
             */
-          case (_, sup: OWLObjectOneOf) if sup.getIndividuals.length == 0 =>
-            normalize(factory.getOWLSubClassOfAxiom(sub, factory.getOWLNothing))
           case (_, sup: OWLObjectOneOf) if sup.getIndividuals.length > 2 =>
-            notInHornALCHOIQ(a)
+            normalize(
+              factory.getOWLSubClassOfAxiom(
+                sub,
+                factory.getOWLObjectUnionOf(
+                  sup.getIndividuals.map(factory.getOWLObjectOneOf(_))
+                )
+              )
+            )
           /** Class complement on the lhs
             *
-            *   ~C c D -> top c C n D
+            *   ~C c D -> top c C u D
             */
           case (sub: OWLObjectComplementOf, _) =>
             normalize(
               factory.getOWLSubClassOfAxiom(
                 factory.getOWLThing,
-                factory.getOWLObjectIntersectionOf(sub.getComplementNNF, sup)
+                factory.getOWLObjectUnionOf(sub.getComplementNNF, sup)
               )
             )
           /** Class complement on the rhs
@@ -414,8 +457,8 @@ class Normalizer() {
               )
             )
           /** Self-restriction over an object property */
-          case (sub: OWLObjectHasSelf, _) => notInHornALCHOIQ(a)
-          case (_, sup: OWLObjectHasSelf) => notInHornALCHOIQ(a)
+          case (sub: OWLObjectHasSelf, _) => notSupported(a)
+          case (_, sup: OWLObjectHasSelf) => notSupported(a)
 
           /** Axiom is already normalized */
           case _ => Seq(a)
@@ -513,17 +556,17 @@ class Normalizer() {
       case a: OWLNegativeDataPropertyAssertionAxiom =>
         normalize(a.getAxiomWithoutAnnotations.asOWLSubClassOfAxiom)
 
-      /** Not in Horn-ALCHOIQ */
+      case a: OWLTransitiveObjectPropertyAxiom => {
+        val role = a.getProperty
+        normalize(
+          factory.getOWLSubPropertyChainOfAxiom( List(role, role), role)
+        )
+      }
 
-      case a: OWLTransitiveObjectPropertyAxiom => notInHornALCHOIQ(a)
+      case a: OWLReflexiveObjectPropertyAxiom =>
+        normalize(a.getAxiomWithoutAnnotations.asOWLSubClassOfAxiom)
 
-      case a: OWLReflexiveObjectPropertyAxiom => notInHornALCHOIQ(a)
-
-      case a: OWLSubPropertyChainOfAxiom => notInHornALCHOIQ(a)
-
-      /** Unsupported */
-
-      case a: OWLAsymmetricObjectPropertyAxiom => notInHornALCHOIQ(a)
+      case a: OWLAsymmetricObjectPropertyAxiom => notSupported(a)
 
       case a: OWLDatatypeDefinitionAxiom => notSupported(a)
 
@@ -536,74 +579,17 @@ class Normalizer() {
       case a: SWRLRule => notSupported(a)
 
       /** Axiom is already normalized */
+      //case a: OWLSubPropertyChainOfAxiom => notSupported(a)
       case a => Seq(a)
     }
 
-  /** Shift an axiom with disjunction on the rhs */
-  private def shift(
-      sub: OWLClassExpression,
-      sup: OWLObjectUnionOf
-  ): Seq[OWLLogicalAxiom] = {
-    val body =
-      sub.asConjunctSet.map((atom) => (atom, RSAUtil.getFreshOWLClass()))
-    val head =
-      sup.asDisjunctSet.map((atom) => (atom, RSAUtil.getFreshOWLClass()))
-
-    /* Update statistics */
-    shifted += 1
-
-    val r1 =
-      factory.getOWLSubClassOfAxiom(
-        factory.getOWLObjectIntersectionOf(
-          (body.map(_._1) ++ head.map(_._2)): _*
-        ),
-        factory.getOWLNothing
-      )
-
-    val r2s =
-      for {
-        (a, na) <- head
-        hs = head.map(_._2).filterNot(_ equals na)
-      } yield factory.getOWLSubClassOfAxiom(
-        factory.getOWLObjectIntersectionOf(
-          (body.map(_._1) ++ hs): _*
-        ),
-        a
-      )
-
-    val r3s =
-      for {
-        (a, na) <- body
-        bs = body.map(_._1).filterNot(_ equals a)
-      } yield factory.getOWLSubClassOfAxiom(
-        factory.getOWLObjectIntersectionOf(
-          (bs ++ head.map(_._2)): _*
-        ),
-        na
-      )
-
-    Seq(r1) ++ r2s ++ r3s
-  }
-
-  /** Approximation function for axioms out of Horn-ALCHOIQ
-    *
-    * By default discards the axiom, which guarantees a lower bound
-    * ontology w.r.t. CQ answering.
-    */
-  protected def notInHornALCHOIQ(
-      axiom: OWLLogicalAxiom
-  ): Seq[OWLLogicalAxiom] = {
-    /* Update statistics */
-    discarded += 1
-    Logger.print(
-      s"'$axiom' has been ignored because it is not in Horn-ALCHOIQ",
-      Logger.VERBOSE
-    )
-    Seq()
-  }
-
   /** Non supported axioms */
   private def notSupported(axiom: OWLLogicalAxiom): Seq[OWLLogicalAxiom] =
+    // Logger.print(
+    //   s"'$axiom' has been ignored because it is not in Horn-ALCHOIQ",
+    //   Logger.VERBOSE
+    // )
+    // Seq()
     throw new RuntimeException(
       s"'$axiom' is not currently supported."
     )
