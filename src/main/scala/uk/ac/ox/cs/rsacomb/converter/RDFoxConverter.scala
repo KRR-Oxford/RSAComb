@@ -91,35 +91,37 @@ trait RDFoxConverter {
   protected def ResultF(atoms: List[TupleTableAtom]): Result = (atoms, List())
   protected def ResultR(rules: List[Rule]): Result = (List(), rules)
 
-  /** Converts a
-    * [[org.semanticweb.owlapi.model.OWLLogicalAxiom OWLLogicalAxiom]]
-    * into a collection of
-    * [[tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom TupleTableAtoms]]
-    * and
-    * [[tech.oxfordsemantic.jrdfox.logic.datalog.Rule Rules]].
+  /** Converts a [[OWLLogicalAxiom]] into a collection of [[TupleTableAtoms]] and [[Rules]].
     *
     * @note not all possible axioms are handled correctly, and in
     * general they are assumed to be normalised. Following is a list of
     * all unhandled class expressions:
     * - [[org.semanticweb.owlapi.model.OWLAsymmetricObjectPropertyAxiom OWLAsymmetricObjectPropertyAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLDataPropertyAssertionAxiom OWLDataPropertyAssertionAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLDataPropertyRangeAxiom OWLDataPropertyRangeAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLDatatypeDefinitionAxiom OWLDatatypeDefinitionAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLDifferentIndividualsAxiom OWLDifferentIndividualsAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLDisjointDataPropertiesAxiom OWLDisjointDataPropertiesAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLDisjointObjectPropertiesAxiom OWLDisjointObjectPropertiesAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLHasKeyAxiom OWLHasKeyAxiom]]
+    * - [[org.semanticweb.owlapi.model.SWRLRule SWRLRule]]
+    *
+    * @note The following axioms are not handled directly but can be
+    * normalised beforehand.
+    *
+    * - [[org.semanticweb.owlapi.model.OWLTransitiveObjectPropertyAxiom OWLTransitiveObjectPropertyAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLDataPropertyAssertionAxiom OWLDataPropertyAssertionAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLDataPropertyRangeAxiom OWLDataPropertyRangeAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLDifferentIndividualsAxiom OWLDifferentIndividualsAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLReflexiveObjectPropertyAxiom OWLReflexiveObjectPropertyAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLSameIndividualAxiom OWLSameIndividualAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLNegativeDataPropertyAssertionAxiom OWLNegativeDataPropertyAssertionAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLNegativeObjectPropertyAssertionAxiom OWLNegativeObjectPropertyAssertionAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLIrreflexiveObjectPropertyAxiom OWLIrreflexiveObjectPropertyAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLDisjointUnionAxiom OWLDisjointUnionAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLEquivalentDataPropertiesAxiom OWLEquivalentDataPropertiesAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLFunctionalDataPropertyAxiom OWLFunctionalDataPropertyAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLHasKeyAxiom OWLHasKeyAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLIrreflexiveObjectPropertyAxiom OWLIrreflexiveObjectPropertyAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLNegativeDataPropertyAssertionAxiom OWLNegativeDataPropertyAssertionAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLNegativeObjectPropertyAssertionAxiom OWLNegativeObjectPropertyAssertionAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLReflexiveObjectPropertyAxiom OWLReflexiveObjectPropertyAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLSameIndividualAxiom OWLSameIndividualAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLSubPropertyChainOfAxiom OWLSubPropertyChainOfAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLTransitiveObjectPropertyAxiom OWLTransitiveObjectPropertyAxiom]]
-    * - [[org.semanticweb.owlapi.model.SWRLRule SWRLRule]]
+    *
+    * @see [[Normaliser]]
+    * @see
+    *   http://owlcs.github.io/owlapi/apidocs_5/index.html
     */
   def convert(
       axiom: OWLLogicalAxiom,
@@ -250,20 +252,26 @@ trait RDFoxConverter {
           ResultF(List(prop))
         }
 
-      case a: OWLDataPropertyRangeAxiom =>
-        Result() // ignored
-
-      case a: OWLFunctionalDataPropertyAxiom =>
-        Result()
-
-      case a: OWLTransitiveObjectPropertyAxiom =>
-        Result()
+      case a: OWLSubPropertyChainOfAxiom => {
+        val (term1, body) = a.getPropertyChain.foldLeft((term, List[TupleTableAtom]())){
+          case ((term, atoms), prop) => {
+            val term1 = RSAUtil.genFreshVariable()
+            val atom = convert(prop, term, term1, suffix)
+            (term1, atoms :+ atom)
+          }
+        }
+        val head = convert(a.getSuperProperty, term, term1, suffix)
+        ResultR(List(Rule.create(head, body)))
+      }
 
       /** Catch-all case for all unhandled axiom types. */
-      case a => default(axiom)
+      case a => unsupported(axiom)
     }
 
-  protected def default(axiom: OWLLogicalAxiom): Result =
+  protected def toBeNormalised(axiom: OWLLogicalAxiom): Result =
+    throw new RuntimeException(s"Axiom '$axiom' should be normalised!")
+
+  protected def unsupported(axiom: OWLLogicalAxiom): Result =
     throw new RuntimeException(s"Axiom '$axiom' is not supported (yet?)")
 
   /** Converts a class expression into a collection of atoms.

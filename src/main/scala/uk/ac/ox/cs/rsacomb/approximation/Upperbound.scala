@@ -55,44 +55,6 @@ class Upperbound extends Approximation[RSAOntology] {
       )
     )
 
-  /** Discards all axioms outside ALCHOIQ */
-  // private def inALCHOIQ(axiom: OWLLogicalAxiom): Boolean =
-  //   axiom match {
-  //     case a: OWLSubClassOfAxiom => {
-  //       val sub = a.getSubClass.getNNF
-  //       val sup = a.getSuperClass.getNNF
-  //       (sub, sup) match {
-  //         case (sub: OWLObjectAllValuesFrom, _) => false
-  //         case (sub: OWLDataAllValuesFrom, _)   => false
-  //         case (_, sup: OWLDataAllValuesFrom)   => false
-  //         case (sub: OWLObjectMinCardinality, _) if sub.getCardinality >= 2 =>
-  //           false
-  //         case (sub: OWLDataMinCardinality, _) if sub.getCardinality >= 2 =>
-  //           false
-  //         case (_, sup: OWLObjectMinCardinality) if sup.getCardinality >= 2 =>
-  //           false
-  //         case (_, sup: OWLDataMinCardinality) if sup.getCardinality >= 2 =>
-  //           false
-  //         case (sub: OWLObjectMaxCardinality, _) => false
-  //         case (sub: OWLDataMaxCardinality, _)   => false
-  //         case (_, sup: OWLObjectMaxCardinality) if sup.getCardinality >= 2 =>
-  //           false
-  //         case (_, sup: OWLDataMaxCardinality) if sup.getCardinality >= 1 =>
-  //           false
-  //         case (_, sup: OWLObjectOneOf) if sup.getIndividuals.length > 2 =>
-  //           false
-  //         case (sub: OWLObjectHasSelf, _) => false
-  //         case (_, sup: OWLObjectHasSelf) => false
-  //         case _                          => true
-  //       }
-  //     }
-  //     case a: OWLTransitiveObjectPropertyAxiom => false
-  //     case a: OWLReflexiveObjectPropertyAxiom  => false
-  //     case a: OWLSubPropertyChainOfAxiom       => false
-  //     case a: OWLAsymmetricObjectPropertyAxiom => false
-  //     case a                                   => true
-  //   }
-
   /** Turn disjuncts into conjuncts
     *
     * This is a very naïve way of getting rid of disjunction preserving
