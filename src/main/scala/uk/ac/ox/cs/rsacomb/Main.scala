@@ -28,7 +28,7 @@ import sparql.ConjunctiveQuery
 
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
 import uk.ac.ox.cs.rsacomb.converter.Normalizer
-import uk.ac.ox.cs.rsacomb.approximation.Lowerbound
+import uk.ac.ox.cs.rsacomb.approximation.{Upperbound, Lowerbound}
 
 case class RSAOption[+T](opt: T) {
   def get[T]: T = opt.asInstanceOf[T]
@@ -133,7 +133,7 @@ object RSAComb extends App {
   ).normalize(new Normalizer)
 
   /* Approximate the ontology to RSA */
-  val toRSA = new Lowerbound
+  val toRSA = new Upperbound
   val rsa = ontology approximate toRSA
 
   if (config contains 'query) {

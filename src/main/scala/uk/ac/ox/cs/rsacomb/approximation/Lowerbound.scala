@@ -13,8 +13,8 @@ import scalax.collection.GraphPredef._, scalax.collection.GraphEdge._
 import scalax.collection.GraphTraversal._
 
 import uk.ac.ox.cs.rsacomb.RSAOntology
-import uk.ac.ox.cs.rsacomb.RSAUtil
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
+import uk.ac.ox.cs.rsacomb.util.DataFactory
 
 object Lowerbound {
 
@@ -38,7 +38,8 @@ object Lowerbound {
   *
   * @see [[uk.ac.ox.cs.rsacomb.converter.Normalizer]]
   */
-class Lowerbound extends Approximation[RSAOntology] {
+class Lowerbound(implicit fresh: DataFactory)
+    extends Approximation[RSAOntology] {
 
   /** Simplify conversion between Java and Scala collections */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
@@ -122,12 +123,10 @@ class Lowerbound extends Approximation[RSAOntology] {
         val sup = a.getSuperClass.getNNF
         sup match {
           case sup: OWLObjectUnionOf => {
-            val body = sub.asConjunctSet.map((atom) =>
-              (atom, RSAUtil.getFreshOWLClass())
-            )
-            val head = sup.asDisjunctSet.map((atom) =>
-              (atom, RSAUtil.getFreshOWLClass())
-            )
+            val body =
+              sub.asConjunctSet.map((atom) => (atom, fresh.getOWLClass))
+            val head =
+              sup.asDisjunctSet.map((atom) => (atom, fresh.getOWLClass))
 
             val r1 =
               Lowerbound.factory.getOWLSubClassOfAxiom(

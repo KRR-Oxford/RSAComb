@@ -35,9 +35,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{Resource, Term, Variable}
 import uk.ac.ox.cs.rsacomb.approximation.Approximation
 import uk.ac.ox.cs.rsacomb.converter._
 import uk.ac.ox.cs.rsacomb.suffix._
-import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
-
-import uk.ac.ox.cs.rsacomb.RSAUtil
+import uk.ac.ox.cs.rsacomb.util.{DataFactory, RDFoxUtil, RSA}
 
 object Ontology {
 
@@ -95,12 +93,13 @@ object Ontology {
           unsafe: List[OWLObjectPropertyExpression],
           skolem: SkolemStrategy,
           suffix: RSASuffix
-      ): Shards =
+      )(implicit fresh: DataFactory): Shards =
         (expr, skolem) match {
 
           case (e: OWLObjectSomeValuesFrom, c: Constant) => {
             nodemap.update(c.iri.getIRI, c.axiom)
-            val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
+            val (res, ext) =
+              super.convert(e, term, unsafe, skolem, suffix)(fresh)
             if (unsafe contains e.getProperty)
               (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
             else
@@ -109,19 +108,20 @@ object Ontology {
 
           case (e: OWLDataSomeValuesFrom, c: Constant) => {
             nodemap.update(c.iri.getIRI, c.axiom)
-            val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
+            val (res, ext) =
+              super.convert(e, term, unsafe, skolem, suffix)(fresh)
             if (unsafe contains e.getProperty)
               (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
             else
               (RSA.PE(term, c.iri) :: res, ext)
           }
 
-          case _ => super.convert(expr, term, unsafe, skolem, suffix)
+          case _ => super.convert(expr, term, unsafe, skolem, suffix)(fresh)
         }
     }
 
     /* Ontology convertion into LP rules */
-    val term = RSAUtil.genFreshVariable()
+    val term = Variable.create("X")
     val result = axioms.map(a =>
       RSAConverter.convert(a, term, unsafe, new Constant(a), Empty)
     )
@@ -215,8 +215,6 @@ class Ontology(val axioms: List[OWLLogicalAxiom], val datafiles: List[File]) {
 
   /** Simplify conversion between Java and Scala collections */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
-
-  println(s"Axioms: ${axioms.length}")
 
   /** OWLOntology based on input axioms
     *

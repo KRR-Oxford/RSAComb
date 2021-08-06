@@ -13,8 +13,8 @@ import scalax.collection.GraphPredef._, scalax.collection.GraphEdge._
 import scalax.collection.GraphTraversal._
 
 import uk.ac.ox.cs.rsacomb.RSAOntology
-import uk.ac.ox.cs.rsacomb.RSAUtil
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
+import uk.ac.ox.cs.rsacomb.util.DataFactory
 
 object Upperbound {
 
@@ -38,7 +38,8 @@ object Upperbound {
   *
   * @see [[uk.ac.ox.cs.rsacomb.converter.Normalizer]]
   */
-class Upperbound extends Approximation[RSAOntology] {
+class Upperbound(implicit fresh: DataFactory)
+    extends Approximation[RSAOntology] {
 
   /** Simplify conversion between Java and Scala collections */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
@@ -138,15 +139,17 @@ class Upperbound extends Approximation[RSAOntology] {
       import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom._
       axiom.toTriple match {
         case Some((subclass, role, filler)) => {
-          val skolem = Upperbound.factory.getOWLNamedIndividual(s"i_${axiom.toString.hashCode}")
-          val fresh = RSAUtil.getFreshOWLClass()
+          val skolem = Upperbound.factory.getOWLNamedIndividual(
+            s"i_${axiom.toString.hashCode}"
+          )
+          val cls = fresh.getOWLClass
           List(
             Upperbound.factory.getOWLSubClassOfAxiom(
               subclass,
-              Upperbound.factory.getOWLObjectSomeValuesFrom(role, fresh)
+              Upperbound.factory.getOWLObjectSomeValuesFrom(role, cls)
             ),
             Upperbound.factory.getOWLSubClassOfAxiom(
-              fresh,
+              cls,
               Upperbound.factory.getOWLObjectOneOf(skolem)
             ),
             Upperbound.factory.getOWLClassAssertionAxiom(filler, skolem)
@@ -169,5 +172,5 @@ class Upperbound extends Approximation[RSAOntology] {
   // val edges2 = Seq('I ~> 'M, 'I ~> 'L, 'L ~> 'N, 'M ~> 'N)
   // val edges3 = Seq('P ~> 'O)
   // val graph = Graph.from(edges = edges1 ++ edges2 ++ edges3)
-  
+
 }

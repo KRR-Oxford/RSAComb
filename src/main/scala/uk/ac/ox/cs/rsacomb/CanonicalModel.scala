@@ -39,7 +39,7 @@ import implicits.JavaCollections._
 
 import uk.ac.ox.cs.rsacomb.converter._
 import uk.ac.ox.cs.rsacomb.suffix._
-import uk.ac.ox.cs.rsacomb.util.RSA
+import uk.ac.ox.cs.rsacomb.util.{DataFactory, RSA}
 
 /** Canonical model generator
   *
@@ -92,7 +92,7 @@ class CanonicalModel(val ontology: RSAOntology) {
   val (facts, rules): (List[TupleTableAtom], List[Rule]) = {
     // Compute rules from ontology axioms
     val (facts, rules) = {
-      val term = RSAUtil.genFreshVariable()
+      val term = Variable.create("X")
       val unsafe = ontology.unsafe
       ontology.axioms
         .map(a =>
@@ -216,13 +216,13 @@ class CanonicalModel(val ontology: RSAOntology) {
         unsafe: List[OWLObjectPropertyExpression],
         skolem: SkolemStrategy,
         suffix: RSASuffix
-    ): Result =
+    )(implicit fresh: DataFactory): Result =
       axiom match {
 
         case a: OWLSubClassOfAxiom if a.isT5 => {
           val role = axiom.objectPropertyExpressionsInSignature(0)
           if (unsafe contains role)
-            super.convert(a, term, unsafe, new Standard(a), Forward)
+            super.convert(a, term, unsafe, new Standard(a), Forward)(fresh)
           else {
             val (f1, r1) = rules1(a)
             (f1, r1 ::: rules2(a) ::: rules3(a))
@@ -231,12 +231,12 @@ class CanonicalModel(val ontology: RSAOntology) {
 
         case a: OWLSubObjectPropertyOfAxiom => {
           val (facts, rules) = List(Empty, Forward, Backward)
-            .map(super.convert(a, term, unsafe, NoSkolem, _))
+            .map(super.convert(a, term, unsafe, NoSkolem, _)(fresh))
             .unzip
           (facts.flatten, rules.flatten)
         }
 
-        case a => super.convert(a, term, unsafe, skolem, suffix)
+        case a => super.convert(a, term, unsafe, skolem, suffix)(fresh)
 
       }
   }

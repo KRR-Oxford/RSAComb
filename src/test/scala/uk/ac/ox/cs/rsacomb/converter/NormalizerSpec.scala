@@ -27,6 +27,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{Variable, IRI}
 import uk.ac.ox.cs.rsacomb.converter.RDFoxConverter
 import uk.ac.ox.cs.rsacomb.suffix.{Empty, Forward, Backward, Inverse}
 import uk.ac.ox.cs.rsacomb.converter.{Normalizer, SkolemStrategy, NoSkolem}
+import uk.ac.ox.cs.rsacomb.util.DataFactory
 
 object NormalizerSpec {
   val manager = OWLManager.createOWLOntologyManager()
@@ -89,27 +90,58 @@ class NormalizerSpec extends AnyFlatSpec with Matchers with LoneElement {
       ).flatMap(normalizer.normalize)
   }
 
-  "Disjunction on the rhs" should "be shifted" in {
-    def cls(n: Int) = factory.getOWLClass(s"_:class$n")
-    val axiom1 =
-      factory.getOWLSubClassOfAxiom(
-        factory.getOWLObjectIntersectionOf(cls(1), cls(2), cls(3)),
-        factory.getOWLObjectUnionOf(cls(4), cls(5))
-      )
-    val axiom2 =
-      factory.getOWLSubClassOfAxiom(
-        cls(1),
-        factory.getOWLObjectUnionOf(cls(2), cls(3), cls(4))
-      )
-    val axiom3 =
-      factory.getOWLSubClassOfAxiom(
-        factory.getOWLObjectIntersectionOf(cls(1), cls(2), cls(3)),
-        factory.getOWLObjectUnionOf(cls(4))
-      )
-    normalizer.normalize(axiom1) should have length 5
-    normalizer.normalize(axiom2) should have length 5
-    normalizer.normalize(axiom3) should have length 4
+  "A c \\exists R . D" should "be normalised to { A c \\exists R . C, C c D } if D is not a concept name" in {
+    val seed = 42
+    val test = normalizer.normalize(
+      factory
+        .getOWLSubClassOfAxiom(
+          factory.getOWLClass("A"),
+          factory.getOWLObjectSomeValuesFrom(
+            factory.getOWLObjectProperty("R"),
+            factory.getOWLObjectIntersectionOf(
+              factory.getOWLClass("D1"),
+              factory.getOWLClass("D2")
+            )
+          )
+        )
+    )(DataFactory(seed))
+    val cls = DataFactory(seed).getOWLClass
+    val result = List(
+      factory
+        .getOWLSubClassOfAxiom(
+          factory.getOWLClass("A"),
+          factory.getOWLObjectSomeValuesFrom(
+            factory.getOWLObjectProperty("R"),
+            cls
+          )
+        ),
+      factory.getOWLSubClassOfAxiom(cls, factory.getOWLClass("D1")),
+      factory.getOWLSubClassOfAxiom(cls, factory.getOWLClass("D2"))
+    )
+    test should contain theSameElementsAs result
   }
+
+  // "Disjunction on the rhs" should "be shifted" in {
+  //   def cls(n: Int) = factory.getOWLClass(s"_:class$n")
+  //   val axiom1 =
+  //     factory.getOWLSubClassOfAxiom(
+  //       factory.getOWLObjectIntersectionOf(cls(1), cls(2), cls(3)),
+  //       factory.getOWLObjectUnionOf(cls(4), cls(5))
+  //     )
+  //   val axiom2 =
+  //     factory.getOWLSubClassOfAxiom(
+  //       cls(1),
+  //       factory.getOWLObjectUnionOf(cls(2), cls(3), cls(4))
+  //     )
+  //   val axiom3 =
+  //     factory.getOWLSubClassOfAxiom(
+  //       factory.getOWLObjectIntersectionOf(cls(1), cls(2), cls(3)),
+  //       factory.getOWLObjectUnionOf(cls(4))
+  //     )
+  //   normalizer.normalize(axiom1) should have length 5
+  //   normalizer.normalize(axiom2) should have length 5
+  //   normalizer.normalize(axiom3) should have length 4
+  // }
   //"A class name" should "be converted into a single atom" in {
   //  val cls = factory.getOWLClass(iriString0)
   //  val atom = TupleTableAtom.rdf(term0, IRI.RDF_TYPE, IRI.create(iriString0))

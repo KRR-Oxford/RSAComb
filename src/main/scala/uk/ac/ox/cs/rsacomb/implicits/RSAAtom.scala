@@ -25,10 +25,9 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
 }
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI}
 
-import uk.ac.ox.cs.rsacomb.RSAUtil
 import uk.ac.ox.cs.rsacomb.RSAOntology
 import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Nth}
-import uk.ac.ox.cs.rsacomb.util.RDFoxUtil
+import uk.ac.ox.cs.rsacomb.util.{DataFactory, RDFoxUtil}
 
 /* Is this the best way to determine if an atom is an RDF triple?
  * Note that we can't use `getNumberOfArguments()` because is not
@@ -91,11 +90,13 @@ object RSAAtom {
         TupleTableAtom.create(ttname, atom.getArguments())
       }
 
-    lazy val reified: (Option[TupleTableAtom], List[TupleTableAtom]) =
+    def reified(implicit
+        fresh: DataFactory
+    ): (Option[TupleTableAtom], List[TupleTableAtom]) =
       if (isRDF) {
         (None, List(atom))
       } else {
-        val varS = RSAUtil.genFreshVariable()
+        val varS = fresh.getVariable
         val skolem = RDFoxUtil.skolem(name, (args :+ varS): _*)
         val atom = TupleTableAtom.rdf(varS, IRI.RDF_TYPE, name)
         val atoms = args.zipWithIndex

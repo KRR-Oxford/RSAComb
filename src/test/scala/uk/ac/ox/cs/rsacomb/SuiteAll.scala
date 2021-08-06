@@ -32,7 +32,7 @@ import uk.ac.ox.cs.rsacomb.sparql.{
 class SuiteAll
     extends Suites(
       new Ontology1_CanonicalModelSpec,
-      new Ontology2_CanonicalModelSpec,
+      //new Ontology2_CanonicalModelSpec,
       new NaiveFilteringProgramSpec,
       new OWLAxiomSpec,
       new OWLClassSpec,

@@ -81,30 +81,6 @@ import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
 import uk.ac.ox.cs.rsacomb.util.Logger
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
 
-object RSAUtil {
-
-  // implicit def axiomsToOntology(axioms: Seq[OWLAxiom]) = {
-  //   val manager = OWLManager.createOWLOntologyManager()
-  //   manager.createOntology(axioms.asJava)
-  // }
-
-  /** Manager instance to interface with OWLAPI */
-  val manager = OWLManager.createOWLOntologyManager()
-  val factory = manager.getOWLDataFactory()
-
-  /** Simple fresh variable/class generator */
-  private var counter = -1;
-  def genFreshVariable(): Variable = {
-    counter += 1
-    Variable.create(f"I$counter%05d")
-  }
-  def getFreshOWLClass(): OWLClass = {
-    counter += 1
-    factory.getOWLClass(s"X$counter")
-  }
-
-}
-
 object RSAOntology {
 
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
