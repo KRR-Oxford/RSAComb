@@ -84,8 +84,9 @@ object RDFoxUtil {
     val password = ""
     val server =
       ConnectionFactory.newServerConnection(serverUrl, role, password)
+    opts.put("type", "par-complex-nn")
     if (!server.containsDataStore(datastore))
-      server.createDataStore(datastore, "par-complex-nn", opts)
+      server.createDataStore(datastore, opts)
     val data = server.newDataStoreConnection(datastore)
     (server, data)
   }

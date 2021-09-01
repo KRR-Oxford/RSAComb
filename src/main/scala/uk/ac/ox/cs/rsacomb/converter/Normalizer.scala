@@ -599,13 +599,14 @@ class Normalizer() {
     }
 
   /** Non supported axioms */
-  private def notSupported(axiom: OWLLogicalAxiom): Seq[OWLLogicalAxiom] =
-    // Logger.print(
-    //   s"'$axiom' has been ignored because it is not in Horn-ALCHOIQ",
-    //   Logger.VERBOSE
-    // )
-    // Seq()
-    throw new RuntimeException(
-      s"'$axiom' is not currently supported."
+  private def notSupported(axiom: OWLLogicalAxiom): Seq[OWLLogicalAxiom] = {
+    Logger.print(
+      s"'$axiom' has been ignored because it is not in Horn-ALCHOIQ",
+      Logger.VERBOSE
     )
+    Seq()
+    // throw new RuntimeException(
+    //   s"'$axiom' is not currently supported."
+    // )
+  }
 }

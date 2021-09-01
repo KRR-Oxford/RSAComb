@@ -518,6 +518,7 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
       /* Generate `named` predicates */
       RDFoxUtil.addFacts(data, (individuals ++ literals) map RSA.Named)
       data.evaluateUpdate(
+        null, // the base IRI for the query (if null, a default is used)
         RSA.Prefixes,
         "INSERT { ?X a  rsa:Named } WHERE { ?X a owl:Thing }",
         new java.util.HashMap[String, String]
