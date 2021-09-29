@@ -35,7 +35,8 @@ lazy val root = (project in file("."))
       scalatestFlatSpec % Test,
       scalatestShouldMatchers % Test,
       apibinding,
-      graphcore
+      graphcore,
+      ujson
     )
   )
 

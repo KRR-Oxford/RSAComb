@@ -32,12 +32,14 @@ import uk.ac.ox.cs.rsacomb.util.RDFoxUtil
 /** Factory for [[uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery]]. */
 object ConjunctiveQuery {
 
+  private var idCounter: Int = 0;
+
   /** Creates a new ConjunctiveQuery instance.
     *
     * @param query `SelectQuery` instance representing the actual query
     */
   def apply(query: SelectQuery): ConjunctiveQuery =
-    new ConjunctiveQuery(query)
+    new ConjunctiveQuery({ idCounter += 1; idCounter }, query)
 
   /** Creates a new ConjunctiveQuery from a query string
     *
@@ -66,6 +68,7 @@ object ConjunctiveQuery {
   * `SelectQuery` to be considered a conjunctive query.
   */
 class ConjunctiveQuery(
+    val id: Int,
     query: SelectQuery,
     val prefixes: Prefixes = new Prefixes()
 ) {
