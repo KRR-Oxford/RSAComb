@@ -340,7 +340,7 @@ trait RDFoxConverter {
           .collect { case x: OWLNamedIndividual => x }
         if (named.length != 1)
           throw new RuntimeException(s"Class expression '$e' has arity != 1.")
-        val atom = TupleTableAtom.rdf(term, IRI.SAME_AS, named.head.getIRI)
+        val atom = RSA.Congruent(term, named.head.getIRI)
         (List(atom), List())
       }
 
@@ -412,7 +412,7 @@ trait RDFoxConverter {
         val (res, ext) =
           vars.map(convert(cls, _, unsafe, skolem, suffix)(fresh)).unzip
         val props = vars.map(convert(role, term, _, suffix)(fresh))
-        val eq = TupleTableAtom.rdf(y, IRI.SAME_AS, z)
+        val eq = RSA.Congruent(y, z)
         (List(eq), res.flatten ++ props)
       }
 
