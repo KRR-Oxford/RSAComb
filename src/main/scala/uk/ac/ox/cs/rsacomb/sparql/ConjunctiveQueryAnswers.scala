@@ -46,7 +46,7 @@ class ConjunctiveQueryAnswers(
   val lengthWithMultiplicity: Long = answers.map(_._1).sum
 
   /** Serialise answers as JSON file */
-  def toJSON(): ujson.Js.Value = {
+  def toJSON(): ujson.Js.Value =
     ujson.Obj(
       "queryID" -> query.id,
       "queryText" -> query.toString
@@ -56,7 +56,6 @@ class ConjunctiveQueryAnswers(
       "answerVariables" -> ujson.Arr(query.answer.map(_.toString())),
       "answers" -> ujson.Arr(answers.map(_._2.mkString(" ")).sorted)
     )
-  }
 
   override def toString(): String =
     if (query.bcq) {

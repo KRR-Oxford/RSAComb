@@ -16,7 +16,8 @@
 
 package uk.ac.ox.cs.rsacomb
 
-import java.io.File
+import java.io.{File, PrintWriter}
+import java.nio.file.{Path, Paths, InvalidPathException}
 import java.util.HashMap
 import scala.collection.JavaConverters._
 import tech.oxfordsemantic.jrdfox.client.UpdateType
@@ -97,6 +98,14 @@ object RSAConfig {
         println(help)
         sys.exit(0)
       }
+      case flag @ ("-o" | "--output") :: _output :: tail =>
+        try {
+          val output = Paths.get(_output)
+          parse(tail, config ++ Map('output -> output))
+        } catch {
+          case e: InvalidPathException =>
+            exit(s"'${_output}' is not a valid filename.")
+        }
       case flag @ ("-q" | "--queries") :: _query :: tail => {
         val query = new File(_query)
         if (!query.isFile)
@@ -143,6 +152,11 @@ object RSAComb extends App {
       RDFoxUtil.loadQueriesFromFile(config('queries).get[File].getAbsoluteFile)
 
     val answers = rsa ask queries
+
+    /* Write answers to output file */
+    val output = new PrintWriter(config('output).get[Path].toFile)
+    output.write(ujson.write(ujson.Arr(answers.map(_.toJSON)), indent = 4))
+    output.close()
 
     // Logger.print(s"$answers", Logger.VERBOSE)
     // Logger print s"Number of answers: ${answers.length} (${answers.lengthWithMultiplicity})"
