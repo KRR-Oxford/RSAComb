@@ -496,6 +496,8 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
   def unfold(axiom: OWLSubClassOfAxiom): Set[Term] =
     this.self(axiom) | this.cycle(axiom)
 
+  def ask(queries: Seq[ConjunctiveQuery]): Seq[ConjunctiveQueryAnswers] = ???
+
   /** Returns the answers to a query
     *
     *  @param query query to execute
@@ -553,7 +555,7 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
         val ans = filter.answerQuery
         RDFoxUtil
           .submitQuery(data, ans, RSA.Prefixes)
-          .map(new ConjunctiveQueryAnswers(query.bcq, query.variables, _))
+          .map(new ConjunctiveQueryAnswers(query, query.variables, _))
           .get
       }
 

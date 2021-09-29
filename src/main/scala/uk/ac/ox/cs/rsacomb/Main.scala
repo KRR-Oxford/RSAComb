@@ -49,7 +49,7 @@ object RSAConfig {
       -h | -? | --help
           print this help message
 
-      -q <file> | --query <file>
+      -q <file> | --queries <file>
           path to a file containing a single SPARQL query. If no query
           is provided, only the approximation to RSA will be performed.
 
@@ -97,11 +97,11 @@ object RSAConfig {
         println(help)
         sys.exit(0)
       }
-      case flag @ ("-q" | "--query") :: _query :: tail => {
+      case flag @ ("-q" | "--queries") :: _query :: tail => {
         val query = new File(_query)
         if (!query.isFile)
           exit(s"'$query' is not a valid filename.")
-        parse(tail, config ++ Map('query -> query))
+        parse(tail, config ++ Map('queries -> query))
       }
       case _ontology :: _data => {
         val ontology = new File(_ontology)
@@ -132,36 +132,32 @@ object RSAComb extends App {
     config('data).get[List[File]]
   ).normalize(new Normalizer)
 
+  //ontology.axioms foreach println
+
   /* Approximate the ontology to RSA */
   val toRSA = new Upperbound
   val rsa = ontology approximate toRSA
 
-  if (config contains 'query) {
-    val query =
-      RDFoxUtil.loadQueryFromFile(config('query).get[File].getAbsoluteFile)
+  if (config contains 'queries) {
+    val queries =
+      RDFoxUtil.loadQueriesFromFile(config('queries).get[File].getAbsoluteFile)
 
-    ConjunctiveQuery.parse(query) match {
-      case Some(query) => {
-        // Retrieve answers
-        val answers = rsa ask query
-        Logger.print(s"$answers", Logger.VERBOSE)
-        Logger print s"Number of answers: ${answers.length} (${answers.lengthWithMultiplicity})"
-        // Retrieve unfiltered answers
-        // val unfiltered = rsa.queryDataStore(
-        //   """
-        //     SELECT (count(?K) as ?COUNT)
-        //     WHERE {
-        //         ?K a rsa:QM .
-        //     }
-        //   """,
-        //   RSA.Prefixes
-        // )
-        // unfiltered.foreach((u) =>
-        //   Logger print s"Number of unfiltered answers: ${u.head._2}"
-        // )
-      }
-      case None =>
-        throw new RuntimeException("Submitted query is not conjunctive")
-    }
+    val answers = rsa ask queries
+
+    // Logger.print(s"$answers", Logger.VERBOSE)
+    // Logger print s"Number of answers: ${answers.length} (${answers.lengthWithMultiplicity})"
+    // Retrieve unfiltered answers
+    // val unfiltered = rsa.queryDataStore(
+    //   """
+    //     SELECT (count(?K) as ?COUNT)
+    //     WHERE {
+    //         ?K a rsa:QM .
+    //     }
+    //   """,
+    //   RSA.Prefixes
+    // )
+    // unfiltered.foreach((u) =>
+    //   Logger print s"Number of unfiltered answers: ${u.head._2}"
+    // )
   }
 }

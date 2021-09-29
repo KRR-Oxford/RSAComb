@@ -41,6 +41,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
   Term
 }
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
+import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 import uk.ac.ox.cs.rsacomb.suffix.Nth
 import uk.ac.ox.cs.rsacomb.util.Logger
 
@@ -177,15 +178,6 @@ object RDFoxUtil {
   def materialize(data: DataStoreConnection): Unit =
     Logger.timed(data.updateMaterialization(), "Materialization", Logger.DEBUG)
 
-  /** Load SPARQL query from file. */
-  def loadQueryFromFile(file: File): String = {
-    val source = io.Source.fromFile(file)
-    val query = source.getLines mkString "\n"
-    Logger print s"Loaded query:\n$query"
-    source.close()
-    query
-  }
-
   /** Export data in `text/turtle`.
     *
     * @param data datastore connection from which to export data.
@@ -204,6 +196,46 @@ object RDFoxUtil {
       "application/x.datalog",
       RDFoxOpts()
     )
+  }
+
+  /** Load SPARQL queries from file.
+    *
+    * The file can list multiple queries, each preceeded with a
+    * single line containing "#^[Query<id>]" where "<id>" is a number.
+    * Empty lines are ignored.
+    *
+    * @note if a query is not recognized as a [[SelectQuery]] by RDFox
+    * it is discarded.
+    *
+    * @param file file containing a list of conjunctive queries.
+    * @param prefixes additional prefixes for the query. It defaults to
+    * an empty set.
+    *
+    * @return a list of [[tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery SelectQuery]] queries.
+    */
+  def loadQueriesFromFile(
+      file: File,
+      prefixes: Prefixes = new Prefixes()
+  ): List[ConjunctiveQuery] = {
+    val source = io.Source.fromFile(file)
+    val queries = source.getLines
+      .map(_.trim.filter(_ >= ' '))
+      .filterNot(_ == "")
+      .foldRight((List.empty[List[String]], List.empty[String])) {
+        case (line, (acc, query)) => {
+          if ("^#\\^\\[Query\\d+\\]$".r.matches(line))
+            (query :: acc, List.empty)
+          else
+            (acc, line :: query)
+        }
+      }
+      ._1
+      .map(_.mkString(" "))
+      .map(ConjunctiveQuery.parse(_, prefixes))
+      .collect { case Some(q) => q }
+    Logger print s"Loaded ${queries.length} queries from ${file.getAbsolutePath}"
+    source.close()
+    queries
   }
 
   /** Parse a SELECT query from a string in SPARQL format.
