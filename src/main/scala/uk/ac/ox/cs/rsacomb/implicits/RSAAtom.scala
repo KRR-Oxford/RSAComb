@@ -51,19 +51,14 @@ object RSAAtom {
     import RDFox._
     import JavaCollections._
 
-    val name: String = atom.getTupleTableName.getName
+    val tt: TupleTableName = atom.getTupleTableName
 
     val args: List[Term] = atom.getArguments
 
-    val isRDF: Boolean =
-      name == "http://oxfordsemantic.tech/RDFox#DefaultTriples"
+    val isRDF: Boolean = atom.getArguments.length == 3
 
-    val isClassAssertion: Boolean = {
-      isRDF && {
-        val pred = atom.getArguments.get(1)
-        pred == IRI.RDF_TYPE
-      }
-    }
+    val isClassAssertion: Boolean =
+      isRDF && atom.getArguments.get(1) == IRI.RDF_TYPE
 
     val isRoleAssertion: Boolean = isRDF && !isClassAssertion
 
@@ -77,18 +72,15 @@ object RSAAtom {
             case iri: IRI => IRI.create(iri.getIRI :: suffix)
             case other    => other
           }
-          TupleTableAtom.rdf(subj, pred, obj1)
+          TupleTableAtom.create(tt, subj, pred, obj1)
         } else {
           val pred1 = pred match {
             case iri: IRI => IRI.create(iri.getIRI :: suffix)
             case other    => other
           }
-          TupleTableAtom.rdf(subj, pred1, obj)
+          TupleTableAtom.create(tt, subj, pred1, obj)
         }
-      } else {
-        val ttname = TupleTableName.create(name :: suffix)
-        TupleTableAtom.create(ttname, atom.getArguments())
-      }
+      } else atom
 
     def reified(implicit
         fresh: DataFactory

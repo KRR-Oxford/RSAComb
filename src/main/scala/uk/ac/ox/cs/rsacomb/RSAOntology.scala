@@ -48,6 +48,7 @@ import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.logic.datalog.{
   Rule,
   TupleTableAtom,
+  TupleTableName,
   Negation,
   BodyFormula
 }
@@ -90,6 +91,20 @@ object RSAOntology {
 
   /** Name of the RDFox data store used for CQ answering */
   private val DataStore = "answer_computation"
+
+  /** Canonical model named graph */
+  private val CanonGraph: IRI =
+    RDFoxUtil.getNamedGraph(DataStore, "CanonicalModel")
+
+  /** Filtering program named graph
+    *
+    * @param query query associated with the returned named graph.
+    *
+    * @return named graph for the filtering program associated with the
+    * input query.
+    */
+  private def FilterGraph(query: ConjunctiveQuery): IRI =
+    RDFoxUtil.getNamedGraph(DataStore, s"Filter${query.id}")
 
   /** Filtering program for a given query
     *
@@ -343,11 +358,12 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
   private val topAxioms: List[Rule] = {
     val varX = Variable.create("X")
     val varY = Variable.create("Y")
+    val graph = TupleTableName.create(RSAOntology.CanonGraph.getIRI)
     concepts
       .map(c => {
         Rule.create(
-          RSA.Thing(varX),
-          TupleTableAtom.rdf(varX, IRI.RDF_TYPE, c.getIRI)
+          TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING),
+          TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, c.getIRI)
         )
       }) ++ roles.map(r => {
       val name = r match {
@@ -356,8 +372,11 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
           x.getInverse.getNamedProperty.getIRI.getIRIString :: Inverse
       }
       Rule.create(
-        List(RSA.Thing(varX), RSA.Thing(varY)),
-        List(TupleTableAtom.rdf(varX, name, varY))
+        List(
+          TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING),
+          TupleTableAtom.create(graph, varY, IRI.RDF_TYPE, IRI.THING)
+        ),
+        List(TupleTableAtom.create(graph, varX, name, varY))
       )
     })
   }
@@ -382,23 +401,31 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
     val varX = Variable.create("X")
     val varY = Variable.create("Y")
     val varZ = Variable.create("Z")
-    List(
+    val graph = TupleTableName.create(RSAOntology.CanonGraph.getIRI)
+    // Equality properties
+    val properties = List(
       // Reflexivity
-      Rule.create(RSA.Congruent(varX, varX), RSA.Thing(varX)),
+      Rule.create(
+        TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varX),
+        TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING)
+      ),
       // Simmetry
-      Rule.create(RSA.Congruent(varY, varX), RSA.Congruent(varX, varY)),
+      Rule.create(
+        TupleTableAtom.create(graph, varY, RSA.CONGRUENT, varX),
+        TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varY)
+      ),
       // Transitivity
       Rule.create(
-        RSA.Congruent(varX, varZ),
-        RSA.Congruent(varX, varY),
-        RSA.Congruent(varY, varZ)
+        TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varZ),
+        TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varY),
+        TupleTableAtom.create(graph, varY, RSA.CONGRUENT, varZ)
       )
     )
   }
 
   /** Canonical model of the ontology */
   lazy val canonicalModel = Logger.timed(
-    new CanonicalModel(this),
+    new CanonicalModel(this, RSAOntology.CanonGraph),
     "Generating canonical model program",
     Logger.DEBUG
   )
@@ -505,19 +532,18 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
     *  @return a collection of answers for each query.
     */
   def ask(queries: Seq[ConjunctiveQuery]): Seq[ConjunctiveQueryAnswers] = {
+    /* Open connection with RDFox server */
     val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
-    val canonNamedGraph = "http://cs.ox.ac.uk/isg/RSAComb#CanonicalModel"
-    // Create a new NamedGraph for the canonical model
-    data.createTupleTable(canonNamedGraph, Map("type" -> "named-graph").asJava)
 
     /* Upload data from data file */
-    RDFoxUtil.addData(canonNamedGraph, data, datafiles: _*)
+    RDFoxUtil.addData(data, RSAOntology.CanonGraph, datafiles: _*)
     /* Top / equality axiomatization */
     RDFoxUtil.addRules(data, topAxioms ++ equalityAxioms)
     /* Generate `named` predicates */
+    // TODO: do I need both to generate all NAMED atoms?
     RDFoxUtil.addFacts(
-      canonNamedGraph,
       data,
+      RSAOntology.CanonGraph,
       (individuals ++ literals) map RSA.Named
     )
     data.evaluateUpdate(
@@ -525,9 +551,9 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
       RSA.Prefixes,
       s"""
       INSERT { 
-        GRAPH <$canonNamedGraph> { ?X a rsa:Named }
+        GRAPH ${RSAOntology.CanonGraph} { ?X a ${RSA.NAMED} }
       } WHERE {
-        GRAPH <$canonNamedGraph> { ?X a owl:Thing }
+        GRAPH ${RSAOntology.CanonGraph} { ?X a ${IRI.THING} }
       }
       """,
       new java.util.HashMap[String, String]
@@ -538,7 +564,7 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
     RDFoxUtil.addRules(data, this.canonicalModel.rules)
 
     Logger print s"Canonical model facts: ${this.canonicalModel.facts.length}"
-    RDFoxUtil.addFacts(canonNamedGraph, data, this.canonicalModel.facts)
+    RDFoxUtil.addFacts(data, RSAOntology.CanonGraph, this.canonicalModel.facts)
 
     queries map { query =>
       {

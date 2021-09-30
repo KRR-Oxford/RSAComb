@@ -31,7 +31,8 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
   BodyFormula,
   Negation,
   Rule,
-  TupleTableAtom
+  TupleTableAtom,
+  TupleTableName
 }
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Term, Variable}
 
@@ -48,8 +49,9 @@ import uk.ac.ox.cs.rsacomb.util.{DataFactory, RSA}
   * (via materialization).
   *
   * @param ontology the RSA ontology the canonical model is targeting.
+  * @param graph the graph the canonical model will be generated into.
   */
-class CanonicalModel(val ontology: RSAOntology) {
+class CanonicalModel(val ontology: RSAOntology, val graph: IRI) {
 
   /** Simplify conversion between OWLAPI and RDFox concepts */
   import implicits.RDFox._
@@ -65,6 +67,7 @@ class CanonicalModel(val ontology: RSAOntology) {
     * versions need to be explicitly stated in terms of logic rules.
     */
   val rolesAdditionalRules: List[Rule] = {
+    val tt = TupleTableName.create(graph.getIRI)
     ontology.roles
       .collect { case prop: OWLObjectProperty => prop }
       .flatMap((pred) => {
@@ -83,8 +86,8 @@ class CanonicalModel(val ontology: RSAOntology) {
           )
         )
           yield Rule.create(
-            TupleTableAtom.rdf(varX, iri :: hSuffix, varY),
-            TupleTableAtom.rdf(varX, iri :: bSuffix, varY)
+            TupleTableAtom.create(tt, varX, iri :: hSuffix, varY),
+            TupleTableAtom.create(tt, varX, iri :: bSuffix, varY)
           )
       })
   }
@@ -108,6 +111,8 @@ class CanonicalModel(val ontology: RSAOntology) {
 
   object CanonicalModelConverter extends RDFoxConverter {
 
+    override val graph = TupleTableName.create(CanonicalModel.this.graph.getIRI)
+
     private def rules1(
         axiom: OWLSubClassOfAxiom
     ): Result = {
@@ -115,11 +120,10 @@ class CanonicalModel(val ontology: RSAOntology) {
       // Fresh Variables
       val v0 = RSA("v0_" ++ axiom.hashed)
       val varX = Variable.create("X")
-      implicit val unfoldTerm = RSA(unfold.hashCode.toString)
       // TODO: use axiom.toTriple instead
       val atomA: TupleTableAtom = {
         val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
-        TupleTableAtom.rdf(varX, IRI.RDF_TYPE, cls)
+        TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, cls)
       }
       val roleRf: TupleTableAtom = {
         val prop =
@@ -132,12 +136,15 @@ class CanonicalModel(val ontology: RSAOntology) {
           .getFiller
           .asInstanceOf[OWLClass]
           .getIRI
-        TupleTableAtom.rdf(v0, IRI.RDF_TYPE, cls)
+        TupleTableAtom.create(graph, v0, IRI.RDF_TYPE, cls)
       }
-      val facts = unfold map RSA.In
+      val unfoldSet = RSA(unfold.hashCode.toString)
+      val facts = unfold.map(TupleTableAtom.create(graph, _, RSA.IN, unfoldSet))
+      val notInX =
+        Negation.create(TupleTableAtom.create(graph, varX, RSA.IN, unfoldSet))
       val rules = List(
-        Rule.create(roleRf, atomA, RSA.NotIn(varX)),
-        Rule.create(atomB, atomA, RSA.NotIn(varX))
+        Rule.create(roleRf, atomA, notInX),
+        Rule.create(atomB, atomA, notInX)
       )
       (facts, rules)
     }
@@ -155,7 +162,7 @@ class CanonicalModel(val ontology: RSAOntology) {
         // Predicates
         def atomA(t: Term): TupleTableAtom = {
           val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
-          TupleTableAtom.rdf(t, IRI.RDF_TYPE, cls)
+          TupleTableAtom.create(graph, t, IRI.RDF_TYPE, cls)
         }
         def roleRf(t1: Term, t2: Term): TupleTableAtom =
           super.convert(roleR, t1, t2, Forward)
@@ -165,7 +172,7 @@ class CanonicalModel(val ontology: RSAOntology) {
             .getFiller
             .asInstanceOf[OWLClass]
             .getIRI
-          TupleTableAtom.rdf(t, IRI.RDF_TYPE, cls)
+          TupleTableAtom.create(graph, t, IRI.RDF_TYPE, cls)
         }
         //Rules
         List(
@@ -190,7 +197,7 @@ class CanonicalModel(val ontology: RSAOntology) {
       // Predicates
       def atomA(t: Term): TupleTableAtom = {
         val cls = axiom.getSubClass.asInstanceOf[OWLClass].getIRI
-        TupleTableAtom.rdf(t, IRI.RDF_TYPE, cls)
+        TupleTableAtom.create(graph, t, IRI.RDF_TYPE, cls)
       }
       def roleRf(t: Term): TupleTableAtom =
         super.convert(roleR, t, v1, Forward)
@@ -200,7 +207,7 @@ class CanonicalModel(val ontology: RSAOntology) {
           .getFiller
           .asInstanceOf[OWLClass]
           .getIRI
-        TupleTableAtom.rdf(v1, IRI.RDF_TYPE, cls)
+        TupleTableAtom.create(graph, v1, IRI.RDF_TYPE, cls)
       }
       cycle.flatMap { x =>
         List(

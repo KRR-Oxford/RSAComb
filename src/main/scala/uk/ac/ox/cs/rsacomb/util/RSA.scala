@@ -42,32 +42,29 @@ import scala.collection.JavaConverters._
 
 object RSA {
 
+  /** Set of default prefixes to be included in all datastore operations */
   val Prefixes: Prefixes = new Prefixes()
-  Prefixes.declarePrefix("rsa:", "http://www.cs.ox.ac.uk/isg/rsa/")
+  Prefixes.declarePrefix("rsacomb:", "http://www.cs.ox.ac.uk/isg/RSAComb#")
+  Prefixes.declarePrefix("rdfox:", "http://oxfordsemantic.tech/RDFox#")
   Prefixes.declarePrefix("owl:", "http://www.w3.org/2002/07/owl#")
 
-  val CONGRUENT = RSA("congruent")
+  /** Creates a `rsacomb:<name>` IRI */
+  def apply(name: Any): IRI =
+    IRI.create(
+      Prefixes.getPrefixIRIsByPrefixName.get("rsacomb:").getIRI + name.toString
+    )
+
   val NAMED = RSA("Named")
+  val CONGRUENT = RSA("congruent")
+  val IN = RSA("In")
 
-  private def atom(name: IRI, vars: List[Term]): TupleTableAtom =
-    TupleTableAtom.create(TupleTableName.create(name.getIRI), vars: _*)
+  // def In(t: Term)(implicit set: Term) =
+  //   TupleTableAtom.rdf(t, RSA("In"), set)
 
-  def E(t1: Term, t2: Term) =
-    TupleTableAtom.rdf(t1, RSA("E"), t2)
+  // def NotIn(t: Term)(implicit set: Term) = Negation.create(In(t)(set))
 
-  def PE(t1: Term, t2: Term) =
-    TupleTableAtom.rdf(t1, RSA("PE"), t2)
-
-  def U(t: Term) =
-    TupleTableAtom.rdf(t, IRI.RDF_TYPE, RSA("U"))
-
-  def In(t: Term)(implicit set: Term) =
-    TupleTableAtom.rdf(t, RSA("In"), set)
-
-  def NotIn(t: Term)(implicit set: Term) = Negation.create(In(t)(set))
-
-  def Congruent(t1: Term, t2: Term) =
-    TupleTableAtom.rdf(t1, RSA("congruent"), t2)
+  // def Congruent(t1: Term, t2: Term) =
+  //   TupleTableAtom.rdf(t1, RSA("congruent"), t2)
 
   def QM(implicit q: ConjunctiveQuery) =
     atom(RSA("QM"), q.answer ::: q.bounded)
@@ -104,8 +101,18 @@ object RSA {
       atom(RSA("Ans"), q.answer)
   }
 
-  def apply(name: Any): IRI =
-    IRI.create(
-      Prefixes.getPrefixIRIsByPrefixName.get("rsa:").getIRI + name.toString
-    )
+  /* TODO: review after reworking the dependency graph construction */
+
+  // private def atom(name: IRI, vars: List[Term]): TupleTableAtom =
+  //   TupleTableAtom.create(TupleTableName.create(name.getIRI), vars: _*)
+
+  def E(t1: Term, t2: Term) =
+    TupleTableAtom.rdf(t1, RSA("E"), t2)
+
+  def PE(t1: Term, t2: Term) =
+    TupleTableAtom.rdf(t1, RSA("PE"), t2)
+
+  def U(t: Term) =
+    TupleTableAtom.rdf(t, IRI.RDF_TYPE, RSA("U"))
+
 }

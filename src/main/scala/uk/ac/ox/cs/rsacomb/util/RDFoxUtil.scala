@@ -17,6 +17,7 @@
 package uk.ac.ox.cs.rsacomb.util
 
 import java.io.{OutputStream, File, StringReader}
+import scala.collection.JavaConverters._
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.client.{
   ComponentInfo,
@@ -38,7 +39,8 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
   Literal,
   Resource,
   Variable,
-  Term
+  Term,
+  IRI
 }
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
@@ -92,6 +94,22 @@ object RDFoxUtil {
     (server, data)
   }
 
+  /** Get the IRI of a named graph (creating it if necessary)
+    *
+    * @param datastore name of the datastore to perform the action in.
+    * @param name name of the named graph.
+    *
+    * @return the full IRI for the (new) named graph.
+    */
+  def getNamedGraph(datastore: String, name: String): IRI = {
+    val graph = RSA(name)
+    val (server, data) = openConnection(datastore)
+    if (!data.containsTupleTable(graph.getIRI))
+      data.createTupleTable(graph.getIRI, Map("type" -> "named-graph").asJava)
+    RDFoxUtil.closeConnection(server, data)
+    return graph
+  }
+
   /** Create a built-in `rdfox:SKOLEM` TupleTableAtom. */
   def skolem(name: String, terms: Term*): TupleTableAtom =
     TupleTableAtom.create(
@@ -143,14 +161,14 @@ object RDFoxUtil {
     * @param facts collection of facts to be added to the data store
     */
   def addFacts(
-      graph: String,
       data: DataStoreConnection,
+      graph: IRI,
       facts: Seq[TupleTableAtom]
   ): Unit =
     Logger.timed(
       if (facts.length > 0) {
         data.importData(
-          graph,
+          graph.getIRI,
           UpdateType.ADDITION,
           RSA.Prefixes,
           facts
@@ -165,12 +183,13 @@ object RDFoxUtil {
   /** Imports a sequence of files directly into a datastore.
     *
     * @param data datastore connection.
+    * @param graph named graph where the data should be uploaded
     * @param files sequence of files to upload.
     */
-  def addData(graph: String, data: DataStoreConnection, files: File*): Unit =
+  def addData(data: DataStoreConnection, graph: IRI, files: File*): Unit =
     Logger.timed(
       files.foreach {
-        data.importData(graph, UpdateType.ADDITION, RSA.Prefixes, _)
+        data.importData(graph.getIRI, UpdateType.ADDITION, RSA.Prefixes, _)
       },
       "Loading data files",
       Logger.DEBUG

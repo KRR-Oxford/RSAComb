@@ -24,7 +24,8 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
   BindAtom,
   BodyFormula,
   Rule,
-  TupleTableAtom
+  TupleTableAtom,
+  TupleTableName
 }
 import tech.oxfordsemantic.jrdfox.logic.expression.{Term, IRI, FunctionCall}
 import uk.ac.ox.cs.rsacomb.RSAOntology
@@ -58,6 +59,10 @@ trait RDFoxConverter {
     */
   private val manager = OWLManager.createOWLOntologyManager()
   private val factory = manager.getOWLDataFactory()
+
+  /** Default named graph to be used when generating new atoms */
+  val graph: TupleTableName =
+    TupleTableName.create("http://oxfordsemantic.tech/RDFox#DefaultTriples")
 
   /** Represents the result of the conversion of a
     * [[org.semanticweb.owlapi.model.OWLClassExpression OWLClassExpression]].
@@ -193,7 +198,8 @@ trait RDFoxConverter {
           .flatMap((cls) =>
             convert(cls, term, unsafe, NoSkolem, suffix)(fresh)._1
           )
-        val bottom = TupleTableAtom.rdf(term, IRI.RDF_TYPE, IRI.NOTHING)
+        val bottom =
+          TupleTableAtom.create(graph, term, IRI.RDF_TYPE, IRI.NOTHING)
         ResultR(List(Rule.create(bottom, body: _*)))
       }
 
@@ -310,7 +316,7 @@ trait RDFoxConverter {
         */
       case e: OWLClass => {
         val iri: IRI = if (e.isTopEntity()) IRI.THING else e.getIRI
-        val atom = TupleTableAtom.rdf(term, IRI.RDF_TYPE, iri)
+        val atom = TupleTableAtom.create(graph, term, IRI.RDF_TYPE, iri)
         (List(atom), List())
       }
 
@@ -340,7 +346,8 @@ trait RDFoxConverter {
           .collect { case x: OWLNamedIndividual => x }
         if (named.length != 1)
           throw new RuntimeException(s"Class expression '$e' has arity != 1.")
-        val atom = RSA.Congruent(term, named.head.getIRI)
+        val atom =
+          TupleTableAtom.create(graph, term, RSA.CONGRUENT, named.head.getIRI)
         (List(atom), List())
       }
 
@@ -412,7 +419,7 @@ trait RDFoxConverter {
         val (res, ext) =
           vars.map(convert(cls, _, unsafe, skolem, suffix)(fresh)).unzip
         val props = vars.map(convert(role, term, _, suffix)(fresh))
-        val eq = RSA.Congruent(y, z)
+        val eq = TupleTableAtom.create(graph, y, RSA.CONGRUENT, z)
         (List(eq), res.flatten ++ props)
       }
 
@@ -515,7 +522,7 @@ trait RDFoxConverter {
         */
       case e: OWLObjectProperty => {
         val role = IRI.create(e.getIRI.getIRIString :: suffix)
-        TupleTableAtom.rdf(term1, role, term2)
+        TupleTableAtom.create(graph, term1, role, term2)
       }
 
       /** Inverse of a named role/property
@@ -555,7 +562,7 @@ trait RDFoxConverter {
         */
       case e: OWLDataProperty => {
         val role = IRI.create(e.getIRI.getIRIString :: suffix)
-        TupleTableAtom.rdf(term1, role, term2)
+        TupleTableAtom.create(graph, term1, role, term2)
       }
 
       /** The infamous impossible case.
