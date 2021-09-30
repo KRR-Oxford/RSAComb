@@ -124,13 +124,14 @@ object RDFoxUtil {
   def addRules(data: DataStoreConnection, rules: Seq[Rule]): Unit =
     Logger.timed(
       if (rules.length > 0) {
-        data.importData(
-          UpdateType.ADDITION,
-          RSA.Prefixes,
-          rules
-            .map(_.toString(Prefixes.s_emptyPrefixes))
-            .mkString("\n")
-        )
+        data addRules rules
+        // data.importData(
+        //   UpdateType.ADDITION,
+        //   RSA.Prefixes,
+        //   rules
+        //     .map(_.toString(Prefixes.s_emptyPrefixes))
+        //     .mkString("\n")
+        // )
       },
       s"Loading ${rules.length} rules",
       Logger.DEBUG
@@ -141,10 +142,15 @@ object RDFoxUtil {
     * @param data datastore connection
     * @param facts collection of facts to be added to the data store
     */
-  def addFacts(data: DataStoreConnection, facts: Seq[TupleTableAtom]): Unit =
+  def addFacts(
+      graph: String,
+      data: DataStoreConnection,
+      facts: Seq[TupleTableAtom]
+  ): Unit =
     Logger.timed(
       if (facts.length > 0) {
         data.importData(
+          graph,
           UpdateType.ADDITION,
           RSA.Prefixes,
           facts
@@ -161,14 +167,10 @@ object RDFoxUtil {
     * @param data datastore connection.
     * @param files sequence of files to upload.
     */
-  def addData(data: DataStoreConnection, files: File*): Unit =
+  def addData(graph: String, data: DataStoreConnection, files: File*): Unit =
     Logger.timed(
       files.foreach {
-        data.importData(
-          UpdateType.ADDITION,
-          RSA.Prefixes,
-          _
-        )
+        data.importData(graph, UpdateType.ADDITION, RSA.Prefixes, _)
       },
       "Loading data files",
       Logger.DEBUG
@@ -315,11 +317,13 @@ object RDFoxUtil {
     * compatible with RDFox engine. This helper allows to build a query
     * to gather all instances of an internal predicate
     *
+    * @param graph named graph to query for the provided predicate
     * @param pred name of the predicate to describe.
     * @param arity arity of the predicate.
     * @return a string containing a SPARQL query.
     */
   def buildDescriptionQuery(
+      graph: String,
       pred: String,
       arity: Int
   ): String = {
@@ -328,12 +332,12 @@ object RDFoxUtil {
       s"""
       SELECT $variables
       WHERE {
-          ?K a rsa:$pred.
-          TT <http://oxfordsemantic.tech/RDFox#SKOLEM> { $variables ?K } .
+        GRAPH <$graph> { ?K a rsa:$pred }.
+        TT <http://oxfordsemantic.tech/RDFox#SKOLEM> { $variables ?K } .
       }
       """
     } else {
-      "ASK { ?X a rsa:Ans }"
+      s"ASK { GRAPH <$graph> { ?X a rsa:Ans } }"
     }
   }
 

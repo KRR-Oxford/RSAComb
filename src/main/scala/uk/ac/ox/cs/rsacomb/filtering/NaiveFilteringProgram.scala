@@ -36,8 +36,8 @@ object NaiveFilteringProgram {
     *
     * @param query CQ to be converted into logic rules.
     */
-  def apply(query: ConjunctiveQuery): FilteringProgram =
-    new NaiveFilteringProgram(query)
+  def apply(graph: String, query: ConjunctiveQuery): FilteringProgram =
+    new NaiveFilteringProgram(graph, query)
 }
 
 /** Filtering Program generator
@@ -47,7 +47,7 @@ object NaiveFilteringProgram {
   *
   * Instances can be created using the companion object.
   */
-class NaiveFilteringProgram(val query: ConjunctiveQuery)
+class NaiveFilteringProgram(val graph: String, val query: ConjunctiveQuery)
     extends FilteringProgram {
 
   /** Extends capabilities of
@@ -321,5 +321,6 @@ class NaiveFilteringProgram(val query: ConjunctiveQuery)
         r9 :: List()) map RDFoxUtil.reify
     }
 
-  val answerQuery = RDFoxUtil.buildDescriptionQuery("Ans", query.answer.size)
+  val answerQuery =
+    RDFoxUtil.buildDescriptionQuery(graph, "Ans", query.answer.size)
 }

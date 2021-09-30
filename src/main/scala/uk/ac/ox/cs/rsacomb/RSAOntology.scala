@@ -96,7 +96,10 @@ object RSAOntology {
     * @param query the query to derive the filtering program
     * @return the filtering program for the given query
     */
-  def filteringProgram(query: ConjunctiveQuery): FilteringProgram =
+  def filteringProgram(
+      graph: String,
+      query: ConjunctiveQuery
+  ): FilteringProgram =
     Logger.timed(
       FilteringProgram(FilterType.REVISED)(query),
       "Generating filtering program",
@@ -496,76 +499,131 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
   def unfold(axiom: OWLSubClassOfAxiom): Set[Term] =
     this.self(axiom) | this.cycle(axiom)
 
-  def ask(queries: Seq[ConjunctiveQuery]): Seq[ConjunctiveQueryAnswers] = ???
-
-  /** Returns the answers to a query
+  /** Returns the answers to a collection of queries
     *
-    *  @param query query to execute
-    *  @return a collection of answers
+    *  @param queries a sequence of conjunctive queries to answer.
+    *  @return a collection of answers for each query.
     */
-  def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = Logger.timed(
-    {
-      val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
-      val canon = this.canonicalModel
-      val filter = RSAOntology.filteringProgram(query)
+  def ask(queries: Seq[ConjunctiveQuery]): Seq[ConjunctiveQueryAnswers] = {
+    val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
+    val canonNamedGraph = "http://cs.ox.ac.uk/isg/RSAComb#CanonicalModel"
+    // Create a new NamedGraph for the canonical model
+    data.createTupleTable(canonNamedGraph, Map("type" -> "named-graph").asJava)
 
-      /* Upload data from data file */
-      RDFoxUtil.addData(data, datafiles: _*)
+    /* Upload data from data file */
+    RDFoxUtil.addData(canonNamedGraph, data, datafiles: _*)
+    /* Top / equality axiomatization */
+    RDFoxUtil.addRules(data, topAxioms ++ equalityAxioms)
+    /* Generate `named` predicates */
+    RDFoxUtil.addFacts(
+      canonNamedGraph,
+      data,
+      (individuals ++ literals) map RSA.Named
+    )
+    data.evaluateUpdate(
+      null, // the base IRI for the query (if null, a default is used)
+      RSA.Prefixes,
+      s"""
+      INSERT { 
+        GRAPH <$canonNamedGraph> { ?X a rsa:Named }
+      } WHERE {
+        GRAPH <$canonNamedGraph> { ?X a owl:Thing }
+      }
+      """,
+      new java.util.HashMap[String, String]
+    )
 
-      RDFoxUtil printStatisticsFor data
+    /* Add canonical model */
+    Logger print s"Canonical model rules: ${this.canonicalModel.rules.length}"
+    RDFoxUtil.addRules(data, this.canonicalModel.rules)
 
-      /* Top / equality axiomatization */
-      RDFoxUtil.addRules(data, topAxioms ++ equalityAxioms)
+    Logger print s"Canonical model facts: ${this.canonicalModel.facts.length}"
+    RDFoxUtil.addFacts(canonNamedGraph, data, this.canonicalModel.facts)
 
-      /* Generate `named` predicates */
-      RDFoxUtil.addFacts(data, (individuals ++ literals) map RSA.Named)
-      data.evaluateUpdate(
-        null, // the base IRI for the query (if null, a default is used)
-        RSA.Prefixes,
-        "INSERT { ?X a  rsa:Named } WHERE { ?X a owl:Thing }",
-        new java.util.HashMap[String, String]
-      )
+    queries map { query =>
+      {
+        val filterNamedGraph =
+          s"http://cs.ox.ac.uk/isg/RSAComb#Filter${query.id}"
+        val filter = RSAOntology.filteringProgram(filterNamedGraph, query)
+        /* Add filtering program */
+        Logger print s"Filtering program rules: ${filter.rules.length}"
+        RDFoxUtil.addRules(data, filter.rules)
 
-      /* Add canonical model */
-      Logger print s"Canonical model rules: ${canon.rules.length}"
-      RDFoxUtil.addRules(data, canon.rules)
+        // We remove the rules, should we drop the tuple table as well?
+        data.clearRulesAxiomsExplicateFacts()
 
-      Logger print s"Canonical model facts: ${canon.facts.length}"
-      RDFoxUtil.addFacts(data, canon.facts)
-
-      RDFoxUtil printStatisticsFor data
-
-      //{
-      //  import java.io.{PrintStream, FileOutputStream, File}
-      //  val rules1 = new FileOutputStream(new File("rules1-lubm200.dlog"))
-      //  val facts1 = new FileOutputStream(new File("facts1-lubm200.ttl"))
-      //  RDFoxUtil.export(data, rules1, facts1)
-      //  val rules2 = new PrintStream(new File("rules2-q34.dlog"))
-      //  rules2.print(filter.rules.mkString("\n"))
-      //}
-
-      /* Add filtering program */
-      Logger print s"Filtering program rules: ${filter.rules.length}"
-      RDFoxUtil.addRules(data, filter.rules)
-
-      RDFoxUtil printStatisticsFor data
-
-      /* Gather answers to the query */
-      val answers = {
-        val ans = filter.answerQuery
+        /* Gather answers to the query */
         RDFoxUtil
-          .submitQuery(data, ans, RSA.Prefixes)
+          .submitQuery(data, filter.answerQuery, RSA.Prefixes)
           .map(new ConjunctiveQueryAnswers(query, query.variables, _))
           .get
       }
+    }
+  }
 
-      RDFoxUtil.closeConnection(server, data)
+  //def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = Logger.timed(
+  //  {
+  //    val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
+  //    val canon = this.canonicalModel
+  //    val filter = RSAOntology.filteringProgram(query)
 
-      answers
-    },
-    "Answers computation",
-    Logger.DEBUG
-  )
+  //    /* Upload data from data file */
+  //    RDFoxUtil.addData(data, datafiles: _*)
+
+  //    RDFoxUtil printStatisticsFor data
+
+  //    /* Top / equality axiomatization */
+  //    RDFoxUtil.addRules(data, topAxioms ++ equalityAxioms)
+
+  //    /* Generate `named` predicates */
+  //    RDFoxUtil.addFacts(data, (individuals ++ literals) map RSA.Named)
+  //    data.evaluateUpdate(
+  //      null, // the base IRI for the query (if null, a default is used)
+  //      RSA.Prefixes,
+  //      "INSERT { ?X a  rsa:Named } WHERE { ?X a owl:Thing }",
+  //      new java.util.HashMap[String, String]
+  //    )
+
+  //    /* Add canonical model */
+  //    Logger print s"Canonical model rules: ${canon.rules.length}"
+  //    RDFoxUtil.addRules(data, canon.rules)
+
+  //    Logger print s"Canonical model facts: ${canon.facts.length}"
+  //    RDFoxUtil.addFacts(data, canon.facts)
+
+  //    RDFoxUtil printStatisticsFor data
+
+  //    //{
+  //    //  import java.io.{PrintStream, FileOutputStream, File}
+  //    //  val rules1 = new FileOutputStream(new File("rules1-lubm200.dlog"))
+  //    //  val facts1 = new FileOutputStream(new File("facts1-lubm200.ttl"))
+  //    //  RDFoxUtil.export(data, rules1, facts1)
+  //    //  val rules2 = new PrintStream(new File("rules2-q34.dlog"))
+  //    //  rules2.print(filter.rules.mkString("\n"))
+  //    //}
+
+  //    /* Add filtering program */
+  //    Logger print s"Filtering program rules: ${filter.rules.length}"
+  //    RDFoxUtil.addRules(data, filter.rules)
+
+  //    RDFoxUtil printStatisticsFor data
+
+  //    /* Gather answers to the query */
+  //    val answers = {
+  //      val ans = filter.answerQuery
+  //      RDFoxUtil
+  //        .submitQuery(data, ans, RSA.Prefixes)
+  //        .map(new ConjunctiveQueryAnswers(query, query.variables, _))
+  //        .get
+  //    }
+
+  //    RDFoxUtil.closeConnection(server, data)
+
+  //    answers
+  //  },
+  //  "Answers computation",
+  //  Logger.DEBUG
+  //)
 
   /** Query the RDFox data store used for query answering.
     *

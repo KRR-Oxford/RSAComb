@@ -422,12 +422,12 @@ class RevisedFilteringProgram(val query: ConjunctiveQuery)
       s"""
         SELECT $answer
         WHERE {
-            ?K a rsa:Ans .
+            GRAPH <$graph> { ?K a rsa:Ans } .
             TT <http://oxfordsemantic.tech/RDFox#SKOLEM> { $answer $bounded ?K } .
         }
       """
     } else {
-      "ASK { ?X a rsa:Ans }"
+      s"ASK { GRAPH <$graph> { ?X a rsa:Ans } }"
     }
   }
 

@@ -46,6 +46,9 @@ object FilteringProgram extends Versioned[FilterType] {
   */
 trait FilteringProgram {
 
+  /** Named graph used for filtering process */
+  val graph: String
+
   /** Query from which the filtering program is generated */
   val query: ConjunctiveQuery
 
