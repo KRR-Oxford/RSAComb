@@ -111,12 +111,13 @@ object RSAOntology {
     * @param query the query to derive the filtering program
     * @return the filtering program for the given query
     */
-  def filteringProgram(
-      graph: String,
-      query: ConjunctiveQuery
-  ): FilteringProgram =
+  def filteringProgram(query: ConjunctiveQuery): FilteringProgram =
     Logger.timed(
-      FilteringProgram(FilterType.REVISED)(query),
+      {
+        val filter =
+          FilteringProgram(FilterType.REVISED, CanonGraph, FilterGraph(query))
+        filter(query)
+      },
       "Generating filtering program",
       Logger.DEBUG
     )
@@ -568,9 +569,8 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
 
     queries map { query =>
       {
-        val filterNamedGraph =
-          s"http://cs.ox.ac.uk/isg/RSAComb#Filter${query.id}"
-        val filter = RSAOntology.filteringProgram(filterNamedGraph, query)
+        //val graph = RSAOntology.FilterGraph(query)
+        val filter = RSAOntology.filteringProgram(query)
         /* Add filtering program */
         Logger print s"Filtering program rules: ${filter.rules.length}"
         RDFoxUtil.addRules(data, filter.rules)

@@ -82,18 +82,18 @@ object RSAAtom {
         }
       } else atom
 
-    def reified(implicit
-        fresh: DataFactory
-    ): (Option[TupleTableAtom], List[TupleTableAtom]) =
-      if (isRDF) {
-        (None, List(atom))
-      } else {
-        val varS = fresh.getVariable
-        val skolem = RDFoxUtil.skolem(name, (args :+ varS): _*)
-        val atom = TupleTableAtom.rdf(varS, IRI.RDF_TYPE, name)
-        val atoms = args.zipWithIndex
-          .map { case (a, i) => TupleTableAtom.rdf(varS, name :: Nth(i), a) }
-        (Some(skolem), atom :: atoms)
-      }
+    // def reified(implicit
+    //     fresh: DataFactory
+    // ): (Option[TupleTableAtom], List[TupleTableAtom]) =
+    //   if (isRDF) {
+    //     (None, List(atom))
+    //   } else {
+    //     val varS = fresh.getVariable
+    //     val skolem = RDFoxUtil.skolem(name, (args :+ varS): _*)
+    //     val atom = TupleTableAtom.rdf(varS, IRI.RDF_TYPE, name)
+    //     val atoms = args.zipWithIndex
+    //       .map { case (a, i) => TupleTableAtom.rdf(varS, name :: Nth(i), a) }
+    //     (Some(skolem), atom :: atoms)
+    //   }
   }
 }

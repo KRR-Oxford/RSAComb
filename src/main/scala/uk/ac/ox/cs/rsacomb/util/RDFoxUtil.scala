@@ -342,8 +342,8 @@ object RDFoxUtil {
     * @return a string containing a SPARQL query.
     */
   def buildDescriptionQuery(
-      graph: String,
-      pred: String,
+      graph: IRI,
+      pred: IRI,
       arity: Int
   ): String = {
     if (arity > 0) {
@@ -351,55 +351,12 @@ object RDFoxUtil {
       s"""
       SELECT $variables
       WHERE {
-        GRAPH <$graph> { ?K a rsa:$pred }.
-        TT <http://oxfordsemantic.tech/RDFox#SKOLEM> { $variables ?K } .
+        GRAPH $graph { ?K a $pred }.
+        TT ${TupleTableName.SKOLEM} { $variables ?K } .
       }
       """
     } else {
-      s"ASK { GRAPH <$graph> { ?X a rsa:Ans } }"
-    }
-  }
-
-  /** Reify a [[tech.oxfordsemantic.jrdfox.logic.datalog.Rule Rule]].
-    *
-    * This is needed because RDFox supports only predicates of arity 1
-    * or 2, but the filtering program uses predicates with higher arity.
-    *
-    * @note we can perform a reification of the atoms thanks to the
-    * built-in `SKOLEM` funtion of RDFox.
-    */
-  def reify(rule: Rule): Rule = {
-    val (sk, as) = rule.getHead.map(_.reified).unzip
-    val head: List[TupleTableAtom] = as.flatten
-    val skolem: List[BodyFormula] = sk.flatten
-    val body: List[BodyFormula] = rule.getBody.map(reify).flatten
-    Rule.create(head, skolem ::: body)
-  }
-
-  /** Reify a [[tech.oxfordsemantic.jrdfox.logic.datalog.BodyFormula BodyFormula]].
-    *
-    * This is needed because RDFox supports only predicates of arity 1
-    * or 2, but the filtering program uses predicates with higher arity.
-    *
-    * @note we can perform a reification of the atoms thanks to the
-    * built-in `SKOLEM` funtion of RDFox.
-    */
-  private def reify(formula: BodyFormula): List[BodyFormula] = {
-    formula match {
-      case atom: TupleTableAtom => atom.reified._2
-      case neg: Negation => {
-        val (sk, as) = neg.getNegatedAtoms
-          .map({
-            case a: TupleTableAtom => a.reified
-            case a                 => (None, List(a))
-          })
-          .unzip
-        val skolem =
-          sk.flatten.map(_.getArguments.last).collect { case v: Variable => v }
-        val atoms = as.flatten
-        List(Negation.create(skolem, atoms))
-      }
-      case other => List(other)
+      s"ASK { GRAPH $graph { ?X a $pred } }"
     }
   }
 
