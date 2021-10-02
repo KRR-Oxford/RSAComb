@@ -34,7 +34,7 @@ object Logger {
     def compare(that: Level) = this.level - that.level
     override def toString = name
   }
-  case object QUIET extends Level(0, "normal")
+  case object QUIET extends Level(0, "quiet")
   case object NORMAL extends Level(1, "normal")
   case object DEBUG extends Level(2, "debug")
   case object VERBOSE extends Level(3, "verbose")

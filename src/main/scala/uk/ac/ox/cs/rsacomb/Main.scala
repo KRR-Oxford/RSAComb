@@ -19,6 +19,7 @@ package uk.ac.ox.cs.rsacomb
 import java.io.{File, PrintWriter}
 import java.nio.file.{Path, Paths, InvalidPathException}
 import java.util.HashMap
+import scala.collection.mutable.Map
 import scala.collection.JavaConverters._
 import tech.oxfordsemantic.jrdfox.client.UpdateType
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Term}
@@ -50,7 +51,15 @@ object RSAConfig {
       -h | -? | --help
           print this help message
 
-      -q <file> | --queries <file>
+      -l | --logger <level>
+          specify the logger verbosity. Values are: quiet, normal (default),
+          debug, verbose.
+
+      -o | --output <file>
+        path to the output file for the answers to the query (in JSON
+        format)
+
+      -q | --queries <file>
           path to a file containing a single SPARQL query. If no query
           is provided, only the approximation to RSA will be performed.
 
@@ -98,10 +107,19 @@ object RSAConfig {
         println(help)
         sys.exit(0)
       }
+      case flag @ ("-l" | "--logger") :: _level :: tail => {
+        val level = _level match {
+          case "quiet"   => Logger.QUIET
+          case "debug"   => Logger.DEBUG
+          case "verbose" => Logger.VERBOSE
+          case _         => Logger.NORMAL
+        }
+        parse(tail, config += ('logger -> level))
+      }
       case flag @ ("-o" | "--output") :: _output :: tail =>
         try {
           val output = Paths.get(_output)
-          parse(tail, config ++ Map('output -> output))
+          parse(tail, config += ('output -> output))
         } catch {
           case e: InvalidPathException =>
             exit(s"'${_output}' is not a valid filename.")
@@ -110,7 +128,7 @@ object RSAConfig {
         val query = new File(_query)
         if (!query.isFile)
           exit(s"'$query' is not a valid filename.")
-        parse(tail, config ++ Map('queries -> query))
+        parse(tail, config += ('queries -> query))
       }
       case _ontology :: _data => {
         val ontology = new File(_ontology)
@@ -119,7 +137,7 @@ object RSAConfig {
           if (!file.isFile)
             exit(s"'$file' is not a valid filename.")
         }
-        finalise(config ++ Map('ontology -> ontology, 'data -> data))
+        finalise(config += ('ontology -> ontology) += ('data -> data))
       }
       case a => exit(s"Invalid sequence of arguments '${a.mkString(" ")}'.")
     }
@@ -134,6 +152,7 @@ object RSAComb extends App {
 
   /* Command-line options */
   val config = RSAConfig.parse(args.toList)
+  Logger.level = config('logger).get[Logger.Level]
 
   /* Load original ontology and normalize it */
   val ontology = Ontology(
