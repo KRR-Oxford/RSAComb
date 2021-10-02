@@ -545,7 +545,7 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
     RDFoxUtil.addFacts(
       data,
       RSAOntology.CanonGraph,
-      (individuals ++ literals) map RSA.Named
+      (individuals ++ literals) map RSA.Named(RSAOntology.CanonGraph)
     )
     data.evaluateUpdate(
       null, // the base IRI for the query (if null, a default is used)
@@ -569,13 +569,12 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
 
     queries map { query =>
       {
-        //val graph = RSAOntology.FilterGraph(query)
         val filter = RSAOntology.filteringProgram(query)
+
         /* Add filtering program */
         Logger print s"Filtering program rules: ${filter.rules.length}"
         RDFoxUtil.addRules(data, filter.rules)
-
-        // We remove the rules, should we drop the tuple table as well?
+        // TODO: We remove the rules, should we drop the tuple table as well?
         data.clearRulesAxiomsExplicateFacts()
 
         /* Gather answers to the query */

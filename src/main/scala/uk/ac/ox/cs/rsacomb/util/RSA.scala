@@ -54,72 +54,34 @@ object RSA {
   /** Creates a `rsacomb:<name>` IRI */
   def apply(name: Any): IRI =
     IRI.create(
+      //Prefixes.decodeIRI("rsacomb:") + name.toString
       Prefixes.getPrefixIRIsByPrefixName.get("rsacomb:").getIRI + name.toString
     )
 
+  /** Helper IRIs */
   val ANS = RSA("Ans")
+  val AQ = RSA("AQ")
   val CONGRUENT = RSA("congruent")
+  val FK = RSA("FK")
+  val ID = RSA("ID")
   val IN = RSA("In")
   val NAMED = RSA("Named")
+  val NI = RSA("NI")
+  val QM = RSA("QM")
+  val SP = RSA("SP")
+  val TQ = RSA("TQ")
+
+  def Named(tt: TupleTableName)(x: Term): TupleTableAtom =
+    TupleTableAtom.create(tt, x, IRI.RDF_TYPE, RSA.NAMED)
+  def Congruent(tt: TupleTableName)(x: Term, y: Term): TupleTableAtom =
+    TupleTableAtom.create(tt, x, RSA.CONGRUENT, y)
+  def Skolem(skolem: Term, terms: List[Term]): TupleTableAtom =
+    TupleTableAtom.create(TupleTableName.SKOLEM, terms :+ skolem)
 
   // def In(t: Term)(implicit set: Term) =
   //   TupleTableAtom.rdf(t, RSA("In"), set)
 
   // def NotIn(t: Term)(implicit set: Term) = Negation.create(In(t)(set))
-
-  def Congruent(t1: Term, t2: Term)(implicit graph: TupleTableName) =
-    TupleTableAtom.create(graph, t1, RSA.CONGRUENT, t2)
-
-  def Named(term: Term)(implicit graph: TupleTableName) =
-    TupleTableAtom.create(graph, term, IRI.RDF_TYPE, RSA.NAMED)
-
-  def QM(implicit query: ConjunctiveQuery, graph: TupleTableName) =
-    TupleTableAtom.create(graph, RSA("QM") :: query.answer ::: query.bounded)
-
-  def ID(t1: Term, t2: Term)(implicit
-      query: ConjunctiveQuery,
-      graph: TupleTableName
-  ) =
-    TupleTableAtom.create(
-      graph,
-      RSA("ID") +: (query.answer ::: query.bounded) :+ t1 :+ t2
-    )
-
-  // def Thing(t: Term) =
-  //   TupleTableAtom.rdf(t, IRI.RDF_TYPE, IRI.THING)
-
-  def NI(term: Term)(implicit graph: TupleTableName) =
-    TupleTableAtom.create(graph, term, IRI.RDF_TYPE, RSA("NI"))
-
-  def TQ(sx: RSASuffix, t1: Term, t2: Term)(implicit
-      query: ConjunctiveQuery,
-      graph: TupleTableName
-  ) =
-    TupleTableAtom.create(
-      graph,
-      RSA("TQ" :: sx) +: (query.answer ::: query.bounded) :+ t1 :+ t2
-    )
-
-  def AQ(sx: RSASuffix, t1: Term, t2: Term)(implicit
-      query: ConjunctiveQuery,
-      graph: TupleTableName
-  ) =
-    TupleTableAtom.create(
-      graph,
-      RSA("AQ" :: sx) +: (query.answer ::: query.bounded) :+ t1 :+ t2
-    )
-
-  def FK(implicit query: ConjunctiveQuery, graph: TupleTableName) =
-    TupleTableAtom.create(graph, RSA("FK") :: query.answer ::: query.bounded)
-
-  def SP(implicit q: ConjunctiveQuery, graph: TupleTableName) =
-    TupleTableAtom.create(graph, RSA("SP") :: q.answer ::: q.bounded)
-
-  def Ans(implicit q: ConjunctiveQuery, graph: TupleTableName) =
-    if (q.bcq)
-      TupleTableAtom.create(graph, RSA("blank"), IRI.RDF_TYPE, RSA.ANS)
-    else
-      TupleTableAtom.create(graph, RSA.ANS :: q.answer)
 
   /* TODO: review after reworking the dependency graph construction */
 

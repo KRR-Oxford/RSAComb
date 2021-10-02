@@ -16,13 +16,13 @@
 
 package uk.ac.ox.cs.rsacomb.suffix
 
-import org.semanticweb.owlapi.model.{
-  OWLPropertyExpression,
-  OWLObjectInverseOf,
-  OWLObjectProperty
-}
+// import org.semanticweb.owlapi.model.{
+//   OWLPropertyExpression,
+//   OWLObjectInverseOf,
+//   OWLObjectProperty
+// }
 
-import tech.oxfordsemantic.jrdfox.logic.expression.{IRI}
+import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Term}
 import tech.oxfordsemantic.jrdfox.logic.datalog.{TupleTableAtom, TupleTableName}
 
 object RSASuffix {
@@ -37,7 +37,17 @@ class RSASuffix(val suffix: String => String) {
     new RSASuffix(this.suffix andThen that.suffix)
 
   def ::(str: String): String = this suffix str
-
+  def ::(iri: IRI): IRI = IRI.create(this suffix iri.getIRI)
+  def ::(tta: TupleTableAtom): TupleTableAtom = {
+    val ttn: TupleTableName = tta.getTupleTableName
+    tta.getArguments match {
+      case List(subj: Term, IRI.RDF_TYPE, obj: IRI) =>
+        TupleTableAtom.create(ttn, subj, IRI.RDF_TYPE, obj :: this)
+      case List(subj: Term, pred: IRI, obj: Term) =>
+        TupleTableAtom.create(ttn, subj, pred :: this, obj)
+      case _ => tta
+    }
+  }
 }
 
 case object Empty extends RSASuffix(identity)

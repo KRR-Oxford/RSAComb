@@ -32,7 +32,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
   Variable
 }
 import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
-import uk.ac.ox.cs.rsacomb.suffix.{Forward, Backward, Nth}
+import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Forward, Backward, Nth}
 import uk.ac.ox.cs.rsacomb.util.{DataFactory, RSA, RDFoxUtil}
 
 /** Factory for [[uk.ac.ox.cs.rsacomb.FilteringProgram FilteringProgram]] */
@@ -95,10 +95,41 @@ class NaiveFilteringProgram(
 
   /** `TupleTableName`s for the source/targer named graphs */
   val tts: TupleTableName = TupleTableName.create(source.getIRI)
-  implicit val ttt: TupleTableName = TupleTableName.create(target.getIRI)
+  val ttt: TupleTableName = TupleTableName.create(target.getIRI)
 
   /** Set of atoms in the body of the query */
-  val queryBody: List[TupleTableAtom] = query.atoms(tts)
+  private val queryBody: List[TupleTableAtom] = query.atoms(tts)
+
+  /** Helpers */
+  private def not(atom: TupleTableAtom): BodyFormula = Negation.create(atom)
+
+  private val QM: TupleTableAtom =
+    TupleTableAtom.create(ttt, RSA.QM :: query.answer ::: query.bounded)
+  private def ID(t1: Term, t2: Term) =
+    TupleTableAtom.create(
+      ttt,
+      RSA.ID +: (query.answer ::: query.bounded) :+ t1 :+ t2
+    )
+  private def NI(term: Term) =
+    TupleTableAtom.create(ttt, term, IRI.RDF_TYPE, RSA.NI)
+  private def TQ(sx: RSASuffix, t1: Term, t2: Term) =
+    TupleTableAtom.create(
+      ttt,
+      (RSA.TQ :: sx) +: (query.answer ::: query.bounded) :+ t1 :+ t2
+    )
+  private def AQ(sx: RSASuffix, t1: Term, t2: Term) =
+    TupleTableAtom.create(
+      ttt,
+      (RSA.AQ :: sx) +: (query.answer ::: query.bounded) :+ t1 :+ t2
+    )
+  private val FK: TupleTableAtom =
+    TupleTableAtom.create(ttt, RSA.FK :: query.answer ::: query.bounded)
+  private val SP: TupleTableAtom =
+    TupleTableAtom.create(ttt, RSA.SP :: query.answer ::: query.bounded)
+  private def Ans = if (query.bcq)
+    TupleTableAtom.create(ttt, RSA("blank"), IRI.RDF_TYPE, RSA.ANS)
+  else
+    TupleTableAtom.create(ttt, RSA.ANS :: query.answer)
 
   /** Rule generating the instances of the predicate `rsa:NI`.
     *
@@ -117,23 +148,20 @@ class NaiveFilteringProgram(
     */
   val nis: Rule =
     Rule.create(
-      RSA.NI(varX),
-      RSA.Congruent(varX, varY)(tts),
-      RSA.Named(varY)(tts)
+      NI(varX),
+      RSA.Congruent(tts)(varX, varY),
+      RSA.Named(tts)(varY)
     )
 
   /** Collection of filtering program rules. */
   val rules: List[Rule] =
     nis :: {
 
-      /** Negates a [[tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom TupleTableAtom]] */
-      def not(atom: TupleTableAtom): BodyFormula = Negation.create(atom)
-
       /** Generates all possible, unfiltered answers.
         *
         * @note corresponds to rule 1 in Table 3 in the paper.
         */
-      val r1 = Rule.create(RSA.QM, queryBody: _*)
+      val r1 = Rule.create(QM, queryBody: _*)
 
       /** Initializes instances of `rsa:ID`.
         *
@@ -145,10 +173,10 @@ class NaiveFilteringProgram(
         */
       val r3a =
         for ((v, i) <- query.bounded.zipWithIndex)
-          yield Rule.create(RSA.ID(RSA(i), RSA(i)), RSA.QM, not(RSA.NI(v)))
-      val r3b = Rule.create(RSA.ID(varV, varU), RSA.ID(varU, varV))
+          yield Rule.create(ID(RSA(i), RSA(i)), QM, not(NI(v)))
+      val r3b = Rule.create(ID(varV, varU), ID(varU, varV))
       val r3c =
-        Rule.create(RSA.ID(varU, varW), RSA.ID(varU, varV), RSA.ID(varV, varW))
+        Rule.create(ID(varU, varW), ID(varU, varV), ID(varV, varW))
 
       /** Detects forks in the canonical model.
         *
@@ -162,10 +190,10 @@ class NaiveFilteringProgram(
         index2 = query.bounded indexOf (role2.getArguments get 2)
         if index2 >= 0
       } yield Rule.create(
-        RSA.FK,
-        RSA.ID(RSA(index1), RSA(index2)),
-        role1 << Forward,
-        role2 << Forward,
+        FK,
+        ID(RSA(index1), RSA(index2)),
+        role1 :: Forward,
+        role2 :: Forward,
         not(
           TupleTableAtom.create(
             tts,
@@ -183,10 +211,10 @@ class NaiveFilteringProgram(
         index2 = query.bounded indexOf (role2.getArguments get 0)
         if index2 >= 0
       } yield Rule.create(
-        RSA.FK,
-        RSA.ID(RSA(index1), RSA(index2)),
-        role1 << Forward,
-        role2 << Backward,
+        FK,
+        ID(RSA(index1), RSA(index2)),
+        role1 :: Forward,
+        role2 :: Backward,
         not(
           TupleTableAtom.create(
             tts,
@@ -204,10 +232,10 @@ class NaiveFilteringProgram(
         index2 = query.bounded indexOf (role2.getArguments get 0)
         if index2 >= 0
       } yield Rule.create(
-        RSA.FK,
-        RSA.ID(RSA(index1), RSA(index2)),
-        role1 << Backward,
-        role2 << Backward,
+        FK,
+        ID(RSA(index1), RSA(index2)),
+        role1 :: Backward,
+        role2 :: Backward,
         not(
           TupleTableAtom.create(
             tts,
@@ -234,18 +262,18 @@ class NaiveFilteringProgram(
         r2arg2 = role2.getArguments get 2
         if query.bounded contains r2arg2
       } yield Rule.create(
-        RSA.ID(
+        ID(
           RSA(query.bounded indexOf r1arg0),
           RSA(query.bounded indexOf r2arg0)
         ),
-        RSA.ID(
+        ID(
           RSA(query.bounded indexOf r1arg2),
           RSA(query.bounded indexOf r2arg2)
         ),
         TupleTableAtom.create(tts, r1arg0, RSA.CONGRUENT, r2arg0),
-        role1 << Forward,
-        role2 << Forward,
-        not(RSA.NI(r1arg0))
+        role1 :: Forward,
+        role2 :: Forward,
+        not(NI(r1arg0))
       )
       val r5b = for {
         role1 <- queryBody filter (_.isRoleAssertion)
@@ -259,18 +287,18 @@ class NaiveFilteringProgram(
         r2arg2 = role2.getArguments get 2
         if query.bounded contains r2arg2
       } yield Rule.create(
-        RSA.ID(
+        ID(
           RSA(query.bounded indexOf r1arg0),
           RSA(query.bounded indexOf r2arg2)
         ),
-        RSA.ID(
+        ID(
           RSA(query.bounded indexOf r1arg2),
           RSA(query.bounded indexOf r2arg0)
         ),
         TupleTableAtom.create(tts, r1arg0, RSA.CONGRUENT, r2arg2),
-        role1 << Forward,
-        role2 << Backward,
-        not(RSA.NI(r1arg0))
+        role1 :: Forward,
+        role2 :: Backward,
+        not(NI(r1arg0))
       )
       val r5c = for {
         role1 <- queryBody filter (_.isRoleAssertion)
@@ -284,18 +312,18 @@ class NaiveFilteringProgram(
         r2arg2 = role2.getArguments get 2
         if query.bounded contains r2arg2
       } yield Rule.create(
-        RSA.ID(
+        ID(
           RSA(query.bounded indexOf r1arg2),
           RSA(query.bounded indexOf r2arg2)
         ),
-        RSA.ID(
+        ID(
           RSA(query.bounded indexOf r1arg0),
           RSA(query.bounded indexOf r2arg0)
         ),
         TupleTableAtom.create(tts, r1arg2, RSA.CONGRUENT, r2arg2),
-        role1 << Backward,
-        role2 << Backward,
-        not(RSA.NI(r1arg2))
+        role1 :: Backward,
+        role2 :: Backward,
+        not(NI(r1arg2))
       )
 
       /** Detect cycles in the canonical model.
@@ -314,23 +342,23 @@ class NaiveFilteringProgram(
         if index2 >= 0
         suffix <- Seq(Forward, Backward)
       } yield Rule.create(
-        RSA.AQ(suffix, varV, varW),
-        role << suffix,
-        RSA.ID(RSA(index0), varV),
-        RSA.ID(RSA(index2), varW)
+        AQ(suffix, varV, varW),
+        role :: suffix,
+        ID(RSA(index0), varV),
+        ID(RSA(index2), varW)
       )
       val r7a =
         for (suffix <- List(Forward, Backward))
           yield Rule.create(
-            RSA.TQ(suffix, varU, varV),
-            RSA.AQ(suffix, varU, varV)
+            TQ(suffix, varU, varV),
+            AQ(suffix, varU, varV)
           )
       val r7b =
         for (suffix <- List(Forward, Backward))
           yield Rule.create(
-            RSA.TQ(suffix, varU, varW),
-            RSA.AQ(suffix, varU, varV),
-            RSA.TQ(suffix, varV, varW)
+            TQ(suffix, varU, varW),
+            AQ(suffix, varU, varV),
+            TQ(suffix, varV, varW)
           )
 
       /** Flag spurious answers.
@@ -340,19 +368,14 @@ class NaiveFilteringProgram(
       val r8a =
         for (v <- query.answer)
           yield Rule.create(
-            RSA.SP,
-            RSA.QM,
-            not(
-              TupleTableAtom.create(tts, v, IRI.RDF_TYPE, RSA.NAMED)
-            )
+            SP,
+            QM,
+            not(TupleTableAtom.create(tts, v, IRI.RDF_TYPE, RSA.NAMED))
           )
-      val r8b = Rule.create(RSA.SP, RSA.FK)
+      val r8b = Rule.create(SP, FK)
       val r8c =
         for (suffix <- List(Forward, Backward))
-          yield Rule.create(
-            RSA.SP,
-            RSA.TQ(suffix, varV, varV)
-          )
+          yield Rule.create(SP, TQ(suffix, varV, varV))
 
       /** Determine answers to the query
         *
@@ -369,7 +392,7 @@ class NaiveFilteringProgram(
         *
         * @note corresponds to rule 9 in Table 3.
         */
-      val r9 = Rule.create(RSA.Ans, RSA.QM, not(RSA.SP))
+      val r9 = Rule.create(Ans, QM, not(SP))
 
       (r1 ::
         r3a ::: r3b :: r3c ::
