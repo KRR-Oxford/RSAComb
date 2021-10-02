@@ -527,12 +527,22 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
   def unfold(axiom: OWLSubClassOfAxiom): Set[Term] =
     this.self(axiom) | this.cycle(axiom)
 
+  /** Returns the answers to a single query
+    *
+    *  @param queries a sequence of conjunctive queries to answer.
+    *  @return a collection of answers for each query.
+    */
+  def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = this._ask(query)
+
   /** Returns the answers to a collection of queries
     *
     *  @param queries a sequence of conjunctive queries to answer.
     *  @return a collection of answers for each query.
     */
-  def ask(queries: Seq[ConjunctiveQuery]): Seq[ConjunctiveQueryAnswers] = {
+  def ask(queries: Seq[ConjunctiveQuery]): Seq[ConjunctiveQueryAnswers] =
+    queries map _ask
+
+  private lazy val _ask: ConjunctiveQuery => ConjunctiveQueryAnswers = {
     /* Open connection with RDFox server */
     val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
 
@@ -567,23 +577,31 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
     Logger print s"Canonical model facts: ${this.canonicalModel.facts.length}"
     RDFoxUtil.addFacts(data, RSAOntology.CanonGraph, this.canonicalModel.facts)
 
-    queries map { query =>
-      {
-        val filter = RSAOntology.filteringProgram(query)
+    /* Close connection with RDFox server */
+    RDFoxUtil.closeConnection(server, data)
 
-        /* Add filtering program */
-        Logger print s"Filtering program rules: ${filter.rules.length}"
-        RDFoxUtil.addRules(data, filter.rules)
-        // TODO: We remove the rules, should we drop the tuple table as well?
-        data.clearRulesAxiomsExplicateFacts()
+    (query => {
+      /* Open connection with RDFox server */
+      val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
+      val filter = RSAOntology.filteringProgram(query)
 
-        /* Gather answers to the query */
-        RDFoxUtil
-          .submitQuery(data, filter.answerQuery, RSA.Prefixes)
-          .map(new ConjunctiveQueryAnswers(query, query.variables, _))
-          .get
-      }
-    }
+      /* Add filtering program */
+      Logger print s"Filtering program rules: ${filter.rules.length}"
+      RDFoxUtil.addRules(data, filter.rules)
+      // TODO: We remove the rules, should we drop the tuple table as well?
+      data.clearRulesAxiomsExplicateFacts()
+
+      /* Gather answers to the query */
+      val answers = RDFoxUtil
+        .submitQuery(data, filter.answerQuery, RSA.Prefixes)
+        .map(new ConjunctiveQueryAnswers(query, query.variables, _))
+        .get
+
+      /* Close connection with RDFox server */
+      RDFoxUtil.closeConnection(server, data)
+
+      answers
+    })
   }
 
   //def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = Logger.timed(
