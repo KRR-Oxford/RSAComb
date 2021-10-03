@@ -35,7 +35,7 @@ class LUBM extends AnyFunSpec with Matchers {
 
     queries foreach { query =>
       it(s"Tested Query${query.id}") {
-        val answers = rsa.ask(query).answers.map(_._2.mkString(" "))
+        val answers = rsa.ask(query).answers.map(_._2.mkString("\t"))
         val reference = results
           .find(_("queryID").num == query.id)
           .get("answers")
