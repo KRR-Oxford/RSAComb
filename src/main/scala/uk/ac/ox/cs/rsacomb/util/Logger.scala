@@ -25,6 +25,10 @@ import java.io.PrintStream
   */
 object Logger {
 
+  private val time = Calendar.getInstance()
+
+  private lazy val dir = os.temp.dir(os.pwd, "rsacomb-", false)
+
   /** Output stream for the logger. */
   var output: PrintStream = System.out
 
@@ -42,12 +46,13 @@ object Logger {
   /** Currend logger level */
   var level: Level = DEBUG
 
-  def print(str: Any, lvl: Level = NORMAL): Unit = {
-    if (lvl <= level) {
-      val time = Calendar.getInstance.getTime
-      output println s"[$lvl][$time] $str"
-    }
-  }
+  def print(str: Any, lvl: Level = NORMAL): Unit =
+    if (lvl <= level)
+      output println s"[$lvl][${time.getTime}] $str"
+
+  def write(content: os.Source, file: String, lvl: Level = VERBOSE): Unit =
+    if (lvl <= level)
+      os.write.append(dir / file, content)
 
   def timed[A](expr: => A, desc: String = "", lvl: Level = NORMAL): A = {
     val t0 = System.currentTimeMillis()
