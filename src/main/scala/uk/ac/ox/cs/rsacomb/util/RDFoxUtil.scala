@@ -243,7 +243,8 @@ object RDFoxUtil {
       path: os.Path,
       prefixes: Prefixes = new Prefixes()
   ): List[ConjunctiveQuery] = {
-    val pattern = raw"\^\[Query(\d+)\]".r
+    val header = raw"\^\[[Qq]uery(\d+)\]".r
+    val comment = "^#.*".r
     val queries = os.read
       .lines(path)
       .map(_.trim.filter(_ >= ' '))
@@ -251,12 +252,13 @@ object RDFoxUtil {
       .foldRight((List.empty[Option[ConjunctiveQuery]], List.empty[String])) {
         case (line, (acc, query)) => {
           line match {
-            case pattern(id) => {
+            case header(id) => {
               val cq =
                 ConjunctiveQuery.parse(id.toInt, query.mkString(" "), prefixes)
               (cq :: acc, List.empty)
             }
-            case _ => (acc, line :: query)
+            case comment() => (acc, query)
+            case _         => (acc, line :: query)
           }
         }
       }
