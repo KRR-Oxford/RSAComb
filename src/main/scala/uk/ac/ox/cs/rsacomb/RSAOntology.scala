@@ -123,7 +123,7 @@ object RSAOntology {
 
   def apply(
       axioms: List[OWLLogicalAxiom],
-      datafiles: List[File]
+      datafiles: List[os.Path]
   ): RSAOntology = new RSAOntology(axioms, datafiles)
 
   // def apply(
@@ -191,7 +191,7 @@ object RSAOntology {
   * @param ontology the input OWL2 ontology.
   * @param datafiles additinal data (treated as part of the ABox)
   */
-class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
+class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[os.Path])
     extends Ontology(axioms, datafiles) {
 
   /** Simplify conversion between OWLAPI and RDFox concepts */

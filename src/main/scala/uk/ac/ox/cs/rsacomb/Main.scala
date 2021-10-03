@@ -88,6 +88,14 @@ object RSAConfig {
     sys.exit(1)
   }
 
+  private def getPath(str: String): os.Path =
+    try {
+      os.Path(str, base = os.pwd)
+    } catch {
+      case e: IllegalArgumentException =>
+        exit(s"'$str' is not a well formed path.")
+    }
+
   /** Parse arguments with default options
     *
     * @param args arguments list
@@ -116,26 +124,20 @@ object RSAConfig {
         }
         parse(tail, config += ('logger -> level))
       }
-      case flag @ ("-o" | "--output") :: _output :: tail =>
-        try {
-          val output = Paths.get(_output)
-          parse(tail, config += ('output -> output))
-        } catch {
-          case e: InvalidPathException =>
-            exit(s"'${_output}' is not a valid filename.")
-        }
+      case flag @ ("-o" | "--output") :: output :: tail =>
+        parse(tail, config += ('output -> getPath(output)))
       case flag @ ("-q" | "--queries") :: _query :: tail => {
-        val query = new File(_query)
-        if (!query.isFile)
-          exit(s"'$query' is not a valid filename.")
+        val query = getPath(_query)
+        if (!os.isFile(query))
+          exit(s"'${_query}' is not a valid filename.")
         parse(tail, config += ('queries -> query))
       }
       case _ontology :: _data => {
-        val ontology = new File(_ontology)
-        val data = _data.map(new File(_))
-        (ontology :: data) foreach { (file) =>
-          if (!file.isFile)
-            exit(s"'$file' is not a valid filename.")
+        val ontology = getPath(_ontology)
+        val data = _data map getPath
+        (ontology :: data) foreach { (path) =>
+          if (!os.isFile(path))
+            exit(s"'$path' is not a valid filename.")
         }
         finalise(config += ('ontology -> ontology) += ('data -> data))
       }
@@ -156,8 +158,8 @@ object RSAComb extends App {
 
   /* Load original ontology and normalize it */
   val ontology = Ontology(
-    config('ontology).get[File],
-    config('data).get[List[File]]
+    config('ontology).get[os.Path],
+    config('data).get[List[os.Path]]
   ).normalize(new Normalizer)
 
   //ontology.axioms foreach println
@@ -168,14 +170,18 @@ object RSAComb extends App {
 
   if (config contains 'queries) {
     val queries =
-      RDFoxUtil.loadQueriesFromFile(config('queries).get[File].getAbsoluteFile)
+      RDFoxUtil.loadQueriesFromFile(
+        config('queries).get[os.Path]
+      )
 
     val answers = rsa ask queries
 
     /* Write answers to output file */
-    val output = new PrintWriter(config('output).get[Path].toFile)
-    output.write(ujson.write(ujson.Arr(answers.map(_.toJSON)), indent = 4))
-    output.close()
+    os.write(
+      config('output).get[os.Path],
+      ujson.write(ujson.Arr(answers.map(_.toJSON)), indent = 4),
+      createFolders = true
+    )
 
     // Logger.print(s"$answers", Logger.VERBOSE)
     // Logger print s"Number of answers: ${answers.length} (${answers.lengthWithMultiplicity})"

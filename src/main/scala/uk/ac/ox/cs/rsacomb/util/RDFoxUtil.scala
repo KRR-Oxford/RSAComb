@@ -186,10 +186,15 @@ object RDFoxUtil {
     * @param graph named graph where the data should be uploaded
     * @param files sequence of files to upload.
     */
-  def addData(data: DataStoreConnection, graph: IRI, files: File*): Unit =
+  def addData(data: DataStoreConnection, graph: IRI, files: os.Path*): Unit =
     Logger.timed(
-      files.foreach {
-        data.importData(graph.getIRI, UpdateType.ADDITION, RSA.Prefixes, _)
+      files.foreach { path =>
+        data.importData(
+          graph.getIRI,
+          UpdateType.ADDITION,
+          RSA.Prefixes,
+          path.toIO
+        )
       },
       "Loading data files",
       Logger.DEBUG
@@ -235,11 +240,11 @@ object RDFoxUtil {
     * @return a list of [[tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery SelectQuery]] queries.
     */
   def loadQueriesFromFile(
-      file: File,
+      path: os.Path,
       prefixes: Prefixes = new Prefixes()
   ): List[ConjunctiveQuery] = {
-    val source = io.Source.fromFile(file)
-    val queries = source.getLines
+    val queries = os.read
+      .lines(path)
       .map(_.trim.filter(_ >= ' '))
       .filterNot(_ == "")
       .foldRight((List.empty[List[String]], List.empty[String])) {
@@ -254,8 +259,7 @@ object RDFoxUtil {
       .map(_.mkString(" "))
       .map(ConjunctiveQuery.parse(_, prefixes))
       .collect { case Some(q) => q }
-    Logger print s"Loaded ${queries.length} queries from ${file.getAbsolutePath}"
-    source.close()
+    Logger print s"Loaded ${queries.length} queries from $path"
     queries
   }
 

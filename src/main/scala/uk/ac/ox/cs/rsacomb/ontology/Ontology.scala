@@ -77,7 +77,7 @@ object Ontology {
     */
   def dependencyGraph(
       axioms: List[OWLLogicalAxiom],
-      datafiles: List[File],
+      datafiles: List[os.Path],
       unsafe: List[OWLObjectPropertyExpression]
   ): DependencyGraph = {
 
@@ -167,10 +167,10 @@ object Ontology {
     (graph, nodemap)
   }
 
-  def apply(axioms: List[OWLLogicalAxiom], datafiles: List[File]): Ontology =
+  def apply(axioms: List[OWLLogicalAxiom], datafiles: List[os.Path]): Ontology =
     new Ontology(axioms, datafiles)
 
-  def apply(ontology: OWLOntology, datafiles: List[File]): Ontology = {
+  def apply(ontology: OWLOntology, datafiles: List[os.Path]): Ontology = {
 
     /** TBox axioms */
     var tbox: List[OWLLogicalAxiom] =
@@ -202,8 +202,8 @@ object Ontology {
     Ontology(abox ::: tbox ::: rbox, datafiles)
   }
 
-  def apply(ontofile: File, datafiles: List[File]): Ontology = {
-    val ontology = manager.loadOntologyFromOntologyDocument(ontofile)
+  def apply(ontofile: os.Path, datafiles: List[os.Path]): Ontology = {
+    val ontology = manager.loadOntologyFromOntologyDocument(ontofile.toIO)
     Ontology(ontology, datafiles)
   }
 
@@ -214,7 +214,10 @@ object Ontology {
   * @param axioms list of axioms (roughly) corresponding to the TBox.
   * @param datafiles files containing ABox data.
   */
-class Ontology(val axioms: List[OWLLogicalAxiom], val datafiles: List[File]) {
+class Ontology(
+    val axioms: List[OWLLogicalAxiom],
+    val datafiles: List[os.Path]
+) {
 
   /** Extend OWLAxiom functionalities */
   import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom._
