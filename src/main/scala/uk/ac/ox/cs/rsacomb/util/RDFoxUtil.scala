@@ -243,21 +243,24 @@ object RDFoxUtil {
       path: os.Path,
       prefixes: Prefixes = new Prefixes()
   ): List[ConjunctiveQuery] = {
+    val pattern = raw"\^\[Query(\d+)\]".r
     val queries = os.read
       .lines(path)
       .map(_.trim.filter(_ >= ' '))
       .filterNot(_ == "")
-      .foldRight((List.empty[List[String]], List.empty[String])) {
+      .foldRight((List.empty[Option[ConjunctiveQuery]], List.empty[String])) {
         case (line, (acc, query)) => {
-          if ("^#\\^\\[Query\\d+\\]$".r.matches(line))
-            (query :: acc, List.empty)
-          else
-            (acc, line :: query)
+          line match {
+            case pattern(id) => {
+              val cq =
+                ConjunctiveQuery.parse(id.toInt, query.mkString(" "), prefixes)
+              (cq :: acc, List.empty)
+            }
+            case _ => (acc, line :: query)
+          }
         }
       }
       ._1
-      .map(_.mkString(" "))
-      .map(ConjunctiveQuery.parse(_, prefixes))
       .collect { case Some(q) => q }
     Logger print s"Loaded ${queries.length} queries from $path"
     queries
