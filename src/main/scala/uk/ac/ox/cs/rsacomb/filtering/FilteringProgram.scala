@@ -36,7 +36,7 @@ object FilteringProgram extends Versioned[FilterType] {
 
   import FilterType._
 
-  type Result = (ConjunctiveQuery) => FilteringProgram
+  type Result = (IRI, IRI, ConjunctiveQuery) => FilteringProgram
 
   /** Returns the right type of filtering program builder.
     *
@@ -46,14 +46,10 @@ object FilteringProgram extends Versioned[FilterType] {
     *
     * @return the right type of filtering program builder.
     */
-  def apply(
-      filter: FilterType,
-      source: IRI,
-      target: IRI
-  ): (ConjunctiveQuery) => FilteringProgram =
+  def apply(filter: FilterType): Result =
     filter match {
-      case NAIVE   => NaiveFilteringProgram(source, target, _)
-      case REVISED => RevisedFilteringProgram(source, target, _)
+      case NAIVE   => NaiveFilteringProgram(_, _, _)
+      case REVISED => RevisedFilteringProgram(_, _, _)
     }
 }
 

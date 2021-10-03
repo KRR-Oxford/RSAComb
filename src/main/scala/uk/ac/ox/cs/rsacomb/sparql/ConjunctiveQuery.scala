@@ -100,12 +100,12 @@ class ConjunctiveQuery(
 
   /** Returns the query body as a sequence of atoms (triples). */
   def atoms(graph: TupleTableName): List[TupleTableAtom] =
-    where.collect { case c: ConjunctionPattern =>
-      c.getConjuncts.collect { case t: TriplePattern =>
-        TupleTableAtom
-          .create(graph, t.getSubject, t.getPredicate, t.getObject)
+    where
+      .asInstanceOf[ConjunctionPattern]
+      .getConjuncts
+      .collect { case t: TriplePattern =>
+        TupleTableAtom.create(graph, t.getSubject, t.getPredicate, t.getObject)
       }
-    }.flatten
   // where match {
   //   case b: ConjunctionPattern => {
   //     b.getConjuncts.toList.flatMap { conj: QueryPattern =>
@@ -123,13 +123,16 @@ class ConjunctiveQuery(
 
   /** Returns the full collection of variables involved in the query. */
   val variables: List[Variable] =
-    where.collect { case c: ConjunctionPattern =>
-      c.getConjuncts.collect { case t: TriplePattern =>
+    where
+      .asInstanceOf[ConjunctionPattern]
+      .getConjuncts
+      .collect { case t: TriplePattern =>
         Set(t.getSubject, t.getPredicate, t.getObject).collect {
           case v: Variable => v
         }
       }
-    }.distinct
+      .flatten
+      .distinct
   // (where match {
   //   case b: ConjunctionPattern => {
   //     b.getConjuncts.toList.flatMap { conj: QueryPattern =>

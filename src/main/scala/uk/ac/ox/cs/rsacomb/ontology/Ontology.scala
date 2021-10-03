@@ -29,8 +29,13 @@ import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model.{OWLOntology, OWLAxiom, OWLLogicalAxiom}
 import org.semanticweb.owlapi.model.{OWLObjectPropertyExpression}
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory
-import tech.oxfordsemantic.jrdfox.logic.datalog.Rule
-import tech.oxfordsemantic.jrdfox.logic.expression.{Resource, Term, Variable}
+import tech.oxfordsemantic.jrdfox.logic.datalog.{Rule, TupleTableName}
+import tech.oxfordsemantic.jrdfox.logic.expression.{
+  IRI,
+  Resource,
+  Term,
+  Variable
+}
 
 import uk.ac.ox.cs.rsacomb.approximation.Approximation
 import uk.ac.ox.cs.rsacomb.converter._
@@ -143,10 +148,11 @@ object Ontology {
       RSA.U(varY)
     ) :: rules
     /* Load facts and rules from ontology */
-    RDFoxUtil.addFacts(data, facts)
+    val ttn = IRI.create(TupleTableName.DEFAULT_TRIPLES.getName)
+    RDFoxUtil.addFacts(data, ttn, facts)
     RDFoxUtil.addRules(data, rules)
     /* Load data files */
-    RDFoxUtil.addData(data, datafiles: _*)
+    RDFoxUtil.addData(data, ttn, datafiles: _*)
 
     /* Build the graph */
     val query = "SELECT ?X ?Y WHERE { ?X rsa:E ?Y }"
