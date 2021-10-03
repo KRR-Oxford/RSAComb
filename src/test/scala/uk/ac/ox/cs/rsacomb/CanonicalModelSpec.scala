@@ -45,7 +45,7 @@ object Ontology1_CanonicalModelSpec {
   def base(str: String): IRI =
     IRI.create("http://example.com/rsa_example.owl#" + str)
 
-  val ontology_path: File = new File("examples/example1.ttl")
+  val ontology_path = os.pwd / "examples" / "example1.ttl"
   val ontology = Ontology(ontology_path, List()).approximate(new Lowerbound)
   val program = ontology.canonicalModel
   val converter = program.CanonicalModelConverter
