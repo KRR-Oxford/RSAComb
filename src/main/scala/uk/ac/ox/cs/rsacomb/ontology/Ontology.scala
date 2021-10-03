@@ -155,7 +155,7 @@ object Ontology {
     RDFoxUtil.addData(data, ttn, datafiles: _*)
 
     /* Build the graph */
-    val query = "SELECT ?X ?Y WHERE { ?X rsa:E ?Y }"
+    val query = "SELECT ?X ?Y WHERE { ?X rsacomb:E ?Y }"
     val answers = RDFoxUtil.submitQuery(data, query, RSA.Prefixes).get
     var edges: Seq[DiEdge[Resource]] =
       answers.collect { case (_, Seq(n1, n2)) => n1 ~> n2 }
