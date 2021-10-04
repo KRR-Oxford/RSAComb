@@ -2,7 +2,6 @@
 # Temporary
 .scalafmt.conf
 resources/
-tests/
 lib/
 
 # Scala
