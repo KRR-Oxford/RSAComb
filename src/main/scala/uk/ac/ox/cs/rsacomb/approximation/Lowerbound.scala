@@ -51,6 +51,7 @@ class Lowerbound(implicit fresh: DataFactory)
   def approximate(ontology: Ontology): RSAOntology =
     toRSA(
       new Ontology(
+        ontology.origin,
         ontology.axioms filter inALCHOIQ flatMap shift,
         ontology.datafiles
       )
@@ -218,7 +219,11 @@ class Lowerbound(implicit fresh: DataFactory)
     }.toList
 
     /* Remove axioms from approximated ontology */
-    RSAOntology(ontology.axioms diff toDelete, ontology.datafiles)
+    RSAOntology(
+      ontology.origin,
+      ontology.axioms diff toDelete,
+      ontology.datafiles
+    )
   }
 
   // val edges1 = Seq('A ~> 'B, 'B ~> 'C, 'C ~> 'D, 'D ~> 'H, 'H ~>

@@ -68,7 +68,7 @@ class CanonicalModel(val ontology: RSAOntology, val graph: IRI) {
     */
   val rolesAdditionalRules: List[Rule] = {
     val tt = TupleTableName.create(graph.getIRI)
-    ontology.roles
+    ontology.objroles
       .collect { case prop: OWLObjectProperty => prop }
       .flatMap((pred) => {
         val iri = pred.getIRI.getIRIString

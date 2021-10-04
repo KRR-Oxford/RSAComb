@@ -167,8 +167,8 @@ object Ontology {
     (graph, nodemap)
   }
 
-  def apply(axioms: List[OWLLogicalAxiom], datafiles: List[os.Path]): Ontology =
-    new Ontology(axioms, datafiles)
+  // def apply(axioms: List[OWLLogicalAxiom], datafiles: List[os.Path]): Ontology =
+  //   new Ontology(axioms, datafiles)
 
   def apply(ontology: OWLOntology, datafiles: List[os.Path]): Ontology = {
 
@@ -199,7 +199,7 @@ object Ontology {
         .collect(Collectors.toList())
         .collect { case a: OWLLogicalAxiom => a }
 
-    Ontology(abox ::: tbox ::: rbox, datafiles)
+    new Ontology(ontology, abox ::: tbox ::: rbox, datafiles)
   }
 
   def apply(ontofile: os.Path, datafiles: List[os.Path]): Ontology = {
@@ -215,6 +215,7 @@ object Ontology {
   * @param datafiles files containing ABox data.
   */
 class Ontology(
+    val origin: OWLOntology,
     val axioms: List[OWLLogicalAxiom],
     val datafiles: List[os.Path]
 ) {
@@ -293,6 +294,7 @@ class Ontology(
     */
   def normalize(normalizer: Normalizer): Ontology =
     new Ontology(
+      origin,
       axioms flatMap normalizer.normalize,
       datafiles
     )

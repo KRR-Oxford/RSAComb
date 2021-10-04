@@ -27,6 +27,7 @@ import org.semanticweb.owlapi.model.{OWLOntology, OWLAxiom, OWLLogicalAxiom}
 import org.semanticweb.owlapi.model.{
   OWLClass,
   OWLClassExpression,
+  OWLDataProperty,
   OWLDataPropertyAssertionAxiom,
   OWLObjectProperty,
   OWLSubObjectPropertyOfAxiom,
@@ -46,18 +47,20 @@ import tech.oxfordsemantic.jrdfox.client.{
 }
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.logic.datalog.{
+  BodyFormula,
+  FilterAtom,
+  Negation,
   Rule,
   TupleTableAtom,
-  TupleTableName,
-  Negation,
-  BodyFormula
+  TupleTableName
 }
 import tech.oxfordsemantic.jrdfox.logic.expression.{
-  Term,
-  Variable,
+  FunctionCall,
   IRI,
+  Literal,
   Resource,
-  Literal
+  Term,
+  Variable
 }
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 
@@ -122,9 +125,10 @@ object RSAOntology {
     )
 
   def apply(
+      origin: OWLOntology,
       axioms: List[OWLLogicalAxiom],
       datafiles: List[os.Path]
-  ): RSAOntology = new RSAOntology(axioms, datafiles)
+  ): RSAOntology = new RSAOntology(origin, axioms, datafiles)
 
   // def apply(
   //     ontofile: File,
@@ -191,8 +195,11 @@ object RSAOntology {
   * @param ontology the input OWL2 ontology.
   * @param datafiles additinal data (treated as part of the ABox)
   */
-class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[os.Path])
-    extends Ontology(axioms, datafiles) {
+class RSAOntology(
+    origin: OWLOntology,
+    axioms: List[OWLLogicalAxiom],
+    datafiles: List[os.Path]
+) extends Ontology(origin, axioms, datafiles) {
 
   /** Simplify conversion between OWLAPI and RDFox concepts */
   import implicits.RDFox._
@@ -221,10 +228,9 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[os.Path])
   /** Retrieve concepts/roles in the ontology */
   val concepts: List[OWLClass] =
     ontology.getClassesInSignature().asScala.toList
-  val roles: List[OWLObjectPropertyExpression] =
-    axioms
-      .flatMap(_.objectPropertyExpressionsInSignature)
-      .distinct
+  val objroles: List[OWLObjectPropertyExpression] =
+    axioms.flatMap(_.objectPropertyExpressionsInSignature).distinct
+  val dataroles: List[OWLDataProperty] = origin.getDataPropertiesInSignature
 
   /** Unsafe roles of a given ontology.
     *
@@ -358,19 +364,26 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[os.Path])
   private val topAxioms: List[Rule] = {
     val varX = Variable.create("X")
     val varY = Variable.create("Y")
+    val varZ = Variable.create("Z")
     val graph = TupleTableName.create(RSAOntology.CanonGraph.getIRI)
-    concepts
-      .map(c => {
-        Rule.create(
-          TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING),
-          TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, c.getIRI)
-        )
-      }) ++ roles.map(r => {
+    Rule.create(
+      TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING),
+      TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, varY)
+    ) :: objroles.map(r => {
       val name = r match {
         case x: OWLObjectProperty => x.getIRI.getIRIString
         case x: OWLObjectInverseOf =>
           x.getInverse.getNamedProperty.getIRI.getIRIString :: Inverse
       }
+      Rule.create(
+        List(
+          TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING),
+          TupleTableAtom.create(graph, varY, IRI.RDF_TYPE, IRI.THING)
+        ),
+        List(TupleTableAtom.create(graph, varX, name, varY))
+      )
+    }) ::: dataroles.map(r => {
+      val name = r.getIRI.getIRIString
       Rule.create(
         List(
           TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING),
@@ -542,22 +555,17 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[os.Path])
     queries map _ask
 
   private lazy val _ask: ConjunctiveQuery => ConjunctiveQueryAnswers = {
-    /* Open connection with RDFox server */
     val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
 
     /* Upload data from data file */
     RDFoxUtil.addData(data, RSAOntology.CanonGraph, datafiles: _*)
-    /* Top / equality axiomatization */
+
+    /* Top/equality axiomatization */
     RDFoxUtil.addRules(data, topAxioms ++ equalityAxioms)
     Logger.write(topAxioms.mkString("\n"), "canonical_model.datalog")
     Logger.write(equalityAxioms.mkString("\n"), "canonical_model.datalog")
-    /* Generate `named` predicates */
-    // TODO: do I need both to generate all NAMED atoms?
-    RDFoxUtil.addFacts(
-      data,
-      RSAOntology.CanonGraph,
-      (individuals ++ literals) map RSA.Named(RSAOntology.CanonGraph)
-    )
+
+    /* Introduce `rsacomb:Named` concept */
     data.evaluateUpdate(
       null, // the base IRI for the query (if null, a default is used)
       RSA.Prefixes,
@@ -572,25 +580,24 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[os.Path])
     )
 
     /* Add canonical model */
+    Logger print s"Canonical model facts: ${this.canonicalModel.facts.length}"
+    RDFoxUtil.addFacts(data, RSAOntology.CanonGraph, this.canonicalModel.facts)
     Logger print s"Canonical model rules: ${this.canonicalModel.rules.length}"
     Logger.write(canonicalModel.rules.mkString("\n"), "canonical_model.datalog")
     RDFoxUtil.addRules(data, this.canonicalModel.rules)
 
-    Logger print s"Canonical model facts: ${this.canonicalModel.facts.length}"
-    RDFoxUtil.addFacts(data, RSAOntology.CanonGraph, this.canonicalModel.facts)
-
-    /* Close connection with RDFox server */
     RDFoxUtil.closeConnection(server, data)
 
     (query => {
-      /* Open connection with RDFox server */
       val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
+
       val filter = RSAOntology.filteringProgram(query)
 
       /* Add filtering program */
       Logger print s"Filtering program rules: ${filter.rules.length}"
       Logger.write(filter.rules.mkString("\n"), s"filter${query.id}.datalog")
       RDFoxUtil.addRules(data, filter.rules)
+
       // TODO: We remove the rules, should we drop the tuple table as well?
       data.clearRulesAxiomsExplicateFacts()
 
@@ -600,7 +607,6 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[os.Path])
         .map(new ConjunctiveQueryAnswers(query, query.variables, _))
         .get
 
-      /* Close connection with RDFox server */
       RDFoxUtil.closeConnection(server, data)
 
       answers

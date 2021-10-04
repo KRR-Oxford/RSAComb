@@ -42,7 +42,7 @@ object RDFoxDSL {
   import scala.collection.JavaConverters._
 
   implicit class MyVariable(private val str: StringContext) extends AnyVal {
-    def v(args: Any*): Variable = Variable.create(s"${str.s(args: _*)}i")
+    def v(args: Any*): Variable = Variable.create(s"${str.s(args: _*)}")
   }
 
 }

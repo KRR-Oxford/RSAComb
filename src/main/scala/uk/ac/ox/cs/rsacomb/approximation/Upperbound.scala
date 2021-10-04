@@ -51,6 +51,7 @@ class Upperbound(implicit fresh: DataFactory)
   def approximate(ontology: Ontology): RSAOntology =
     toRSA(
       new Ontology(
+        ontology.origin,
         ontology.axioms flatMap toConjuncts,
         ontology.datafiles
       )
@@ -161,6 +162,7 @@ class Upperbound(implicit fresh: DataFactory)
 
     /* Substitute selected axioms with their "skolemized" version */
     RSAOntology(
+      ontology.origin,
       ontology.axioms diff toSkolem concat skolemized,
       ontology.datafiles
     )
