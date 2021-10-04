@@ -17,6 +17,7 @@
 package uk.ac.ox.cs.rsacomb.util
 
 import java.io.{OutputStream, File, StringReader}
+import scala.collection.JavaConverters._
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.client.{
   ComponentInfo,
@@ -38,9 +39,11 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
   Literal,
   Resource,
   Variable,
-  Term
+  Term,
+  IRI
 }
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
+import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 import uk.ac.ox.cs.rsacomb.suffix.Nth
 import uk.ac.ox.cs.rsacomb.util.Logger
 
@@ -84,10 +87,27 @@ object RDFoxUtil {
     val password = ""
     val server =
       ConnectionFactory.newServerConnection(serverUrl, role, password)
+    opts.put("type", "par-complex-nn")
     if (!server.containsDataStore(datastore))
-      server.createDataStore(datastore, "par-complex-nn", opts)
+      server.createDataStore(datastore, opts)
     val data = server.newDataStoreConnection(datastore)
     (server, data)
+  }
+
+  /** Get the IRI of a named graph (creating it if necessary)
+    *
+    * @param datastore name of the datastore to perform the action in.
+    * @param name name of the named graph.
+    *
+    * @return the full IRI for the (new) named graph.
+    */
+  def getNamedGraph(datastore: String, name: String): IRI = {
+    val graph = RSA(name)
+    val (server, data) = openConnection(datastore)
+    if (!data.containsTupleTable(graph.getIRI))
+      data.createTupleTable(graph.getIRI, Map("type" -> "named-graph").asJava)
+    RDFoxUtil.closeConnection(server, data)
+    return graph
   }
 
   /** Create a built-in `rdfox:SKOLEM` TupleTableAtom. */
@@ -122,13 +142,14 @@ object RDFoxUtil {
   def addRules(data: DataStoreConnection, rules: Seq[Rule]): Unit =
     Logger.timed(
       if (rules.length > 0) {
-        data.importData(
-          UpdateType.ADDITION,
-          RSA.Prefixes,
-          rules
-            .map(_.toString(Prefixes.s_emptyPrefixes))
-            .mkString("\n")
-        )
+        data addRules rules
+        // data.importData(
+        //   UpdateType.ADDITION,
+        //   RSA.Prefixes,
+        //   rules
+        //     .map(_.toString(Prefixes.s_emptyPrefixes))
+        //     .mkString("\n")
+        // )
       },
       s"Loading ${rules.length} rules",
       Logger.DEBUG
@@ -139,10 +160,15 @@ object RDFoxUtil {
     * @param data datastore connection
     * @param facts collection of facts to be added to the data store
     */
-  def addFacts(data: DataStoreConnection, facts: Seq[TupleTableAtom]): Unit =
+  def addFacts(
+      data: DataStoreConnection,
+      graph: IRI,
+      facts: Seq[TupleTableAtom]
+  ): Unit =
     Logger.timed(
       if (facts.length > 0) {
         data.importData(
+          graph.getIRI,
           UpdateType.ADDITION,
           RSA.Prefixes,
           facts
@@ -157,15 +183,17 @@ object RDFoxUtil {
   /** Imports a sequence of files directly into a datastore.
     *
     * @param data datastore connection.
+    * @param graph named graph where the data should be uploaded
     * @param files sequence of files to upload.
     */
-  def addData(data: DataStoreConnection, files: File*): Unit =
+  def addData(data: DataStoreConnection, graph: IRI, files: os.Path*): Unit =
     Logger.timed(
-      files.foreach {
+      files.foreach { path =>
         data.importData(
+          graph.getIRI,
           UpdateType.ADDITION,
           RSA.Prefixes,
-          _
+          path.toIO
         )
       },
       "Loading data files",
@@ -175,15 +203,6 @@ object RDFoxUtil {
   /** Force materialization in RDFox. */
   def materialize(data: DataStoreConnection): Unit =
     Logger.timed(data.updateMaterialization(), "Materialization", Logger.DEBUG)
-
-  /** Load SPARQL query from file. */
-  def loadQueryFromFile(file: File): String = {
-    val source = io.Source.fromFile(file)
-    val query = source.getLines mkString "\n"
-    Logger print s"Loaded query:\n$query"
-    source.close()
-    query
-  }
 
   /** Export data in `text/turtle`.
     *
@@ -203,6 +222,50 @@ object RDFoxUtil {
       "application/x.datalog",
       RDFoxOpts()
     )
+  }
+
+  /** Load SPARQL queries from file.
+    *
+    * The file can list multiple queries, each preceeded with a
+    * single line containing "#^[Query<id>]" where "<id>" is a number.
+    * Empty lines are ignored.
+    *
+    * @note if a query is not recognized as a [[SelectQuery]] by RDFox
+    * it is discarded.
+    *
+    * @param file file containing a list of conjunctive queries.
+    * @param prefixes additional prefixes for the query. It defaults to
+    * an empty set.
+    *
+    * @return a list of [[tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery SelectQuery]] queries.
+    */
+  def loadQueriesFromFile(
+      path: os.Path,
+      prefixes: Prefixes = new Prefixes()
+  ): List[ConjunctiveQuery] = {
+    val header = raw"\^\[[Qq]uery(\d+)\]".r
+    val comment = "^#.*".r
+    val queries = os.read
+      .lines(path)
+      .map(_.trim.filter(_ >= ' '))
+      .filterNot(_ == "")
+      .foldRight((List.empty[Option[ConjunctiveQuery]], List.empty[String])) {
+        case (line, (acc, query)) => {
+          line match {
+            case header(id) => {
+              val cq =
+                ConjunctiveQuery.parse(id.toInt, query.mkString(" "), prefixes)
+              (cq :: acc, List.empty)
+            }
+            case comment() => (acc, query)
+            case _         => (acc, line :: query)
+          }
+        }
+      }
+      ._1
+      .collect { case Some(q) => q }
+    Logger print s"Loaded ${queries.length} queries from $path"
+    queries
   }
 
   /** Parse a SELECT query from a string in SPARQL format.
@@ -282,12 +345,14 @@ object RDFoxUtil {
     * compatible with RDFox engine. This helper allows to build a query
     * to gather all instances of an internal predicate
     *
+    * @param graph named graph to query for the provided predicate
     * @param pred name of the predicate to describe.
     * @param arity arity of the predicate.
     * @return a string containing a SPARQL query.
     */
   def buildDescriptionQuery(
-      pred: String,
+      graph: IRI,
+      pred: IRI,
       arity: Int
   ): String = {
     if (arity > 0) {
@@ -295,55 +360,12 @@ object RDFoxUtil {
       s"""
       SELECT $variables
       WHERE {
-          ?K a rsa:$pred.
-          TT <http://oxfordsemantic.tech/RDFox#SKOLEM> { $variables ?K } .
+        GRAPH $graph { ?K a $pred }.
+        TT ${TupleTableName.SKOLEM} { $variables ?K } .
       }
       """
     } else {
-      "ASK { ?X a rsa:Ans }"
-    }
-  }
-
-  /** Reify a [[tech.oxfordsemantic.jrdfox.logic.datalog.Rule Rule]].
-    *
-    * This is needed because RDFox supports only predicates of arity 1
-    * or 2, but the filtering program uses predicates with higher arity.
-    *
-    * @note we can perform a reification of the atoms thanks to the
-    * built-in `SKOLEM` funtion of RDFox.
-    */
-  def reify(rule: Rule): Rule = {
-    val (sk, as) = rule.getHead.map(_.reified).unzip
-    val head: List[TupleTableAtom] = as.flatten
-    val skolem: List[BodyFormula] = sk.flatten
-    val body: List[BodyFormula] = rule.getBody.map(reify).flatten
-    Rule.create(head, skolem ::: body)
-  }
-
-  /** Reify a [[tech.oxfordsemantic.jrdfox.logic.datalog.BodyFormula BodyFormula]].
-    *
-    * This is needed because RDFox supports only predicates of arity 1
-    * or 2, but the filtering program uses predicates with higher arity.
-    *
-    * @note we can perform a reification of the atoms thanks to the
-    * built-in `SKOLEM` funtion of RDFox.
-    */
-  private def reify(formula: BodyFormula): List[BodyFormula] = {
-    formula match {
-      case atom: TupleTableAtom => atom.reified._2
-      case neg: Negation => {
-        val (sk, as) = neg.getNegatedAtoms
-          .map({
-            case a: TupleTableAtom => a.reified
-            case a                 => (None, List(a))
-          })
-          .unzip
-        val skolem =
-          sk.flatten.map(_.getArguments.last).collect { case v: Variable => v }
-        val atoms = as.flatten
-        List(Negation.create(skolem, atoms))
-      }
-      case other => List(other)
+      s"ASK { GRAPH $graph { ?X a $pred } }"
     }
   }
 

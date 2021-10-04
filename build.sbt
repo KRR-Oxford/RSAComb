@@ -1,7 +1,7 @@
 import Dependencies._
 
 ThisBuild / scalaVersion := "2.13.4"
-ThisBuild / version := "0.1.0"
+ThisBuild / version := "0.2.0"
 ThisBuild / organization := "uk.ac.ox.cs.rsacomb"
 ThisBuild / organizationName := "Department of Computer Science - University of Oxford"
 ThisBuild / organizationHomepage := Some(url("https://www.cs.ox.ac.uk"))
@@ -35,7 +35,9 @@ lazy val root = (project in file("."))
       scalatestFlatSpec % Test,
       scalatestShouldMatchers % Test,
       apibinding,
-      graphcore
+      graphcore,
+      ujson,
+      oslib
     )
   )
 

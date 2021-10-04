@@ -24,13 +24,13 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
   BindAtom,
   BodyFormula,
   Rule,
-  TupleTableAtom
+  TupleTableAtom,
+  TupleTableName
 }
 import tech.oxfordsemantic.jrdfox.logic.expression.{Term, IRI, FunctionCall}
-import uk.ac.ox.cs.rsacomb.RSAUtil
 import uk.ac.ox.cs.rsacomb.RSAOntology
 import uk.ac.ox.cs.rsacomb.suffix.{Empty, Inverse, RSASuffix}
-import uk.ac.ox.cs.rsacomb.util.{RSA, RDFoxUtil}
+import uk.ac.ox.cs.rsacomb.util.{DataFactory, RSA, RDFoxUtil}
 
 /** Horn-ALCHOIQ to RDFox axiom converter.
   *
@@ -59,6 +59,10 @@ trait RDFoxConverter {
     */
   private val manager = OWLManager.createOWLOntologyManager()
   private val factory = manager.getOWLDataFactory()
+
+  /** Default named graph to be used when generating new atoms */
+  val graph: TupleTableName =
+    TupleTableName.create("http://oxfordsemantic.tech/RDFox#DefaultTriples")
 
   /** Represents the result of the conversion of a
     * [[org.semanticweb.owlapi.model.OWLClassExpression OWLClassExpression]].
@@ -91,35 +95,37 @@ trait RDFoxConverter {
   protected def ResultF(atoms: List[TupleTableAtom]): Result = (atoms, List())
   protected def ResultR(rules: List[Rule]): Result = (List(), rules)
 
-  /** Converts a
-    * [[org.semanticweb.owlapi.model.OWLLogicalAxiom OWLLogicalAxiom]]
-    * into a collection of
-    * [[tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom TupleTableAtoms]]
-    * and
-    * [[tech.oxfordsemantic.jrdfox.logic.datalog.Rule Rules]].
+  /** Converts a [[OWLLogicalAxiom]] into a collection of [[TupleTableAtoms]] and [[Rules]].
     *
     * @note not all possible axioms are handled correctly, and in
     * general they are assumed to be normalised. Following is a list of
     * all unhandled class expressions:
     * - [[org.semanticweb.owlapi.model.OWLAsymmetricObjectPropertyAxiom OWLAsymmetricObjectPropertyAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLDataPropertyAssertionAxiom OWLDataPropertyAssertionAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLDataPropertyRangeAxiom OWLDataPropertyRangeAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLDatatypeDefinitionAxiom OWLDatatypeDefinitionAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLDifferentIndividualsAxiom OWLDifferentIndividualsAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLDisjointDataPropertiesAxiom OWLDisjointDataPropertiesAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLDisjointObjectPropertiesAxiom OWLDisjointObjectPropertiesAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLHasKeyAxiom OWLHasKeyAxiom]]
+    * - [[org.semanticweb.owlapi.model.SWRLRule SWRLRule]]
+    *
+    * @note The following axioms are not handled directly but can be
+    * normalised beforehand.
+    *
+    * - [[org.semanticweb.owlapi.model.OWLTransitiveObjectPropertyAxiom OWLTransitiveObjectPropertyAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLDataPropertyAssertionAxiom OWLDataPropertyAssertionAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLDataPropertyRangeAxiom OWLDataPropertyRangeAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLDifferentIndividualsAxiom OWLDifferentIndividualsAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLReflexiveObjectPropertyAxiom OWLReflexiveObjectPropertyAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLSameIndividualAxiom OWLSameIndividualAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLNegativeDataPropertyAssertionAxiom OWLNegativeDataPropertyAssertionAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLNegativeObjectPropertyAssertionAxiom OWLNegativeObjectPropertyAssertionAxiom]]
+    * - [[org.semanticweb.owlapi.model.OWLIrreflexiveObjectPropertyAxiom OWLIrreflexiveObjectPropertyAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLDisjointUnionAxiom OWLDisjointUnionAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLEquivalentDataPropertiesAxiom OWLEquivalentDataPropertiesAxiom]]
     * - [[org.semanticweb.owlapi.model.OWLFunctionalDataPropertyAxiom OWLFunctionalDataPropertyAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLHasKeyAxiom OWLHasKeyAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLIrreflexiveObjectPropertyAxiom OWLIrreflexiveObjectPropertyAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLNegativeDataPropertyAssertionAxiom OWLNegativeDataPropertyAssertionAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLNegativeObjectPropertyAssertionAxiom OWLNegativeObjectPropertyAssertionAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLReflexiveObjectPropertyAxiom OWLReflexiveObjectPropertyAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLSameIndividualAxiom OWLSameIndividualAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLSubPropertyChainOfAxiom OWLSubPropertyChainOfAxiom]]
-    * - [[org.semanticweb.owlapi.model.OWLTransitiveObjectPropertyAxiom OWLTransitiveObjectPropertyAxiom]]
-    * - [[org.semanticweb.owlapi.model.SWRLRule SWRLRule]]
+    *
+    * @see [[Normaliser]]
+    * @see
+    *   http://owlcs.github.io/owlapi/apidocs_5/index.html
     */
   def convert(
       axiom: OWLLogicalAxiom,
@@ -127,16 +133,16 @@ trait RDFoxConverter {
       unsafe: List[OWLObjectPropertyExpression],
       skolem: SkolemStrategy,
       suffix: RSASuffix
-  ): Result =
+  )(implicit fresh: DataFactory): Result =
     axiom match {
 
       case a: OWLSubClassOfAxiom => {
         val subcls = a.getSubClass
         val supcls = a.getSuperClass
         val (sub, _) =
-          convert(subcls, term, unsafe, NoSkolem, suffix)
+          convert(subcls, term, unsafe, NoSkolem, suffix)(fresh)
         val (sup, ext) =
-          convert(supcls, term, unsafe, skolem, suffix)
+          convert(supcls, term, unsafe, skolem, suffix)(fresh)
         val rule = Rule.create(sup, ext ::: sub)
         ResultR(List(rule))
       }
@@ -146,7 +152,7 @@ trait RDFoxConverter {
       case a: OWLEquivalentClassesAxiom => {
         val (atoms, rules) = a.asPairwiseAxioms
           .flatMap(_.asOWLSubClassOfAxioms)
-          .map(a => convert(a, term, unsafe, skolem dup a, suffix))
+          .map(a => convert(a, term, unsafe, skolem dup a, suffix)(fresh))
           .unzip
         (atoms.flatten, rules.flatten)
       }
@@ -154,61 +160,65 @@ trait RDFoxConverter {
       case a: OWLEquivalentObjectPropertiesAxiom => {
         val (atoms, rules) = a.asPairwiseAxioms
           .flatMap(_.asSubObjectPropertyOfAxioms)
-          .map(a => convert(a, term, unsafe, skolem dup a, suffix))
+          .map(a => convert(a, term, unsafe, skolem dup a, suffix)(fresh))
           .unzip
         (atoms.flatten, rules.flatten)
       }
 
       case a: OWLSubObjectPropertyOfAxiom => {
-        val term1 = RSAUtil.genFreshVariable()
-        val body = convert(a.getSubProperty, term, term1, suffix)
-        val head = convert(a.getSuperProperty, term, term1, suffix)
+        val term1 = fresh.getVariable
+        val body = convert(a.getSubProperty, term, term1, suffix)(fresh)
+        val head = convert(a.getSuperProperty, term, term1, suffix)(fresh)
         ResultR(List(Rule.create(head, body)))
       }
 
       case a: OWLSubDataPropertyOfAxiom => {
-        val term1 = RSAUtil.genFreshVariable()
-        val body = convert(a.getSubProperty, term, term1, suffix)
-        val head = convert(a.getSuperProperty, term, term1, suffix)
+        val term1 = fresh.getVariable
+        val body = convert(a.getSubProperty, term, term1, suffix)(fresh)
+        val head = convert(a.getSuperProperty, term, term1, suffix)(fresh)
         ResultR(List(Rule.create(head, body)))
       }
 
       case a: OWLObjectPropertyDomainAxiom =>
-        convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)
+        convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)(fresh)
 
       case a: OWLObjectPropertyRangeAxiom => {
-        val term1 = RSAUtil.genFreshVariable()
-        val (res, ext) = convert(a.getRange, term, unsafe, skolem, suffix)
-        val prop = convert(a.getProperty, term1, term, suffix)
+        val term1 = fresh.getVariable
+        val (res, ext) =
+          convert(a.getRange, term, unsafe, skolem, suffix)(fresh)
+        val prop = convert(a.getProperty, term1, term, suffix)(fresh)
         ResultR(List(Rule.create(res, prop :: ext)))
       }
 
       case a: OWLDataPropertyDomainAxiom =>
-        convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)
+        convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)(fresh)
 
       case a: OWLDisjointClassesAxiom => {
         val body = a.getOperandsAsList.asScala.toSeq
-          .flatMap((cls) => convert(cls, term, unsafe, NoSkolem, suffix)._1)
-        val bottom = TupleTableAtom.rdf(term, IRI.RDF_TYPE, IRI.NOTHING)
+          .flatMap((cls) =>
+            convert(cls, term, unsafe, NoSkolem, suffix)(fresh)._1
+          )
+        val bottom =
+          TupleTableAtom.create(graph, term, IRI.RDF_TYPE, IRI.NOTHING)
         ResultR(List(Rule.create(bottom, body: _*)))
       }
 
       case a: OWLInverseObjectPropertiesAxiom => {
         val (atoms, rules) = a.asSubObjectPropertyOfAxioms
-          .map(a => convert(a, term, unsafe, skolem dup a, suffix))
+          .map(a => convert(a, term, unsafe, skolem dup a, suffix)(fresh))
           .unzip
         (atoms.flatten, rules.flatten)
       }
 
       case a: OWLFunctionalObjectPropertyAxiom =>
-        convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)
+        convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)(fresh)
 
       case a: OWLInverseFunctionalObjectPropertyAxiom =>
-        convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)
+        convert(a.asOWLSubClassOfAxiom, term, unsafe, skolem, suffix)(fresh)
 
       case a: OWLSymmetricObjectPropertyAxiom => {
         val (atoms, rules) = a.asSubPropertyAxioms
-          .map(a => convert(a, term, unsafe, skolem dup a, suffix))
+          .map(a => convert(a, term, unsafe, skolem dup a, suffix)(fresh))
           .unzip
         (atoms.flatten, rules.flatten)
       }
@@ -219,7 +229,7 @@ trait RDFoxConverter {
           case i: OWLNamedIndividual => {
             val cls = a.getClassExpression
             val (res, _) =
-              convert(cls, i.getIRI, unsafe, NoSkolem, suffix)
+              convert(cls, i.getIRI, unsafe, NoSkolem, suffix)(fresh)
             ResultF(res)
           }
           case _ => Result()
@@ -232,7 +242,7 @@ trait RDFoxConverter {
         else {
           val subj = a.getSubject.asOWLNamedIndividual.getIRI
           val obj = a.getObject.asOWLNamedIndividual.getIRI
-          val prop = convert(a.getProperty, subj, obj, suffix)
+          val prop = convert(a.getProperty, subj, obj, suffix)(fresh)
           ResultF(List(prop))
         }
 
@@ -246,24 +256,30 @@ trait RDFoxConverter {
         else {
           val subj = a.getSubject.asOWLNamedIndividual.getIRI
           val obj = a.getObject
-          val prop = convert(a.getProperty, subj, obj, suffix)
+          val prop = convert(a.getProperty, subj, obj, suffix)(fresh)
           ResultF(List(prop))
         }
 
-      case a: OWLDataPropertyRangeAxiom =>
-        Result() // ignored
-
-      case a: OWLFunctionalDataPropertyAxiom =>
-        Result()
-
-      case a: OWLTransitiveObjectPropertyAxiom =>
-        Result()
+      case a: OWLSubPropertyChainOfAxiom => {
+        val (term1, body) =
+          a.getPropertyChain.foldLeft((term, List[TupleTableAtom]())) {
+            case ((term, atoms), prop) => {
+              val term1 = fresh.getVariable
+              val atom = convert(prop, term, term1, suffix)(fresh)
+              (term1, atoms :+ atom)
+            }
+          }
+        val head = convert(a.getSuperProperty, term, term1, suffix)(fresh)
+        val rule = Rule.create(head, body)
+        println(rule)
+        ResultR(List(rule))
+      }
 
       /** Catch-all case for all unhandled axiom types. */
-      case a => default(axiom)
+      case a => unsupported(axiom)
     }
 
-  protected def default(axiom: OWLLogicalAxiom): Result =
+  protected def unsupported(axiom: OWLLogicalAxiom): Result =
     throw new RuntimeException(s"Axiom '$axiom' is not supported (yet?)")
 
   /** Converts a class expression into a collection of atoms.
@@ -291,7 +307,7 @@ trait RDFoxConverter {
       unsafe: List[OWLObjectPropertyExpression],
       skolem: SkolemStrategy,
       suffix: RSASuffix
-  ): Shards =
+  )(implicit fresh: DataFactory): Shards =
     expr match {
 
       /** Simple class name.
@@ -300,7 +316,7 @@ trait RDFoxConverter {
         */
       case e: OWLClass => {
         val iri: IRI = if (e.isTopEntity()) IRI.THING else e.getIRI
-        val atom = TupleTableAtom.rdf(term, IRI.RDF_TYPE, iri)
+        val atom = TupleTableAtom.create(graph, term, IRI.RDF_TYPE, iri)
         (List(atom), List())
       }
 
@@ -310,7 +326,7 @@ trait RDFoxConverter {
         */
       case e: OWLObjectIntersectionOf => {
         val (res, ext) = e.asConjunctSet
-          .map(convert(_, term, unsafe, skolem, suffix))
+          .map(convert(_, term, unsafe, skolem, suffix)(fresh))
           .unzip
         (res.flatten, ext.flatten)
       }
@@ -330,7 +346,8 @@ trait RDFoxConverter {
           .collect { case x: OWLNamedIndividual => x }
         if (named.length != 1)
           throw new RuntimeException(s"Class expression '$e' has arity != 1.")
-        val atom = TupleTableAtom.rdf(term, IRI.SAME_AS, named.head.getIRI)
+        val atom =
+          TupleTableAtom.create(graph, term, RSA.CONGRUENT, named.head.getIRI)
         (List(atom), List())
       }
 
@@ -344,14 +361,14 @@ trait RDFoxConverter {
       case e: OWLObjectSomeValuesFrom => {
         val cls = e.getFiller()
         val role = e.getProperty()
-        val varX = RSAUtil.genFreshVariable
+        val varX = fresh.getVariable
         val (bind, term1) = skolem match {
           case NoSkolem    => (None, varX)
           case c: Constant => (None, c.iri)
           case s: Standard => (Some(RDFoxUtil.skolem(s.name, term, varX)), varX)
         }
-        val (res, ext) = convert(cls, term1, unsafe, skolem, suffix)
-        val prop = convert(role, term, term1, suffix)
+        val (res, ext) = convert(cls, term1, unsafe, skolem, suffix)(fresh)
+        val prop = convert(role, term, term1, suffix)(fresh)
         (prop :: res, ext ++ bind)
       }
 
@@ -371,13 +388,13 @@ trait RDFoxConverter {
         // Computes the result of rule skolemization. Depending on the used
         // technique it might involve the introduction of additional atoms,
         // and/or fresh constants and variables.
-        val varX = RSAUtil.genFreshVariable
+        val varX = fresh.getVariable
         val (bind, term1) = skolem match {
           case NoSkolem    => (None, varX)
           case c: Constant => (None, c.iri)
           case s: Standard => (Some(RDFoxUtil.skolem(s.name, term, varX)), varX)
         }
-        val prop = convert(role, term, term1, suffix)
+        val prop = convert(role, term, term1, suffix)(fresh)
         (List(prop), bind.toList)
       }
 
@@ -396,12 +413,13 @@ trait RDFoxConverter {
             s"Class expression '$e' has cardinality restriction != 1."
           )
         val vars @ (y :: z :: _) =
-          Seq(RSAUtil.genFreshVariable(), RSAUtil.genFreshVariable())
+          Seq(fresh.getVariable, fresh.getVariable)
         val cls = e.getFiller
         val role = e.getProperty
-        val (res, ext) = vars.map(convert(cls, _, unsafe, skolem, suffix)).unzip
-        val props = vars.map(convert(role, term, _, suffix))
-        val eq = TupleTableAtom.rdf(y, IRI.SAME_AS, z)
+        val (res, ext) =
+          vars.map(convert(cls, _, unsafe, skolem, suffix)(fresh)).unzip
+        val props = vars.map(convert(role, term, _, suffix)(fresh))
+        val eq = TupleTableAtom.create(graph, y, RSA.CONGRUENT, z)
         (List(eq), res.flatten ++ props)
       }
 
@@ -423,7 +441,7 @@ trait RDFoxConverter {
         val filler = e.getFiller
         val property = e.getProperty
         val expr = factory.getOWLObjectSomeValuesFrom(property, filler)
-        convert(expr, term, unsafe, skolem, suffix)
+        convert(expr, term, unsafe, skolem, suffix)(fresh)
       }
 
       /** Minimum cardinality restriction class
@@ -444,7 +462,7 @@ trait RDFoxConverter {
         val filler = e.getFiller
         val property = e.getProperty
         val expr = factory.getOWLDataSomeValuesFrom(property, filler)
-        convert(expr, term, unsafe, skolem, suffix)
+        convert(expr, term, unsafe, skolem, suffix)(fresh)
       }
 
       //case (_, sup: OWLObjectExactCardinality) => {
@@ -467,7 +485,7 @@ trait RDFoxConverter {
           case i: OWLNamedIndividual     => i.getIRI
           case i: OWLAnonymousIndividual => i.getID
         }
-        (List(convert(e.getProperty, term, term1, suffix)), List())
+        (List(convert(e.getProperty, term, term1, suffix)(fresh)), List())
       }
 
       /** Existential quantification with singleton literal filler
@@ -476,7 +494,7 @@ trait RDFoxConverter {
         * [[http://www.w3.org/TR/owl2-syntax/#Literal_Value_Restriction]]
         */
       case e: OWLDataHasValue =>
-        (List(convert(e.getProperty, term, e.getFiller, suffix)), List())
+        (List(convert(e.getProperty, term, e.getFiller, suffix)(fresh)), List())
 
       case e: OWLObjectUnionOf => {
         (List(), List())
@@ -495,7 +513,7 @@ trait RDFoxConverter {
       term1: Term,
       term2: Term,
       suffix: RSASuffix
-  ): TupleTableAtom =
+  )(implicit fresh: DataFactory): TupleTableAtom =
     expr match {
 
       /** Simple named role/object property.
@@ -504,7 +522,7 @@ trait RDFoxConverter {
         */
       case e: OWLObjectProperty => {
         val role = IRI.create(e.getIRI.getIRIString :: suffix)
-        TupleTableAtom.rdf(term1, role, term2)
+        TupleTableAtom.create(graph, term1, role, term2)
       }
 
       /** Inverse of a named role/property
@@ -516,7 +534,7 @@ trait RDFoxConverter {
         */
       case e: OWLObjectInverseOf =>
         //convert(e.getInverse, term1, term2, suffix + Inverse)
-        convert(e.getInverse, term2, term1, suffix)
+        convert(e.getInverse, term2, term1, suffix)(fresh)
 
       /** The infamous impossible case.
         *
@@ -535,7 +553,7 @@ trait RDFoxConverter {
       term1: Term,
       term2: Term,
       suffix: RSASuffix
-  ): TupleTableAtom =
+  )(implicit fresh: DataFactory): TupleTableAtom =
     expr match {
 
       /** Simple named role/data property
@@ -544,7 +562,7 @@ trait RDFoxConverter {
         */
       case e: OWLDataProperty => {
         val role = IRI.create(e.getIRI.getIRIString :: suffix)
-        TupleTableAtom.rdf(term1, role, term2)
+        TupleTableAtom.create(graph, term1, role, term2)
       }
 
       /** The infamous impossible case.

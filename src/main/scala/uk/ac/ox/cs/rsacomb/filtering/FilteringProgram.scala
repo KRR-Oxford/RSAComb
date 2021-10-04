@@ -17,25 +17,39 @@
 package uk.ac.ox.cs.rsacomb.filtering
 
 import tech.oxfordsemantic.jrdfox.logic.datalog.Rule
+import tech.oxfordsemantic.jrdfox.logic.expression.IRI
 import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 import uk.ac.ox.cs.rsacomb.util.Versioned
 
+/** Type of filtering strategy.
+  *
+  * Mainly for testing different approaches and techniques.
+  */
 sealed trait FilterType
 object FilterType {
   case object NAIVE extends FilterType
   case object REVISED extends FilterType
 }
 
+/** Filtering program trait */
 object FilteringProgram extends Versioned[FilterType] {
 
   import FilterType._
 
-  type Result = (ConjunctiveQuery) => FilteringProgram
+  type Result = (IRI, IRI, ConjunctiveQuery) => FilteringProgram
 
-  def apply(t: FilterType): (ConjunctiveQuery) => FilteringProgram =
-    t match {
-      case NAIVE   => NaiveFilteringProgram(_)
-      case REVISED => RevisedFilteringProgram(_)
+  /** Returns the right type of filtering program builder.
+    *
+    * @param filter type of filtering program.
+    * @param source source named graph for the filtering program.
+    * @param target target named graph for the filtering program.
+    *
+    * @return the right type of filtering program builder.
+    */
+  def apply(filter: FilterType): Result =
+    filter match {
+      case NAIVE   => NaiveFilteringProgram(_, _, _)
+      case REVISED => RevisedFilteringProgram(_, _, _)
     }
 }
 
@@ -45,6 +59,12 @@ object FilteringProgram extends Versioned[FilterType] {
   * representing the filtering step of the RSA combined approach.
   */
 trait FilteringProgram {
+
+  /** Source named graph for the filtering process */
+  val source: IRI
+
+  /** Target named graph for the filtering process */
+  val target: IRI
 
   /** Query from which the filtering program is generated */
   val query: ConjunctiveQuery

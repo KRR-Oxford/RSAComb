@@ -13,10 +13,10 @@ import scalax.collection.GraphPredef._, scalax.collection.GraphEdge._
 import scalax.collection.GraphTraversal._
 
 import uk.ac.ox.cs.rsacomb.RSAOntology
-import uk.ac.ox.cs.rsacomb.RSAUtil
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
+import uk.ac.ox.cs.rsacomb.util.DataFactory
 
-object LowerBound {
+object Lowerbound {
 
   private val manager = OWLManager.createOWLOntologyManager()
   private val factory = manager.getOWLDataFactory()
@@ -38,7 +38,8 @@ object LowerBound {
   *
   * @see [[uk.ac.ox.cs.rsacomb.converter.Normalizer]]
   */
-class LowerBound extends Approximation[RSAOntology] {
+class Lowerbound(implicit fresh: DataFactory)
+    extends Approximation[RSAOntology] {
 
   /** Simplify conversion between Java and Scala collections */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
@@ -50,6 +51,7 @@ class LowerBound extends Approximation[RSAOntology] {
   def approximate(ontology: Ontology): RSAOntology =
     toRSA(
       new Ontology(
+        ontology.origin,
         ontology.axioms filter inALCHOIQ flatMap shift,
         ontology.datafiles
       )
@@ -122,27 +124,25 @@ class LowerBound extends Approximation[RSAOntology] {
         val sup = a.getSuperClass.getNNF
         sup match {
           case sup: OWLObjectUnionOf => {
-            val body = sub.asConjunctSet.map((atom) =>
-              (atom, RSAUtil.getFreshOWLClass())
-            )
-            val head = sup.asDisjunctSet.map((atom) =>
-              (atom, RSAUtil.getFreshOWLClass())
-            )
+            val body =
+              sub.asConjunctSet.map((atom) => (atom, fresh.getOWLClass))
+            val head =
+              sup.asDisjunctSet.map((atom) => (atom, fresh.getOWLClass))
 
             val r1 =
-              LowerBound.factory.getOWLSubClassOfAxiom(
-                LowerBound.factory.getOWLObjectIntersectionOf(
+              Lowerbound.factory.getOWLSubClassOfAxiom(
+                Lowerbound.factory.getOWLObjectIntersectionOf(
                   (body.map(_._1) ++ head.map(_._2)): _*
                 ),
-                LowerBound.factory.getOWLNothing
+                Lowerbound.factory.getOWLNothing
               )
 
             val r2s =
               for {
                 (a, na) <- head
                 hs = head.map(_._2).filterNot(_ equals na)
-              } yield LowerBound.factory.getOWLSubClassOfAxiom(
-                LowerBound.factory.getOWLObjectIntersectionOf(
+              } yield Lowerbound.factory.getOWLSubClassOfAxiom(
+                Lowerbound.factory.getOWLObjectIntersectionOf(
                   (body.map(_._1) ++ hs): _*
                 ),
                 a
@@ -152,8 +152,8 @@ class LowerBound extends Approximation[RSAOntology] {
               for {
                 (a, na) <- body
                 bs = body.map(_._1).filterNot(_ equals a)
-              } yield LowerBound.factory.getOWLSubClassOfAxiom(
-                LowerBound.factory.getOWLObjectIntersectionOf(
+              } yield Lowerbound.factory.getOWLSubClassOfAxiom(
+                Lowerbound.factory.getOWLObjectIntersectionOf(
                   (bs ++ head.map(_._2)): _*
                 ),
                 na
@@ -219,7 +219,11 @@ class LowerBound extends Approximation[RSAOntology] {
     }.toList
 
     /* Remove axioms from approximated ontology */
-    RSAOntology(ontology.axioms diff toDelete, ontology.datafiles)
+    RSAOntology(
+      ontology.origin,
+      ontology.axioms diff toDelete,
+      ontology.datafiles
+    )
   }
 
   // val edges1 = Seq('A ~> 'B, 'B ~> 'C, 'C ~> 'D, 'D ~> 'H, 'H ~>

@@ -29,15 +29,18 @@ import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model.{OWLOntology, OWLAxiom, OWLLogicalAxiom}
 import org.semanticweb.owlapi.model.{OWLObjectPropertyExpression}
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory
-import tech.oxfordsemantic.jrdfox.logic.datalog.Rule
-import tech.oxfordsemantic.jrdfox.logic.expression.{Resource, Term, Variable}
+import tech.oxfordsemantic.jrdfox.logic.datalog.{Rule, TupleTableName}
+import tech.oxfordsemantic.jrdfox.logic.expression.{
+  IRI,
+  Resource,
+  Term,
+  Variable
+}
 
 import uk.ac.ox.cs.rsacomb.approximation.Approximation
 import uk.ac.ox.cs.rsacomb.converter._
 import uk.ac.ox.cs.rsacomb.suffix._
-import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
-
-import uk.ac.ox.cs.rsacomb.RSAUtil
+import uk.ac.ox.cs.rsacomb.util.{DataFactory, RDFoxUtil, RSA}
 
 object Ontology {
 
@@ -74,7 +77,7 @@ object Ontology {
     */
   def dependencyGraph(
       axioms: List[OWLLogicalAxiom],
-      datafiles: List[File],
+      datafiles: List[os.Path],
       unsafe: List[OWLObjectPropertyExpression]
   ): DependencyGraph = {
 
@@ -95,12 +98,13 @@ object Ontology {
           unsafe: List[OWLObjectPropertyExpression],
           skolem: SkolemStrategy,
           suffix: RSASuffix
-      ): Shards =
+      )(implicit fresh: DataFactory): Shards =
         (expr, skolem) match {
 
           case (e: OWLObjectSomeValuesFrom, c: Constant) => {
             nodemap.update(c.iri.getIRI, c.axiom)
-            val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
+            val (res, ext) =
+              super.convert(e, term, unsafe, skolem, suffix)(fresh)
             if (unsafe contains e.getProperty)
               (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
             else
@@ -109,19 +113,20 @@ object Ontology {
 
           case (e: OWLDataSomeValuesFrom, c: Constant) => {
             nodemap.update(c.iri.getIRI, c.axiom)
-            val (res, ext) = super.convert(e, term, unsafe, skolem, suffix)
+            val (res, ext) =
+              super.convert(e, term, unsafe, skolem, suffix)(fresh)
             if (unsafe contains e.getProperty)
               (RSA.PE(term, c.iri) :: RSA.U(c.iri) :: res, ext)
             else
               (RSA.PE(term, c.iri) :: res, ext)
           }
 
-          case _ => super.convert(expr, term, unsafe, skolem, suffix)
+          case _ => super.convert(expr, term, unsafe, skolem, suffix)(fresh)
         }
     }
 
     /* Ontology convertion into LP rules */
-    val term = RSAUtil.genFreshVariable()
+    val term = Variable.create("X")
     val result = axioms.map(a =>
       RSAConverter.convert(a, term, unsafe, new Constant(a), Empty)
     )
@@ -143,13 +148,14 @@ object Ontology {
       RSA.U(varY)
     ) :: rules
     /* Load facts and rules from ontology */
-    RDFoxUtil.addFacts(data, facts)
+    val ttn = IRI.create(TupleTableName.DEFAULT_TRIPLES.getName)
+    RDFoxUtil.addFacts(data, ttn, facts)
     RDFoxUtil.addRules(data, rules)
     /* Load data files */
-    RDFoxUtil.addData(data, datafiles: _*)
+    RDFoxUtil.addData(data, ttn, datafiles: _*)
 
     /* Build the graph */
-    val query = "SELECT ?X ?Y WHERE { ?X rsa:E ?Y }"
+    val query = "SELECT ?X ?Y WHERE { ?X rsacomb:E ?Y }"
     val answers = RDFoxUtil.submitQuery(data, query, RSA.Prefixes).get
     var edges: Seq[DiEdge[Resource]] =
       answers.collect { case (_, Seq(n1, n2)) => n1 ~> n2 }
@@ -161,10 +167,10 @@ object Ontology {
     (graph, nodemap)
   }
 
-  def apply(axioms: List[OWLLogicalAxiom], datafiles: List[File]): Ontology =
-    new Ontology(axioms, datafiles)
+  // def apply(axioms: List[OWLLogicalAxiom], datafiles: List[os.Path]): Ontology =
+  //   new Ontology(axioms, datafiles)
 
-  def apply(ontology: OWLOntology, datafiles: List[File]): Ontology = {
+  def apply(ontology: OWLOntology, datafiles: List[os.Path]): Ontology = {
 
     /** TBox axioms */
     var tbox: List[OWLLogicalAxiom] =
@@ -193,11 +199,11 @@ object Ontology {
         .collect(Collectors.toList())
         .collect { case a: OWLLogicalAxiom => a }
 
-    Ontology(abox ::: tbox ::: rbox, datafiles)
+    new Ontology(ontology, abox ::: tbox ::: rbox, datafiles)
   }
 
-  def apply(ontofile: File, datafiles: List[File]): Ontology = {
-    val ontology = manager.loadOntologyFromOntologyDocument(ontofile)
+  def apply(ontofile: os.Path, datafiles: List[os.Path]): Ontology = {
+    val ontology = manager.loadOntologyFromOntologyDocument(ontofile.toIO)
     Ontology(ontology, datafiles)
   }
 
@@ -208,15 +214,17 @@ object Ontology {
   * @param axioms list of axioms (roughly) corresponding to the TBox.
   * @param datafiles files containing ABox data.
   */
-class Ontology(val axioms: List[OWLLogicalAxiom], val datafiles: List[File]) {
+class Ontology(
+    val origin: OWLOntology,
+    val axioms: List[OWLLogicalAxiom],
+    val datafiles: List[os.Path]
+) {
 
   /** Extend OWLAxiom functionalities */
   import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom._
 
   /** Simplify conversion between Java and Scala collections */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
-
-  println(s"Axioms: ${axioms.length}")
 
   /** OWLOntology based on input axioms
     *
@@ -286,6 +294,7 @@ class Ontology(val axioms: List[OWLLogicalAxiom], val datafiles: List[File]) {
     */
   def normalize(normalizer: Normalizer): Ontology =
     new Ontology(
+      origin,
       axioms flatMap normalizer.normalize,
       datafiles
     )

@@ -19,7 +19,7 @@ package uk.ac.ox.cs.rsacomb.sparql
 import java.util.{Map => JMap, HashMap => JHashMap}
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.client.DataStoreConnection
-import tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom
+import tech.oxfordsemantic.jrdfox.logic.datalog.{TupleTableAtom, TupleTableName}
 import tech.oxfordsemantic.jrdfox.logic.expression.Variable
 import tech.oxfordsemantic.jrdfox.logic.sparql.pattern.{
   ConjunctionPattern,
@@ -36,8 +36,8 @@ object ConjunctiveQuery {
     *
     * @param query `SelectQuery` instance representing the actual query
     */
-  def apply(query: SelectQuery): ConjunctiveQuery =
-    new ConjunctiveQuery(query)
+  def apply(id: Int, query: SelectQuery): ConjunctiveQuery =
+    new ConjunctiveQuery(id, query)
 
   /** Creates a new ConjunctiveQuery from a query string
     *
@@ -48,10 +48,11 @@ object ConjunctiveQuery {
     *         input query represents one, None is returned otherwise.
     */
   def parse(
+      id: Int,
       query: String,
       prefixes: Prefixes = new Prefixes()
   ): Option[ConjunctiveQuery] =
-    RDFoxUtil.parseSelectQuery(query, prefixes).map(ConjunctiveQuery(_))
+    RDFoxUtil.parseSelectQuery(query, prefixes).map(ConjunctiveQuery(id, _))
 
 }
 
@@ -66,6 +67,7 @@ object ConjunctiveQuery {
   * `SelectQuery` to be considered a conjunctive query.
   */
 class ConjunctiveQuery(
+    val id: Int,
     query: SelectQuery,
     val prefixes: Prefixes = new Prefixes()
 ) {
@@ -96,37 +98,54 @@ class ConjunctiveQuery(
   val bcq: Boolean = select.isEmpty && !query.getAllPossibleVariables
 
   /** Returns the query body as a sequence of atoms (triples). */
-  val atoms: List[TupleTableAtom] =
-    where match {
-      case b: ConjunctionPattern => {
-        b.getConjuncts.toList.flatMap { conj: QueryPattern =>
-          conj match {
-            case c: TriplePattern =>
-              Seq(
-                TupleTableAtom.rdf(c.getSubject, c.getPredicate, c.getObject)
-              )
-            case _ => List()
-          }
-        }
+  def atoms(graph: TupleTableName): List[TupleTableAtom] =
+    where
+      .asInstanceOf[ConjunctionPattern]
+      .getConjuncts
+      .collect { case t: TriplePattern =>
+        TupleTableAtom.create(graph, t.getSubject, t.getPredicate, t.getObject)
       }
-      case _ => List()
-    }
+  // where match {
+  //   case b: ConjunctionPattern => {
+  //     b.getConjuncts.toList.flatMap { conj: QueryPattern =>
+  //       conj match {
+  //         case c: TriplePattern =>
+  //           Seq(
+  //             TupleTableAtom.rdf(c.getSubject, c.getPredicate, c.getObject)
+  //           )
+  //         case _ => List()
+  //       }
+  //     }
+  //   }
+  //   case _ => List()
+  // }
 
   /** Returns the full collection of variables involved in the query. */
-  val variables: List[Variable] = (where match {
-    case b: ConjunctionPattern => {
-      b.getConjuncts.toList.flatMap { conj: QueryPattern =>
-        conj match {
-          case c: TriplePattern =>
-            Set(c.getSubject, c.getPredicate, c.getObject).collect {
-              case v: Variable => v
-            }
-          case _ => List()
+  val variables: List[Variable] =
+    where
+      .asInstanceOf[ConjunctionPattern]
+      .getConjuncts
+      .collect { case t: TriplePattern =>
+        Set(t.getSubject, t.getPredicate, t.getObject).collect {
+          case v: Variable => v
         }
       }
-    }
-    case _ => List()
-  }).distinct
+      .flatten
+      .distinct
+  // (where match {
+  //   case b: ConjunctionPattern => {
+  //     b.getConjuncts.toList.flatMap { conj: QueryPattern =>
+  //       conj match {
+  //         case c: TriplePattern =>
+  //           Set(c.getSubject, c.getPredicate, c.getObject).collect {
+  //             case v: Variable => v
+  //           }
+  //         case _ => List()
+  //       }
+  //     }
+  //   }
+  //   case _ => List()
+  // }).distinct
 
   /** Returns the collection of answer variables in the query. */
   val answer: List[Variable] =

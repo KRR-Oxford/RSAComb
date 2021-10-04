@@ -27,6 +27,7 @@ import org.semanticweb.owlapi.model.{OWLOntology, OWLAxiom, OWLLogicalAxiom}
 import org.semanticweb.owlapi.model.{
   OWLClass,
   OWLClassExpression,
+  OWLDataProperty,
   OWLDataPropertyAssertionAxiom,
   OWLObjectProperty,
   OWLSubObjectPropertyOfAxiom,
@@ -46,17 +47,20 @@ import tech.oxfordsemantic.jrdfox.client.{
 }
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.logic.datalog.{
+  BodyFormula,
+  FilterAtom,
+  Negation,
   Rule,
   TupleTableAtom,
-  Negation,
-  BodyFormula
+  TupleTableName
 }
 import tech.oxfordsemantic.jrdfox.logic.expression.{
-  Term,
-  Variable,
+  FunctionCall,
   IRI,
+  Literal,
   Resource,
-  Literal
+  Term,
+  Variable
 }
 import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
 
@@ -81,30 +85,6 @@ import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
 import uk.ac.ox.cs.rsacomb.util.Logger
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
 
-object RSAUtil {
-
-  // implicit def axiomsToOntology(axioms: Seq[OWLAxiom]) = {
-  //   val manager = OWLManager.createOWLOntologyManager()
-  //   manager.createOntology(axioms.asJava)
-  // }
-
-  /** Manager instance to interface with OWLAPI */
-  val manager = OWLManager.createOWLOntologyManager()
-  val factory = manager.getOWLDataFactory()
-
-  /** Simple fresh variable/class generator */
-  private var counter = -1;
-  def genFreshVariable(): Variable = {
-    counter += 1
-    Variable.create(f"I$counter%05d")
-  }
-  def getFreshOWLClass(): OWLClass = {
-    counter += 1
-    factory.getOWLClass(s"X$counter")
-  }
-
-}
-
 object RSAOntology {
 
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
@@ -115,6 +95,20 @@ object RSAOntology {
   /** Name of the RDFox data store used for CQ answering */
   private val DataStore = "answer_computation"
 
+  /** Canonical model named graph */
+  private val CanonGraph: IRI =
+    RDFoxUtil.getNamedGraph(DataStore, "CanonicalModel")
+
+  /** Filtering program named graph
+    *
+    * @param query query associated with the returned named graph.
+    *
+    * @return named graph for the filtering program associated with the
+    * input query.
+    */
+  private def FilterGraph(query: ConjunctiveQuery): IRI =
+    RDFoxUtil.getNamedGraph(DataStore, s"Filter${query.id}")
+
   /** Filtering program for a given query
     *
     * @param query the query to derive the filtering program
@@ -122,15 +116,19 @@ object RSAOntology {
     */
   def filteringProgram(query: ConjunctiveQuery): FilteringProgram =
     Logger.timed(
-      FilteringProgram(FilterType.REVISED)(query),
+      {
+        val filter = FilteringProgram(FilterType.REVISED)
+        filter(CanonGraph, FilterGraph(query), query)
+      },
       "Generating filtering program",
       Logger.DEBUG
     )
 
   def apply(
+      origin: OWLOntology,
       axioms: List[OWLLogicalAxiom],
-      datafiles: List[File]
-  ): RSAOntology = new RSAOntology(axioms, datafiles)
+      datafiles: List[os.Path]
+  ): RSAOntology = new RSAOntology(origin, axioms, datafiles)
 
   // def apply(
   //     ontofile: File,
@@ -197,8 +195,11 @@ object RSAOntology {
   * @param ontology the input OWL2 ontology.
   * @param datafiles additinal data (treated as part of the ABox)
   */
-class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
-    extends Ontology(axioms, datafiles) {
+class RSAOntology(
+    origin: OWLOntology,
+    axioms: List[OWLLogicalAxiom],
+    datafiles: List[os.Path]
+) extends Ontology(origin, axioms, datafiles) {
 
   /** Simplify conversion between OWLAPI and RDFox concepts */
   import implicits.RDFox._
@@ -227,10 +228,9 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
   /** Retrieve concepts/roles in the ontology */
   val concepts: List[OWLClass] =
     ontology.getClassesInSignature().asScala.toList
-  val roles: List[OWLObjectPropertyExpression] =
-    axioms
-      .flatMap(_.objectPropertyExpressionsInSignature)
-      .distinct
+  val objroles: List[OWLObjectPropertyExpression] =
+    axioms.flatMap(_.objectPropertyExpressionsInSignature).distinct
+  val dataroles: List[OWLDataProperty] = origin.getDataPropertiesInSignature
 
   /** Unsafe roles of a given ontology.
     *
@@ -364,21 +364,32 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
   private val topAxioms: List[Rule] = {
     val varX = Variable.create("X")
     val varY = Variable.create("Y")
-    concepts
-      .map(c => {
-        Rule.create(
-          RSA.Thing(varX),
-          TupleTableAtom.rdf(varX, IRI.RDF_TYPE, c.getIRI)
-        )
-      }) ++ roles.map(r => {
+    val varZ = Variable.create("Z")
+    val graph = TupleTableName.create(RSAOntology.CanonGraph.getIRI)
+    Rule.create(
+      TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING),
+      TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, varY)
+    ) :: objroles.map(r => {
       val name = r match {
         case x: OWLObjectProperty => x.getIRI.getIRIString
         case x: OWLObjectInverseOf =>
           x.getInverse.getNamedProperty.getIRI.getIRIString :: Inverse
       }
       Rule.create(
-        List(RSA.Thing(varX), RSA.Thing(varY)),
-        List(TupleTableAtom.rdf(varX, name, varY))
+        List(
+          TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING),
+          TupleTableAtom.create(graph, varY, IRI.RDF_TYPE, IRI.THING)
+        ),
+        List(TupleTableAtom.create(graph, varX, name, varY))
+      )
+    }) ::: dataroles.map(r => {
+      val name = r.getIRI.getIRIString
+      Rule.create(
+        List(
+          TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING),
+          TupleTableAtom.create(graph, varY, IRI.RDF_TYPE, IRI.THING)
+        ),
+        List(TupleTableAtom.create(graph, varX, name, varY))
       )
     })
   }
@@ -403,23 +414,31 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
     val varX = Variable.create("X")
     val varY = Variable.create("Y")
     val varZ = Variable.create("Z")
-    List(
+    val graph = TupleTableName.create(RSAOntology.CanonGraph.getIRI)
+    // Equality properties
+    val properties = List(
       // Reflexivity
-      Rule.create(RSA.Congruent(varX, varX), RSA.Thing(varX)),
+      Rule.create(
+        TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varX),
+        TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING)
+      ),
       // Simmetry
-      Rule.create(RSA.Congruent(varY, varX), RSA.Congruent(varX, varY)),
+      Rule.create(
+        TupleTableAtom.create(graph, varY, RSA.CONGRUENT, varX),
+        TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varY)
+      ),
       // Transitivity
       Rule.create(
-        RSA.Congruent(varX, varZ),
-        RSA.Congruent(varX, varY),
-        RSA.Congruent(varY, varZ)
+        TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varZ),
+        TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varY),
+        TupleTableAtom.create(graph, varY, RSA.CONGRUENT, varZ)
       )
     )
   }
 
   /** Canonical model of the ontology */
   lazy val canonicalModel = Logger.timed(
-    new CanonicalModel(this),
+    new CanonicalModel(this, RSAOntology.CanonGraph),
     "Generating canonical model program",
     Logger.DEBUG
   )
@@ -520,73 +539,143 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[File])
   def unfold(axiom: OWLSubClassOfAxiom): Set[Term] =
     this.self(axiom) | this.cycle(axiom)
 
-  /** Returns the answers to a query
+  /** Returns the answers to a single query
     *
-    *  @param query query to execute
-    *  @return a collection of answers
+    *  @param queries a sequence of conjunctive queries to answer.
+    *  @return a collection of answers for each query.
     */
-  def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = Logger.timed(
-    {
+  def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = this._ask(query)
+
+  /** Returns the answers to a collection of queries
+    *
+    *  @param queries a sequence of conjunctive queries to answer.
+    *  @return a collection of answers for each query.
+    */
+  def ask(queries: Seq[ConjunctiveQuery]): Seq[ConjunctiveQueryAnswers] =
+    queries map _ask
+
+  private lazy val _ask: ConjunctiveQuery => ConjunctiveQueryAnswers = {
+    val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
+
+    /* Upload data from data file */
+    RDFoxUtil.addData(data, RSAOntology.CanonGraph, datafiles: _*)
+
+    /* Top/equality axiomatization */
+    RDFoxUtil.addRules(data, topAxioms ++ equalityAxioms)
+    Logger.write(topAxioms.mkString("\n"), "canonical_model.datalog")
+    Logger.write(equalityAxioms.mkString("\n"), "canonical_model.datalog")
+
+    /* Introduce `rsacomb:Named` concept */
+    data.evaluateUpdate(
+      null, // the base IRI for the query (if null, a default is used)
+      RSA.Prefixes,
+      s"""
+      INSERT { 
+        GRAPH ${RSAOntology.CanonGraph} { ?X a ${RSA.NAMED} }
+      } WHERE {
+        GRAPH ${RSAOntology.CanonGraph} { ?X a ${IRI.THING} }
+      }
+      """,
+      new java.util.HashMap[String, String]
+    )
+
+    /* Add canonical model */
+    Logger print s"Canonical model facts: ${this.canonicalModel.facts.length}"
+    RDFoxUtil.addFacts(data, RSAOntology.CanonGraph, this.canonicalModel.facts)
+    Logger print s"Canonical model rules: ${this.canonicalModel.rules.length}"
+    Logger.write(canonicalModel.rules.mkString("\n"), "canonical_model.datalog")
+    RDFoxUtil.addRules(data, this.canonicalModel.rules)
+
+    RDFoxUtil.closeConnection(server, data)
+
+    (query => {
       val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
-      val canon = this.canonicalModel
+
       val filter = RSAOntology.filteringProgram(query)
-
-      /* Upload data from data file */
-      RDFoxUtil.addData(data, datafiles: _*)
-
-      RDFoxUtil printStatisticsFor data
-
-      /* Top / equality axiomatization */
-      RDFoxUtil.addRules(data, topAxioms ++ equalityAxioms)
-
-      /* Generate `named` predicates */
-      RDFoxUtil.addFacts(data, (individuals ++ literals) map RSA.Named)
-      data.evaluateUpdate(
-        RSA.Prefixes,
-        "INSERT { ?X a  rsa:Named } WHERE { ?X a owl:Thing }",
-        new java.util.HashMap[String, String]
-      )
-
-      /* Add canonical model */
-      Logger print s"Canonical model rules: ${canon.rules.length}"
-      RDFoxUtil.addRules(data, canon.rules)
-
-      Logger print s"Canonical model facts: ${canon.facts.length}"
-      RDFoxUtil.addFacts(data, canon.facts)
-
-      RDFoxUtil printStatisticsFor data
-
-      //{
-      //  import java.io.{PrintStream, FileOutputStream, File}
-      //  val rules1 = new FileOutputStream(new File("rules1-lubm200.dlog"))
-      //  val facts1 = new FileOutputStream(new File("facts1-lubm200.ttl"))
-      //  RDFoxUtil.export(data, rules1, facts1)
-      //  val rules2 = new PrintStream(new File("rules2-q34.dlog"))
-      //  rules2.print(filter.rules.mkString("\n"))
-      //}
 
       /* Add filtering program */
       Logger print s"Filtering program rules: ${filter.rules.length}"
+      Logger.write(filter.rules.mkString("\n"), s"filter${query.id}.datalog")
       RDFoxUtil.addRules(data, filter.rules)
 
-      RDFoxUtil printStatisticsFor data
+      // TODO: We remove the rules, should we drop the tuple table as well?
+      data.clearRulesAxiomsExplicateFacts()
 
       /* Gather answers to the query */
-      val answers = {
-        val ans = filter.answerQuery
-        RDFoxUtil
-          .submitQuery(data, ans, RSA.Prefixes)
-          .map(new ConjunctiveQueryAnswers(query.bcq, query.variables, _))
-          .get
-      }
+      val answers = RDFoxUtil
+        .submitQuery(data, filter.answerQuery, RSA.Prefixes)
+        .map(new ConjunctiveQueryAnswers(query, query.variables, _))
+        .get
 
       RDFoxUtil.closeConnection(server, data)
 
       answers
-    },
-    "Answers computation",
-    Logger.DEBUG
-  )
+    })
+  }
+
+  //def ask(query: ConjunctiveQuery): ConjunctiveQueryAnswers = Logger.timed(
+  //  {
+  //    val (server, data) = RDFoxUtil.openConnection(RSAOntology.DataStore)
+  //    val canon = this.canonicalModel
+  //    val filter = RSAOntology.filteringProgram(query)
+
+  //    /* Upload data from data file */
+  //    RDFoxUtil.addData(data, datafiles: _*)
+
+  //    RDFoxUtil printStatisticsFor data
+
+  //    /* Top / equality axiomatization */
+  //    RDFoxUtil.addRules(data, topAxioms ++ equalityAxioms)
+
+  //    /* Generate `named` predicates */
+  //    RDFoxUtil.addFacts(data, (individuals ++ literals) map RSA.Named)
+  //    data.evaluateUpdate(
+  //      null, // the base IRI for the query (if null, a default is used)
+  //      RSA.Prefixes,
+  //      "INSERT { ?X a  rsa:Named } WHERE { ?X a owl:Thing }",
+  //      new java.util.HashMap[String, String]
+  //    )
+
+  //    /* Add canonical model */
+  //    Logger print s"Canonical model rules: ${canon.rules.length}"
+  //    RDFoxUtil.addRules(data, canon.rules)
+
+  //    Logger print s"Canonical model facts: ${canon.facts.length}"
+  //    RDFoxUtil.addFacts(data, canon.facts)
+
+  //    RDFoxUtil printStatisticsFor data
+
+  //    //{
+  //    //  import java.io.{PrintStream, FileOutputStream, File}
+  //    //  val rules1 = new FileOutputStream(new File("rules1-lubm200.dlog"))
+  //    //  val facts1 = new FileOutputStream(new File("facts1-lubm200.ttl"))
+  //    //  RDFoxUtil.export(data, rules1, facts1)
+  //    //  val rules2 = new PrintStream(new File("rules2-q34.dlog"))
+  //    //  rules2.print(filter.rules.mkString("\n"))
+  //    //}
+
+  //    /* Add filtering program */
+  //    Logger print s"Filtering program rules: ${filter.rules.length}"
+  //    RDFoxUtil.addRules(data, filter.rules)
+
+  //    RDFoxUtil printStatisticsFor data
+
+  //    /* Gather answers to the query */
+  //    val answers = {
+  //      val ans = filter.answerQuery
+  //      RDFoxUtil
+  //        .submitQuery(data, ans, RSA.Prefixes)
+  //        .map(new ConjunctiveQueryAnswers(query, query.variables, _))
+  //        .get
+  //    }
+
+  //    RDFoxUtil.closeConnection(server, data)
+
+  //    answers
+  //  },
+  //  "Answers computation",
+  //  Logger.DEBUG
+  //)
 
   /** Query the RDFox data store used for query answering.
     *

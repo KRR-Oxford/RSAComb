@@ -17,6 +17,7 @@
 package uk.ac.ox.cs.rsacomb.implicits
 
 import tech.oxfordsemantic.jrdfox.logic.Datatype
+import tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableName
 import tech.oxfordsemantic.jrdfox.logic.expression.{
   BlankNode,
   IRI => RDFoxIRI,
@@ -46,6 +47,9 @@ object RDFox {
 
   implicit def stringToRdfoxIri(iri: String): RDFoxIRI =
     RDFoxIRI.create(iri)
+
+  implicit def iriToTupleTableName(iri: RDFoxIRI): TupleTableName =
+    TupleTableName.create(iri.getIRI)
 
   /** Converst an OWLAPI datatype into an RDFox datatype.
     *

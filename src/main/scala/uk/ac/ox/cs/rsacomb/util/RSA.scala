@@ -42,15 +42,51 @@ import scala.collection.JavaConverters._
 
 object RSA {
 
+  /** Simplify conversion between Java and Scala `List`s */
+  import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
+
+  /** Set of default prefixes to be included in all datastore operations */
   val Prefixes: Prefixes = new Prefixes()
-  Prefixes.declarePrefix("rsa:", "http://www.cs.ox.ac.uk/isg/rsa/")
+  Prefixes.declarePrefix("rsacomb:", "http://www.cs.ox.ac.uk/isg/RSAComb#")
+  Prefixes.declarePrefix("rdfox:", "http://oxfordsemantic.tech/RDFox#")
   Prefixes.declarePrefix("owl:", "http://www.w3.org/2002/07/owl#")
 
-  val CONGRUENT = RSA("congruent")
-  val NAMED = RSA("Named")
+  /** Creates a `rsacomb:<name>` IRI */
+  def apply(name: Any): IRI =
+    IRI.create(
+      //Prefixes.decodeIRI("rsacomb:") + name.toString
+      Prefixes.getPrefixIRIsByPrefixName.get("rsacomb:").getIRI + name.toString
+    )
 
-  private def atom(name: IRI, vars: List[Term]): TupleTableAtom =
-    TupleTableAtom.create(TupleTableName.create(name.getIRI), vars: _*)
+  /** Helper IRIs */
+  val ANS = RSA("Ans")
+  val AQ = RSA("AQ")
+  val CONGRUENT = RSA("congruent")
+  val FK = RSA("FK")
+  val ID = RSA("ID")
+  val IN = RSA("In")
+  val NAMED = RSA("Named")
+  val NI = RSA("NI")
+  val QM = RSA("QM")
+  val SP = RSA("SP")
+  val TQ = RSA("TQ")
+
+  def Named(tt: TupleTableName)(x: Term): TupleTableAtom =
+    TupleTableAtom.create(tt, x, IRI.RDF_TYPE, RSA.NAMED)
+  def Congruent(tt: TupleTableName)(x: Term, y: Term): TupleTableAtom =
+    TupleTableAtom.create(tt, x, RSA.CONGRUENT, y)
+  def Skolem(skolem: Term, terms: List[Term]): TupleTableAtom =
+    TupleTableAtom.create(TupleTableName.SKOLEM, terms :+ skolem)
+
+  // def In(t: Term)(implicit set: Term) =
+  //   TupleTableAtom.rdf(t, RSA("In"), set)
+
+  // def NotIn(t: Term)(implicit set: Term) = Negation.create(In(t)(set))
+
+  /* TODO: review after reworking the dependency graph construction */
+
+  // private def atom(name: IRI, vars: List[Term]): TupleTableAtom =
+  //   TupleTableAtom.create(TupleTableName.create(name.getIRI), vars: _*)
 
   def E(t1: Term, t2: Term) =
     TupleTableAtom.rdf(t1, RSA("E"), t2)
@@ -61,51 +97,4 @@ object RSA {
   def U(t: Term) =
     TupleTableAtom.rdf(t, IRI.RDF_TYPE, RSA("U"))
 
-  def In(t: Term)(implicit set: Term) =
-    TupleTableAtom.rdf(t, RSA("In"), set)
-
-  def NotIn(t: Term)(implicit set: Term) = Negation.create(In(t)(set))
-
-  def Congruent(t1: Term, t2: Term) =
-    TupleTableAtom.rdf(t1, RSA("congruent"), t2)
-
-  def QM(implicit q: ConjunctiveQuery) =
-    atom(RSA("QM"), q.answer ::: q.bounded)
-
-  def ID(t1: Term, t2: Term)(implicit q: ConjunctiveQuery) = {
-    atom(RSA("ID"), (q.answer ::: q.bounded) :+ t1 :+ t2)
-  }
-
-  def Named(t: Term) =
-    TupleTableAtom.rdf(t, IRI.RDF_TYPE, RSA("Named"))
-
-  def Thing(t: Term) =
-    TupleTableAtom.rdf(t, IRI.RDF_TYPE, IRI.THING)
-
-  def NI(t: Term) =
-    TupleTableAtom.rdf(t, IRI.RDF_TYPE, RSA("NI"))
-
-  def TQ(t1: Term, t2: Term, sx: RSASuffix)(implicit q: ConjunctiveQuery) =
-    atom(RSA("TQ" :: sx), (q.answer ::: q.bounded) :+ t1 :+ t2)
-
-  def AQ(t1: Term, t2: Term, sx: RSASuffix)(implicit q: ConjunctiveQuery) =
-    atom(RSA("AQ" :: sx), (q.answer ::: q.bounded) :+ t1 :+ t2)
-
-  def FK(implicit q: ConjunctiveQuery) =
-    atom(RSA("FK"), q.answer ::: q.bounded)
-
-  def SP(implicit q: ConjunctiveQuery) =
-    atom(RSA("SP"), q.answer ::: q.bounded)
-
-  def Ans(implicit q: ConjunctiveQuery) = {
-    if (q.bcq)
-      TupleTableAtom.rdf(RSA("blank"), IRI.RDF_TYPE, RSA("Ans"))
-    else
-      atom(RSA("Ans"), q.answer)
-  }
-
-  def apply(name: Any): IRI =
-    IRI.create(
-      Prefixes.getPrefixIRIsByPrefixName.get("rsa:").getIRI + name.toString
-    )
 }

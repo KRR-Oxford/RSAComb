@@ -16,6 +16,7 @@
 
 package uk.ac.ox.cs.rsacomb.sparql
 
+import ujson._
 import tech.oxfordsemantic.jrdfox.logic.expression.{
   IRI,
   Literal,
@@ -33,19 +34,31 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
   * BCQs, and empty collection represents a ''false'', ''true'' otherwise.
   */
 class ConjunctiveQueryAnswers(
-    bcq: Boolean,
+    val query: ConjunctiveQuery,
     val variables: Seq[Variable],
     val answers: Seq[(Long, Seq[Resource])]
 ) {
 
   /** Returns number of distinct answers. */
-  val length: Int = if (bcq) 0 else answers.length
+  val length: Int = if (query.bcq) 0 else answers.length
 
   /** Returns number of answers taking into account multiplicity. */
   val lengthWithMultiplicity: Long = answers.map(_._1).sum
 
+  /** Serialise answers as JSON file */
+  def toJSON(): ujson.Js.Value =
+    ujson.Obj(
+      "queryID" -> query.id,
+      "queryText" -> query.toString
+        .split('\n')
+        .map(_.trim.filter(_ >= ' '))
+        .mkString(" "),
+      "answerVariables" -> ujson.Arr(query.answer.map(_.toString())),
+      "answers" -> ujson.Arr(answers.map(_._2.mkString(" ")).sorted)
+    )
+
   override def toString(): String =
-    if (bcq) {
+    if (query.bcq) {
       if (answers.isEmpty) "FALSE" else "TRUE"
     } else {
       if (answers.isEmpty)
