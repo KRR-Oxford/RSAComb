@@ -118,9 +118,30 @@ java -cp <path/to/JRDFox.jar>:<path/to/fat.jar> uk.ac.ox.cs.rsacomb.RSAComb [<op
 
 ### Running tests
 
-To run the suit of unit test provided along with the code run
+To run the suites of tests provided along with the code run
 ```
 sbt test
+```
+
+This will run all [unit tests](https://en.wikipedia.org/wiki/Unit_testing) and [functional tests](https://en.wikipedia.org/wiki/Functional_testing).
+If you want to limit the scope of the tests and run only a particular suite use
+```
+sbt "testOnly <test-class>"
+```
+
+For example, to execute only unit tests concerning the canonical model computation, run
+```
+sbt "testOnly uk.ac.ox.cs.rsacomb.CanonicalModelSpec"
+```
+
+or alternatively
+```
+sbt "testOnly *CanonicalModelSpec"
+```
+
+To run only functional tests for LUBM, excluding tests tagged as *slow* (that require more resources), run
+```
+sbt "testOnly *functional.LUBM -- -l org.scalatest.tags.Slow"
 ```
 
 ## Changes introduced

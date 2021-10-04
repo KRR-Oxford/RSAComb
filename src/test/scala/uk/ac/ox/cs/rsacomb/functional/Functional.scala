@@ -2,6 +2,7 @@ package uk.ac.ox.cs.rsacomb.functional
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.tagobjects.Slow
 
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
 import uk.ac.ox.cs.rsacomb.approximation.Upperbound
@@ -27,14 +28,26 @@ class LUBM extends AnyFunSpec with Matchers {
   private val rsa = ontology approximate toUpperbound
 
   /* Queries and results */
-  private val queries =
-    RDFoxUtil.loadQueriesFromFile(test / "queries.sparql")
   private val results = ujson.read(os.read(test / "results.json")).arr
 
   describe("Ontology size: 1)") {
 
+    val queries = RDFoxUtil.loadQueriesFromFile(test / "queries.sparql")
     queries foreach { query =>
       it(s"Tested Query${query.id}") {
+        val answers = rsa.ask(query).answers.map(_._2.mkString("\t"))
+        val reference = results
+          .find(_("queryID").num == query.id)
+          .get("answers")
+          .arr
+          .map(_.str)
+        answers should contain theSameElementsAs reference
+      }
+    }
+
+    val slow = RDFoxUtil.loadQueriesFromFile(test / "queries-slow.sparql")
+    slow foreach { query =>
+      it(s"Tested Query${query.id}", Slow) {
         val answers = rsa.ask(query).answers.map(_._2.mkString("\t"))
         val reference = results
           .find(_("queryID").num == query.id)
