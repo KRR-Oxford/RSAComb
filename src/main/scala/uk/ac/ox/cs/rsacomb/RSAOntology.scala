@@ -407,13 +407,14 @@ class RSAOntology(
     * behaviour is incompatible with other needed features like
     * negation-as-failure and aggregates.
     *
-    * @todo to complete the equality axiomatization we need to introduce
-    * substitution rules to explicate a complete "equality" semantics.
+    * @todo naïve substitution rules might not be very efficient. We
+    * should look into other ways of implementing this.
     */
   private val equalityAxioms: List[Rule] = {
     val varX = Variable.create("X")
     val varY = Variable.create("Y")
     val varZ = Variable.create("Z")
+    val varW = Variable.create("W")
     val graph = TupleTableName.create(RSAOntology.CanonGraph.getIRI)
     // Equality properties
     val properties = List(
@@ -434,6 +435,32 @@ class RSAOntology(
         TupleTableAtom.create(graph, varY, RSA.CONGRUENT, varZ)
       )
     )
+    /* Equality substitution rules */
+    val substitutions =
+      Rule.create(
+        TupleTableAtom.create(graph, varY, IRI.RDF_TYPE, varZ),
+        TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varY),
+        TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, varZ)
+      ) :: objroles.flatMap(r => {
+        val name = r match {
+          case x: OWLObjectProperty => x.getIRI.getIRIString
+          case x: OWLObjectInverseOf =>
+            x.getInverse.getNamedProperty.getIRI.getIRIString :: Inverse
+        }
+        List(
+          Rule.create(
+            TupleTableAtom.create(graph, varZ, name, varY),
+            TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varZ),
+            TupleTableAtom.create(graph, varX, name, varY)
+          ),
+          Rule.create(
+            TupleTableAtom.create(graph, varY, name, varZ),
+            TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varZ),
+            TupleTableAtom.create(graph, varY, name, varX)
+          )
+        )
+      })
+    properties ++ substitutions
   }
 
   /** Canonical model of the ontology */
