@@ -50,7 +50,7 @@ object Logger {
     if (lvl <= level)
       output println s"[$lvl][${time.getTime}] $str"
 
-  def write(content: os.Source, file: String, lvl: Level = VERBOSE): Unit =
+  def write(content: => os.Source, file: String, lvl: Level = VERBOSE): Unit =
     if (lvl <= level)
       os.write.append(dir / file, content)
 

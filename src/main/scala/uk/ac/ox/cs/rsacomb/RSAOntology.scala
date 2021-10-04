@@ -589,7 +589,7 @@ class RSAOntology(axioms: List[OWLLogicalAxiom], datafiles: List[os.Path])
 
       /* Add filtering program */
       Logger print s"Filtering program rules: ${filter.rules.length}"
-      Logger.write(filter.rules.mkString("\n"), "filter.datalog")
+      Logger.write(filter.rules.mkString("\n"), s"filter${query.id}.datalog")
       RDFoxUtil.addRules(data, filter.rules)
       // TODO: We remove the rules, should we drop the tuple table as well?
       data.clearRulesAxiomsExplicateFacts()
