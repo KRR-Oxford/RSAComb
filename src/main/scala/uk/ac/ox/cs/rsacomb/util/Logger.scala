@@ -17,6 +17,7 @@
 package uk.ac.ox.cs.rsacomb.util
 
 import java.util.Calendar
+import java.text.SimpleDateFormat
 import java.io.PrintStream
 
 /** Rough implementation of a logger.
@@ -25,9 +26,14 @@ import java.io.PrintStream
   */
 object Logger {
 
-  private val time = Calendar.getInstance()
-
-  private lazy val dir = os.temp.dir(os.pwd, "rsacomb-", false)
+  private lazy val dir = {
+    val timestamp = (new SimpleDateFormat("yyyyMMddHHmmss")).format(
+      Calendar.getInstance().getTime
+    )
+    val dir = os.pwd / s"rsacomb-$timestamp"
+    os.makeDir(dir)
+    dir
+  }
 
   /** Output stream for the logger. */
   var output: PrintStream = System.out
@@ -48,7 +54,7 @@ object Logger {
 
   def print(str: Any, lvl: Level = NORMAL): Unit =
     if (lvl <= level)
-      output println s"[$lvl][${time.getTime}] $str"
+      output println s"[$lvl][${Calendar.getInstance().getTime}] $str"
 
   def write(content: => os.Source, file: String, lvl: Level = VERBOSE): Unit =
     if (lvl <= level)

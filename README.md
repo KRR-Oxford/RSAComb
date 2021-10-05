@@ -34,32 +34,11 @@ Combined approach for Conjunctive Query answering in RSA
 
 </p>
 
-<!-- TABLE OF CONTENTS -->
-<details close="close">
-<summary>Table of Contents</summary>
-<ol>
-    <li><a href="#about">About</a></li>
-    <li><a href="#preliminaries">Preliminaries</a></li>
-    <li>
-        <a href="#using-the-software">Using the software</a>
-        <ul>
-            <li><a href="#provide-rdfox-license">Provide RDFox license</a></li>
-            <li><a href="#compiling-and-running-the-project">Compiling and running the project</a></li>
-            <li><a href="#running-tests">Running tests</a></li>
-        </ul>
-    </li>
-    <li><a href="#changes-introduced">Changes introduced</a></li>
-    <li><a href="#acknowledgements">Acknowledgements</a></li>
-    <li><a href="#credits">Credits</a></li>
-    <li><a href="#license">License</a></li>
-</ol>
-</details>
-
 ## About
 
-This is a re-implementation of the combined approach for CQ answering over RSA ontologies described in [[1](#references)].
+This is an *improved* re-implementation of the combined approach for CQ answering over RSA ontologies described in [[1](#references)].
 
-> Please note that the prototype mentioned in [[1](#references)] is not available (and the contributors of this repository have never seen it);
+> Please note that the prototype mentioned in [[1](#references)] is not available (and the contributors to this repository have never seen it);
 > therefore, this "re-implementation" could be completely different from that prototype (potentially using different tools and programming language).
 
 ## Preliminaries
@@ -68,7 +47,58 @@ In order to use this program you need to have [RDFox](https://www.oxfordsemantic
 RDFox is proprietary software and as such we are not able to distribute it along with our code.
 Please refer to [this link](https://www.oxfordsemantic.tech/tryrdfoxforfree) to request a free trial.
 
-This software has been developed and tested with RDFox v.4.1
+This software has been developed and tested with RDFox v5.2.1
+
+## Changes introduced
+
+We tried to implement the system as close as possible to the theoretical description provided in [[1](#references)].
+Regardless, we had to deal with the fact that we are using different tools to carry out reasoning tasks and we are probably using a different language to implement the system.
+The following is a (non exhaustive) summary of fixes (🔧), changes (🔄) and improvements (⚡), we introduced along the way:
+
++ 🔄 [RDFox](https://www.oxfordsemantic.tech/product) is used instead of DLV as the underlying LP engine.
+
++ ⚡ The system accepts unrestricted OWL ontologies as input and takes care of normalising and approximating the ontology to RSA.
+    At the time of writing, two approximation algorithms are provided, to compute a sound (or complete) set of answer to the input queries, respectively.
+
++ ⚡ The different steps of the combined approach (namely, the canonical model computation and the filtering step) are executed in isolation using different *named graphs*.
+    This allows us to reuse partial products of the computation and can even be used to parellalise filtering and answering steps.
+
++ 🔧 In Def.4, the definition of built-in predicate `notIn` is wrong and should reflect the implicit semantics implied by the name, i.e.,
+
+    > let [...] `notIn` be a built-in predicate which holds when the first argument is **not** an element of the set given as second argument
+
+    This has been fixed by (1) introducing a built-in predicate `In` (note that instances of `In` can be computed beforehand since they only depend on the input ontology), and (2) implement `notIn` as the negation of `In` using RDFox *NaF* built-in support.
+
++ 🔄 Top (`owl:Thing`) axiomatisation is performed introducing rules as follows.
+    Given `p` predicate (arity *n*) *in the original ontology*, the following rule is introduced:
+    ```
+        owl:Thing[?X1], ..., owl:Thing[?Xn] :- p(?X1, ..., ?Xn) .
+    ```
+    Note that, by definition, arity can be either 1 or 2.
+
++ 🔄 Equality axiomatisation is performed introducing the following rules:
+    ```
+        rsacomb:congruent[?X, ?X] :- owl:Thing[?X] .
+        rsacomb:congruent[?Y, ?X] :- rsacomb:congruent[?X, ?Y] .
+        rsacomb:congruent[?X, ?Z] :- rsacomb:congruent[?X, ?Y], rsacomb:congruent[?Y, ?Z] .
+    ```
+    defining equivalence as a congruence relation over terms in the ontology.
+    Substitution rules propagate the equivalence to all existing atoms.
+
++ 🔧 In Def. 4, the definition of built-in predicate `NI` is not consistent with its use in Table 3 and related description in Sec. 4.2.
+  We redefined `NI` as the set of all constants that are *equal* to a constant in the original ontology (according to the internal equality predicate `rsa:congruent`).
+  Note that, in this scenario, there is no need to introduce `NI` instances as facts in the system;
+  instead we can add a rule to populate the new predicate:
+  ```
+    rsa:NI[?X] :- rsa:congruent[?X, ?Y], rsa:named[?Y] .
+  ```
+  where `rsa:named` is an internal predicate keeping track of all constants in the original ontology.
+
++ ⚡ In Def. 3, regarding the generation of the logic program used for the RSA check, only T5 axioms involving an unsafe role will introduce the internal predicates `PE` and `U`.
+
++ ⚡ Both in the canonical model and the filtering program computations, rules without a body are loaded into RDFox as facts.
+
++ ⚡ The `cycle` function introduced in Def.4 establishing the direction of the *unraveling* of loops is defined over triples `(A,R,B)`. We are currently limiting the triple only to those appearing in a T5 axiom `A ⊑ ∃R.B`. Note that this greatly limits the size of cycle for a given triple, and as a consequence limits the number of rules used to compute the canonical model.
 
 ## Using the software
 
@@ -79,9 +109,9 @@ Download links for specific versions and operating systems can be found [here](h
 
 ```{.bash}
 mkdir -p lib && pushd lib
-wget https://rdfox-distribution.s3.eu-west-2.amazonaws.com/release/v4.2.0/RDFox-linux-4.2.0.zip
-unzip RDFox-linux-4.2.0.zip
-ln -s RDFox-linux-4.2.0.zip/lib/JRDFox.jar
+wget https://rdfox-distribution.s3.eu-west-2.amazonaws.com/release/v5.2.1/RDFox-linux-x86_64-5.2.1.zip
+unzip RDFox-linux-x86_64-5.2.1.zip
+ln -s RDFox-linux-x86_64-5.2.1.zip/lib/JRDFox.jar
 popd
 ```
 
@@ -106,11 +136,7 @@ Run the following from the base directory of the project to produce a standalone
 sbt assembly
 ```
 
-The output of the command will print the location of the produced jar. Execute it with
-```
-java -jar <path/to/fat.jar> [<option> ...]
-```
-
+The output of the command will print the location of the produced jar.
 Note that the fat jar file distributed with this repository excludes the RDFox as a dependency. Provided that you have the RDFox setup on your machine, you can run the program as follows
 ```
 java -cp <path/to/JRDFox.jar>:<path/to/fat.jar> uk.ac.ox.cs.rsacomb.RSAComb [<option> ...]
@@ -144,50 +170,32 @@ To run only functional tests for LUBM, excluding tests tagged as *slow* (that re
 sbt "testOnly *functional.LUBM -- -l org.scalatest.tags.Slow"
 ```
 
-## Changes introduced
+### Debugging
 
-We tried to implement the system as close as possible to the theoretical description provided in [[1](#references)].
-Regardless, we had to deal with the fact that we where using different tools to carry out reasoning tasks and we where probably using a different language to implement the system.
-The following is a (non exhaustive) summary of fixes (🔧), changes (🔄) and improvements (⚡), we introduced along the way:
+You can set the logging level of RSAComb using the `-l | --logger` flag (see the help screen for more information).
+When the logger is set to `verbose`, RSAComb will generate a set of files that contain the intermediate products of the program execution (these include the set of rules to generate the canonical model for the input ontology and the filtering rules derived from the input query).
+These files are stored in the working directory, in a new folder named `rsacomb-<timestamp>`.
 
-+ 🔄 [RDFox](https://www.oxfordsemantic.tech/product) is used instead of DLV as the underlying LP engine.
+You can load these files directly into RDFox to simulate the same environment used by RSAComb, leaving you in a state just before the answer gathering process.
+We also provide a convenient `simulate.rdfox` RDFox script that can be used to load all the necessary files in RDFox for you.
 
-+ 🔧 In Def.4, the definition of built-in predicate `notIn` is wrong and should reflect the implicit semantics implied by the name, i.e.,
+Let's suppose you run the following command from the root of the project
+```{.sh}
+java -cp lib/JRDFox.jar:target/scala-2.13/RSAComb-assembly-0.2.0.jar uk.ac.ox.cs.rsacomb.RSAComb -l verbose -o tests/lubm/univ-bench.owl -d tests/lubm/data/lubm1.ttl -q tests/lubm/queries.sparql
+```
 
-    > let [...] `notIn` be a built-in predicate which holds when the first argument is **not** an element of the set given as second argument
+This will answers all the queries in `tests/lubm/queries.sparql` and generate debug information in a new folder in the current working directory (let's say, `rsacomb-20211005120845/`).
+You can run the provided RDFox script as follows
+```{.sh}
+./lib/RDFox-linux-x86_64-5.2.1/RDFox sandbox . "simulate <debug-folder> <data> <query-id>"
+```
+where
+- `debug-folder` is the newly generated folder (`rsacomb-20211005120845` in this example)
+- `<data>` is the path to the data file used with RSAComb (`tests/lubm/data/lubm1.ttl` in this example)
+- `query-id` is the identifier of the query we want to simulate (if we want to simulate query 16 we will pass `16` as an argument)
 
-    This has been fixed by (1) introducing a built-in predicate `In` (note that instances of `In` can be computed beforehand since they only depend on the input ontology), and (2) implement `notIn` as the negation of `In` using RDFox *NaF* built-in support.
-
-+ 🔄 Top (`owl:Thing`) axiomatisation is performed introducing rules as follows.
-    Given `p` predicate (arity *n*) *in the original ontology*, the following rule is introduced:
-    ```
-        owl:Thing[?X1], ..., owl:Thing[?Xn] :- p(?X1, ..., ?Xn) .
-    ```
-    Note that, by definition, arity can be either 1 or 2.
-
-+ 🔄 Equality axiomatisation is performed introducing the following rules:
-    ```
-        rsa:congruent[?X, ?X] :- owl:Thing[?X] .
-        rsa:congruent[?Y, ?X] :- rsa:congruent[?X, ?Y] .
-        rsa:congruent[?X, ?Z] :- rsa:congruent[?X, ?Y], rsa:congruent[?Y, ?Z] .
-    ```
-    defining equivalence as a congruence relation over terms in the ontology.
-
-+ 🔧 In Def. 4, the definition of built-in predicate `NI` is not consistent with its use in Table 3 and related description in Sec. 4.2.
-  We redefined `NI` as the set of all constants that are *equal* to a constant in the original ontology (according to the internal equality predicate `rsa:congruent`).
-  Note that, in this scenario, there is no need to introduce `NI` instances as facts in the system;
-  instead we can add a rule to populate the new predicate:
-  ```
-    rsa:NI[?X] :- rsa:congruent[?X, ?Y], rsa:named[?Y] .
-  ```
-  where `rsa:named` is an internal predicate keeping track of all constants in the original ontology.
-
-+ ⚡ In Def. 3, regarding the generation of the logic program used for the RSA check, only T5 axioms involving an unsafe role will introduce the internal predicates `PE` and `U`.
-
-+ ⚡ Both in the canonical model and the filtering program computations, rules without a body are loaded into RDFox as facts.
-
-+ ⚡ The `cycle` function introduced in Def.4 establishing the direction of the *unraveling* of loops is defined over triples `(A,R,B)`. We are currently limiting the triple only to those appearing in a T5 axiom `A ⊑ ∃R.B`. Note that this greatly limits the size of cycle for a given triple, and as a consequence limits the number of rules used to compute the canonical model.
-
+This will launch a sandboxed RDFox console, where you will be able to explore a simulation of the datastore used by RSAComb.
+You can also access the same datastore from the web interface at [http://localhost:12110/console/](http://localhost:12110/console/).
 
 ## References
 

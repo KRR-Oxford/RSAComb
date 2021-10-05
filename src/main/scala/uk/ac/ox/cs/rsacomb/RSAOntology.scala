@@ -589,8 +589,8 @@ class RSAOntology(
 
     /* Top/equality axiomatization */
     RDFoxUtil.addRules(data, topAxioms ++ equalityAxioms)
-    Logger.write(topAxioms.mkString("\n"), "canonical_model.datalog")
-    Logger.write(equalityAxioms.mkString("\n"), "canonical_model.datalog")
+    Logger.write(topAxioms.mkString("\n"), "axiomatisation.dlog")
+    Logger.write(equalityAxioms.mkString("\n"), "axiomatisation.dlog")
 
     /* Introduce `rsacomb:Named` concept */
     data.evaluateUpdate(
@@ -608,9 +608,10 @@ class RSAOntology(
 
     /* Add canonical model */
     Logger print s"Canonical model facts: ${this.canonicalModel.facts.length}"
+    Logger.write(canonicalModel.facts.mkString("\n"), "canonical_model.dlog")
     RDFoxUtil.addFacts(data, RSAOntology.CanonGraph, this.canonicalModel.facts)
     Logger print s"Canonical model rules: ${this.canonicalModel.rules.length}"
-    Logger.write(canonicalModel.rules.mkString("\n"), "canonical_model.datalog")
+    Logger.write(canonicalModel.rules.mkString("\n"), "canonical_model.dlog")
     RDFoxUtil.addRules(data, this.canonicalModel.rules)
 
     RDFoxUtil.closeConnection(server, data)
@@ -622,7 +623,7 @@ class RSAOntology(
 
       /* Add filtering program */
       Logger print s"Filtering program rules: ${filter.rules.length}"
-      Logger.write(filter.rules.mkString("\n"), s"filter${query.id}.datalog")
+      Logger.write(filter.rules.mkString("\n"), s"filter_query${query.id}.dlog")
       RDFoxUtil.addRules(data, filter.rules)
 
       // TODO: We remove the rules, should we drop the tuple table as well?

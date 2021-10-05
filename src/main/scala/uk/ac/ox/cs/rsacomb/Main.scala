@@ -65,7 +65,7 @@ object RSAComb extends App {
     if (config.contains('answers))
       os.write(
         config('answers).get[os.Path],
-        ujson.write(ujson.Arr(answers.map(_.toJSON)), indent = 4),
+        ujson.write(ujson.Arr(answers.map(_.toJSON)), indent = 2),
         createFolders = true
       )
 
