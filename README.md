@@ -187,12 +187,11 @@ java -cp lib/JRDFox.jar:target/scala-2.13/RSAComb-assembly-0.2.0.jar uk.ac.ox.cs
 This will answers all the queries in `tests/lubm/queries.sparql` and generate debug information in a new folder in the current working directory (let's say, `rsacomb-20211005120845/`).
 You can run the provided RDFox script as follows
 ```{.sh}
-./lib/RDFox-linux-x86_64-5.2.1/RDFox sandbox . "simulate <debug-folder> <data> <query-id>"
+path/to/RDFox sandbox <debug-folder> "simulate <query-id>"
 ```
 where
 - `debug-folder` is the newly generated folder (`rsacomb-20211005120845` in this example)
-- `<data>` is the path to the data file used with RSAComb (`tests/lubm/data/lubm1.ttl` in this example)
-- `query-id` is the identifier of the query we want to simulate (if we want to simulate query 16 we will pass `16` as an argument)
+- `query-id` is the identifier of the query we want to simulate (if we want to simulate query 16 we will pass `16` as an argument). We can pass `all` to simulate all queries.
 
 This will launch a sandboxed RDFox console, where you will be able to explore a simulation of the datastore used by RSAComb.
 You can also access the same datastore from the web interface at [http://localhost:12110/console/](http://localhost:12110/console/).

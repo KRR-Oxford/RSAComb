@@ -623,7 +623,10 @@ class RSAOntology(
 
       /* Add filtering program */
       Logger print s"Filtering program rules: ${filter.rules.length}"
-      Logger.write(filter.rules.mkString("\n"), s"filter_query${query.id}.dlog")
+      Logger.write(
+        filter.rules.mkString("\n"),
+        s"filter_query_${query.id}.dlog"
+      )
       RDFoxUtil.addRules(data, filter.rules)
 
       // TODO: We remove the rules, should we drop the tuple table as well?

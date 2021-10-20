@@ -19,14 +19,12 @@ package uk.ac.ox.cs.rsacomb.util
 import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.io.PrintStream
+import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 
-/** Rough implementation of a logger.
-  *
-  * This is a WIP class for debugging and benchmarking.
-  */
+/** Simple logger */
 object Logger {
 
-  private lazy val dir = {
+  lazy val dir = {
     val timestamp = (new SimpleDateFormat("yyyyMMddHHmmss")).format(
       Calendar.getInstance().getTime
     )
@@ -52,10 +50,21 @@ object Logger {
   /** Currend logger level */
   var level: Level = DEBUG
 
+  /** Print a line padded with logger level and timestamp.
+    *
+    * @param str object to be printed.
+    * @param lvl minimum logger level required to print.
+    */
   def print(str: Any, lvl: Level = NORMAL): Unit =
     if (lvl <= level)
       output println s"[$lvl][${Calendar.getInstance().getTime}] $str"
 
+  /** Write provided content to file.
+    *
+    * @param content content to append to the file.
+    * @param file name of the file to append the content to.
+    * @param lvl minimum logger level required to write.
+    */
   def write(content: => os.Source, file: String, lvl: Level = VERBOSE): Unit =
     if (lvl <= level)
       os.write.append(dir / file, content)
@@ -69,4 +78,64 @@ object Logger {
     result
   }
 
+  /** Generate simulation scripts for current run
+    *
+    * @param data data files to be imported.
+    * @param queries collection of executed queries.
+    * @param lvl minimum logger level required.
+    */
+  def generateSimulationScripts(
+      data: Seq[os.Path],
+      queries: Seq[ConjunctiveQuery],
+      lvl: Level = VERBOSE
+  ): Unit =
+    if (lvl <= level) {
+      /* Create script folder */
+      val sim = os.rel / 'sim
+      os.makeDir(dir / sim)
+      /* Generate main script */
+      os.write.append(
+        dir / "simulate.rdfox",
+        """
+echo "\n[Start endpoint]"
+endpoint start
+
+echo "\n[Create new datastore]"
+dstore create rsacomb
+active rsacomb
+prefix rsacomb: <http://www.cs.ox.ac.uk/isg/RSAComb#>
+tupletable create rsacomb:CanonicalModel type "named-graph"
+
+echo "\n[Import data]"
+""" ++
+          data
+            .map(d => s"""import > rsacomb:CanonicalModel \"$d\"""")
+            .mkString("\n")
+          ++ s"""
+import "axiomatisation.dlog"
+insert { graph rsacomb:CanonicalModel { ?x a rsacomb:Named } } where { graph rsacomb:CanonicalModel { ?x a owl:Thing } }
+
+echo "\\n[Load canonical model program]"
+import "canonical_model.dlog"
+
+exec "$sim/filter_query_$$(1).rdfox"
+"""
+      )
+      /* Generate query scripts */
+      queries.map(q => {
+        val id = q.id
+        os.write.append(
+          dir / sim / "filter_query_all.rdfox",
+          s"exec $sim/filter_query_$id.rdfox\n"
+        )
+        os.write.append(
+          dir / sim / s"filter_query_$id.rdfox",
+          s"""
+echo "\\n[Load filtering program for query $id]"
+tupletable create rsacomb:Filter$id type "named-graph"
+import "filter_query_$id.dlog"
+"""
+        )
+      })
+    }
 }

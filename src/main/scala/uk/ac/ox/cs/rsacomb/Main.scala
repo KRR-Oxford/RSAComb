@@ -42,10 +42,9 @@ object RSAComb extends App {
     Logger.level = config('logger).get[Logger.Level]
 
   /* Load original ontology and normalize it */
-  val ontology = Ontology(
-    config('ontology).get[os.Path],
-    config('data).get[List[os.Path]]
-  ).normalize(new Normalizer)
+  val ontopath = config('ontology).get[os.Path]
+  val data = config('data).get[List[os.Path]]
+  val ontology = Ontology(ontopath, data).normalize(new Normalizer)
 
   //ontology.axioms foreach println
 
@@ -62,12 +61,14 @@ object RSAComb extends App {
     val answers = rsa ask queries
 
     /* Write answers to output file */
-    if (config.contains('answers))
-      os.write(
-        config('answers).get[os.Path],
-        ujson.write(ujson.Arr(answers.map(_.toJSON)), indent = 2),
-        createFolders = true
-      )
+    os.write(
+      config('answers).get[os.Path],
+      ujson.write(ujson.Arr(answers.map(_.toJSON)), indent = 2),
+      createFolders = true
+    )
+
+    /* Generate simulation script */
+    Logger.generateSimulationScripts(data, queries)
 
     // Logger.print(s"$answers", Logger.VERBOSE)
     // Logger print s"Number of answers: ${answers.length} (${answers.lengthWithMultiplicity})"
