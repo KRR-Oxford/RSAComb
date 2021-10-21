@@ -7,9 +7,11 @@ import org.scalatest.tagobjects.Slow
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
 import uk.ac.ox.cs.rsacomb.approximation.Upperbound
 import uk.ac.ox.cs.rsacomb.converter.Normalizer
-import uk.ac.ox.cs.rsacomb.util.RDFoxUtil
+import uk.ac.ox.cs.rsacomb.util.{Logger, RDFoxUtil}
 
 class LUBM extends AnyFunSpec with Matchers {
+
+  Logger.level = Logger.QUIET
 
   private val test = os.pwd / "tests" / "lubm"
 

@@ -41,6 +41,13 @@ lazy val root = (project in file("."))
     )
   )
 
+/** Execute all tests sequentially
+  *
+  * This is not ideal but it is an easy way to avoid bad interactions
+  * with RDFox.
+  */
+parallelExecution in Test := false
+
 /** Exclude RDFox from the building process
   *
   * @see https://github.com/sbt/sbt-assembly#excluding-jars-and-files

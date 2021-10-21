@@ -35,9 +35,11 @@ import uk.ac.ox.cs.rsacomb.approximation.Lowerbound
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
 import uk.ac.ox.cs.rsacomb.converter.{SkolemStrategy, NoSkolem}
 import uk.ac.ox.cs.rsacomb.suffix.Empty
-import uk.ac.ox.cs.rsacomb.util.{RDFoxUtil, RSA}
+import uk.ac.ox.cs.rsacomb.util.{Logger, RDFoxUtil, RSA}
 
 object Ontology1_CanonicalModelSpec {
+
+  Logger.level = Logger.QUIET
 
   /* Renderer to display OWL Axioms with DL syntax*/
   val renderer = new DLSyntaxObjectRenderer()

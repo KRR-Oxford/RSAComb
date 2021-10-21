@@ -271,7 +271,6 @@ trait RDFoxConverter {
           }
         val head = convert(a.getSuperProperty, term, term1, suffix)(fresh)
         val rule = Rule.create(head, body)
-        println(rule)
         ResultR(List(rule))
       }
 
