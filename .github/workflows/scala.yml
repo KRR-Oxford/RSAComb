@@ -2,25 +2,40 @@ name: Scala CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, develop ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, develop ]
 
 jobs:
-  build:
+
+  build_and_test:
+    name: "Build and test"
 
     runs-on: ubuntu-latest
 
     steps:
+
     - uses: actions/checkout@v2
-      
-    - name: Set up JDK 1.8
+
+    - name: "Set up JDK 1.8"
       uses: actions/setup-java@v1
       with:
         java-version: 1.8
-    
-    - name: Get libs
-      run: ./getlibs.sh
+
+    - name: Setup RDFox
+      run: ./rdfox_setup.sh
+
+    - name: Setup RDFox server path
+      run: echo "SERVER_DIR=$HOME/.RDFox" >> "$GITHUB_ENV"
+    - name: Setup RDFox license
+      env:
+        LICENSE_CONTENT: ${{ secrets.LICENSE_CONTENT }}
+      run: |
+        mkdir -p "$SERVER_DIR"
+        echo "$LICENSE_CONTENT" > "$SERVER_DIR/RDFox.lic"
+
+    - name: Build RSAComb
+      run: sbt compile
 
     - name: Run tests
-      run: sbt test
+      run: sbt "testOnly * -- -l org.scalatest.tags.Slow"

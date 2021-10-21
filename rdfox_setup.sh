@@ -1,11 +1,13 @@
 #!/bin/sh
 
-VERSION="4.1.0"
-NAME="RDFox-linux-$VERSION"
+VERSION="5.2.1"
+NAME="RDFox-linux-x86_64-$VERSION"
 LINK="https://rdfox-distribution.s3.eu-west-2.amazonaws.com/release/v$VERSION/$NAME.zip"
-DEST="./lib/"
+DEST="lib"
 
 mkdir -p "$DEST"
+cd "$DEST"
 wget "$LINK"
 unzip "$NAME.zip"
-cp "./$NAME/lib/JRDFox.jar" "$DEST"
+ln -s "$NAME/lib/JRDFox.jar"
+cd -
