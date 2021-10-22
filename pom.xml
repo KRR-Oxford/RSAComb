@@ -1,0 +1,54 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>uk.ac.ox.cs.rsacomb</groupId>
+    <artifactId>rsacomb_2.13</artifactId>
+    <packaging>jar</packaging>
+    <description>Re-implementation of the combined approach for CQ answering over RSA ontologies.</description>
+    <url>https://github.com/KRR-Oxford/RSAComb</url>
+    <version>0.1.0</version>
+    <name>RSAComb</name>
+    <organization>
+        <name>Department of Computer Science - University of Oxford</name>
+        <url>https://www.cs.ox.ac.uk</url>
+    </organization>
+    <scm>
+        <url>https://github.com/KRR-Oxford/RSAComb</url>
+        <connection>scm:git@github.com:KRR-Oxford/RSAComb.git</connection>
+    </scm>
+    <dependencies>
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>2.13.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_2.13</artifactId>
+            <version>3.2.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest-flatspec_2.13</artifactId>
+            <version>3.2.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest-shouldmatchers_2.13</artifactId>
+            <version>3.2.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.sourceforge.owlapi</groupId>
+            <artifactId>owlapi-apibinding</artifactId>
+            <version>5.1.17</version>
+        </dependency>
+        <dependency>
+            <groupId>org.scala-graph</groupId>
+            <artifactId>graph-core_2.13</artifactId>
+            <version>1.13.2</version>
+        </dependency>
+    </dependencies>
+</project>
