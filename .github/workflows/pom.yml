@@ -24,6 +24,8 @@ jobs:
     - name: Commit changes
       uses: stefanzweifel/git-auto-commit-action@v4
       with:
+        commit_user_name: GitHub POM Action
+        commit_user_email: "gh-pom@github.com"
         commit_message: "⬆ Update POM dependences"
         commit_options: '--no-verify --signoff'
         file_pattern: pom.xml
