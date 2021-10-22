@@ -608,7 +608,7 @@ class RSAOntology(
 
     /* Add canonical model */
     Logger print s"Canonical model facts: ${this.canonicalModel.facts.length}"
-    Logger.write(canonicalModel.facts.mkString("\n"), "canonical_model.dlog")
+    Logger.write(canonicalModel.facts.mkString("", ".\n", ".\n"), "canonical_model.dlog")
     RDFoxUtil.addFacts(data, RSAOntology.CanonGraph, this.canonicalModel.facts)
     Logger print s"Canonical model rules: ${this.canonicalModel.rules.length}"
     Logger.write(canonicalModel.rules.mkString("\n"), "canonical_model.dlog")
