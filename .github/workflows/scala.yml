@@ -37,5 +37,11 @@ jobs:
     - name: Build RSAComb
       run: sbt compile
 
+    - name: Download benchmarks
+      run: |
+        pushd tests/dbpedia/
+        ./setup.sh
+        popd
+
     - name: Run tests
       run: sbt "testOnly * -- -l org.scalatest.tags.Slow"

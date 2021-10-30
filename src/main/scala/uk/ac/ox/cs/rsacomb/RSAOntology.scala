@@ -214,7 +214,7 @@ class RSAOntology(
   /** Retrieve individuals/literals in the ontology */
   private val individuals: List[IRI] =
     ontology
-      .getIndividualsInSignature()
+      .getIndividualsInSignature(Imports.INCLUDED)
       .asScala
       .map(_.getIRI)
       .map(implicits.RDFox.owlapiToRdfoxIri)
@@ -588,23 +588,44 @@ class RSAOntology(
     RDFoxUtil.addData(data, RSAOntology.CanonGraph, datafiles: _*)
 
     /* Top/equality axiomatization */
+    RDFoxUtil.updateData(data, 
+      s"""
+      INSERT { 
+        GRAPH ${RSAOntology.CanonGraph} { ?X a ${IRI.THING} }
+      } WHERE {
+        GRAPH ${RSAOntology.CanonGraph} { ?X ?Y ?Z }
+      }
+      """
+    )
+    RDFoxUtil.updateData(data, 
+      s"""
+      INSERT { 
+        GRAPH ${RSAOntology.CanonGraph} { ?Z a ${RSA.NAMED} }
+      } WHERE {
+        GRAPH ${RSAOntology.CanonGraph} { ?X ?Y ?Z }.
+        FILTER( ?Y != a )
+      }
+      """
+    )
     RDFoxUtil.addRules(data, topAxioms ++ equalityAxioms)
     Logger.write(topAxioms.mkString("\n"), "axiomatisation.dlog")
     Logger.write(equalityAxioms.mkString("\n"), "axiomatisation.dlog")
 
     /* Introduce `rsacomb:Named` concept */
-    data.evaluateUpdate(
-      null, // the base IRI for the query (if null, a default is used)
-      RSA.Prefixes,
+    /* From data */
+    RDFoxUtil.updateData(data, 
       s"""
       INSERT { 
         GRAPH ${RSAOntology.CanonGraph} { ?X a ${RSA.NAMED} }
       } WHERE {
         GRAPH ${RSAOntology.CanonGraph} { ?X a ${IRI.THING} }
       }
-      """,
-      new java.util.HashMap[String, String]
+      """
     )
+    /* From ontology */
+    val named = individuals.map(RSA.Named(RSAOntology.CanonGraph)(_))
+    RDFoxUtil.addFacts(data, RSAOntology.CanonGraph, named)
+    Logger.write(named.mkString("", ".\n", ".\n"), "canonical_model.dlog")
 
     /* Add canonical model */
     Logger print s"Canonical model facts: ${this.canonicalModel.facts.length}"
@@ -630,7 +651,7 @@ class RSAOntology(
       RDFoxUtil.addRules(data, filter.rules)
 
       // TODO: We remove the rules, should we drop the tuple table as well?
-      data.clearRulesAxiomsExplicateFacts()
+      //data.clearRulesAxiomsExplicateFacts()
 
       /* Gather answers to the query */
       val answers = RDFoxUtil

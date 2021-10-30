@@ -25,5 +25,5 @@ class DataFactory(private var counter: Integer) {
     Variable.create(f"I${this.getNext()}%05d")
 
   def getOWLClass(): OWLClass =
-    DataFactory.factory.getOWLClass(s"X${this.getNext()}")
+    DataFactory.factory.getOWLClass(RSA(s"tmp${this.getNext()}").getIRI)
 }

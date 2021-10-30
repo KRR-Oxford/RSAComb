@@ -1,0 +1,94 @@
+^[Query289]
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+SELECT ?X
+WHERE {
+?X rdf:type <http://dbpedia.org/ontology/Colour>
+}
+
+^[Query352]
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+SELECT ?X
+WHERE {
+?X rdf:type <http://dbpedia.org/ontology/Sport>
+}
+
+^[Query353]
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+SELECT ?X
+WHERE {
+?X rdf:type <http://dbpedia.org/ontology/Currency>
+}
+
+^[Query404]
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+SELECT ?X
+WHERE {
+?X rdf:type <http://www.owl-ontologies.com/travel.owl#RetireeDestination>
+}
+
+^[Query439]
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+SELECT ?X
+WHERE {
+?X rdf:type <http://dbpedia.org/ontology/GovernmentType>
+}
+
+^[Query460]
+SELECT ?X ?Y
+WHERE {
+?X <http://dbpedia.org/ontology/biome> ?Y .
+}
+
+^[Query537]
+SELECT ?X ?Y
+WHERE {
+?X <http://dbpedia.org/ontology/currency> ?Y .
+}
+
+^[Query552]
+SELECT ?X ?Y
+WHERE {
+?X <http://dbpedia.org/ontology/viceChancellor> ?Y .
+}
+
+^[Query558]
+SELECT ?X ?Y
+WHERE {
+?X <http://dbpedia.org/ontology/governorGeneral> ?Y .
+}
+
+^[Query575]
+SELECT ?X ?Y
+WHERE {
+?X <http://dbpedia.org/ontology/highestPosition> ?Y .
+}
+
+^[Query599]
+SELECT ?X ?Y
+WHERE {
+?X <http://dbpedia.org/ontology/memberOfParliament> ?Y .
+}
+
+^[Query607]
+SELECT ?X ?Y
+WHERE {
+?X <http://dbpedia.org/ontology/pastMember> ?Y .
+}
+
+^[Query620]
+SELECT ?X ?Y
+WHERE {
+?X <http://dbpedia.org/ontology/languageRegulator> ?Y .
+}
+
+^[Query629]
+SELECT ?X ?Y
+WHERE {
+?X <http://dbpedia.org/ontology/chairLabel> ?Y .
+}
+
+^[Query639]
+SELECT ?X ?Y
+WHERE {
+?X <http://dbpedia.org/ontology/managementPosition> ?Y .
+}

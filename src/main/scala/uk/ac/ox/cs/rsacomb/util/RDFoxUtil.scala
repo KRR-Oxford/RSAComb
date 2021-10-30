@@ -183,7 +183,7 @@ object RDFoxUtil {
   /** Imports a sequence of files directly into a datastore.
     *
     * @param data datastore connection.
-    * @param graph named graph where the data should be uploaded
+    * @param graph named graph where the data should be uploaded.
     * @param files sequence of files to upload.
     */
   def addData(data: DataStoreConnection, graph: IRI, files: os.Path*): Unit =
@@ -197,6 +197,23 @@ object RDFoxUtil {
         )
       },
       "Loading data files",
+      Logger.DEBUG
+    )
+
+  /** Execute an update SPARQL query on a datastore.
+    *
+    * @param data datastore connection.
+    * @param query update SPARQL query.
+    */
+  def updateData(data: DataStoreConnection, query: String): Unit =
+    Logger.timed(
+      data.evaluateUpdate(
+        null, // the base IRI for the query (if null, a default is used)
+        RSA.Prefixes,
+        query,
+        new java.util.HashMap[String, String]
+      ),
+      "Updating data",
       Logger.DEBUG
     )
 

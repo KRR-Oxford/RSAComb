@@ -62,3 +62,44 @@ class LUBM extends AnyFunSpec with Matchers {
 
   }
 }
+
+class DBpedia extends AnyFunSpec with Matchers {
+
+  Logger.level = Logger.QUIET
+
+  private val test = os.pwd / "tests" / "dbpedia"
+
+  /* Approximation algorithms */
+  //private val toLowerbound = new Lowerbound
+  private val toUpperbound = new Upperbound
+
+  /* Normalization algorithms */
+  private val normalizer = new Normalizer
+
+  /* Ontology */
+  private val ontology = Ontology(
+    test / "dbpedia+travel.owl",
+    List(test / "dbpedia+travel.ttl")
+  ) normalize normalizer
+  private val rsa = ontology approximate toUpperbound
+
+  /* Queries and results */
+  private val results = ujson.read(os.read(test / "results.json")).arr
+
+  describe("Full DBpedia + Travel data:") {
+
+    val queries = RDFoxUtil.loadQueriesFromFile(test / "queries.sparql")
+    queries foreach { query =>
+      it(s"Tested Query${query.id}") {
+        val answers = rsa.ask(query).answers.map(_._2.mkString("\t"))
+        val reference = results
+          .find(_("queryID").num == query.id)
+          .get("answers")
+          .arr
+          .map(_.str)
+        answers should contain theSameElementsAs reference
+      }
+    }
+  }
+}
+

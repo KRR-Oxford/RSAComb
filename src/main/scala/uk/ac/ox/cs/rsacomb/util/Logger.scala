@@ -112,6 +112,8 @@ echo "\n[Import data]"
             .map(d => s"""import > rsacomb:CanonicalModel \"$d\"""")
             .mkString("\n")
           ++ s"""
+insert { graph rsacomb:CanonicalModel { ?x a owl:Thing } } where { graph rsacomb:CanonicalModel { ?x ?y ?z } }
+insert { graph rsacomb:CanonicalModel { ?z a owl:Thing } } where { graph rsacomb:CanonicalModel { ?x ?y ?z } . filter( ?y != a ) }
 import "axiomatisation.dlog"
 insert { graph rsacomb:CanonicalModel { ?x a rsacomb:Named } } where { graph rsacomb:CanonicalModel { ?x a owl:Thing } }
 

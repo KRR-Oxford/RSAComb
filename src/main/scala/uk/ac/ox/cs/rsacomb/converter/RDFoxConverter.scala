@@ -350,7 +350,7 @@ trait RDFoxConverter {
         (List(atom), List())
       }
 
-      /** Existential class expression (for data properties).
+      /** Existential class expression (for object properties).
         *
         * Parameter `skolem` is used to determine the skolemization
         * technique (if any) to use for the translation.

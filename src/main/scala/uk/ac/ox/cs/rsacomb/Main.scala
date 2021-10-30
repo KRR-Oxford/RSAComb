@@ -59,6 +59,7 @@ object RSAComb extends App {
       )
 
     val answers = rsa ask queries
+    Logger print s"Number of answers: ${answers.length}"
 
     /* Write answers to output file */
     os.write(

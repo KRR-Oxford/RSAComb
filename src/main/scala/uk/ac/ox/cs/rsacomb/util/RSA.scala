@@ -47,9 +47,12 @@ object RSA {
 
   /** Set of default prefixes to be included in all datastore operations */
   val Prefixes: Prefixes = new Prefixes()
-  Prefixes.declarePrefix("rsacomb:", "http://www.cs.ox.ac.uk/isg/RSAComb#")
-  Prefixes.declarePrefix("rdfox:", "http://oxfordsemantic.tech/RDFox#")
+  Prefixes.declarePrefix("xml:", "http://www.w3.org/XML/1998/namespace")
+  Prefixes.declarePrefix("rdf:", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+  Prefixes.declarePrefix("rdfs:", "http://www.w3.org/2000/01/rdf-schema#")
   Prefixes.declarePrefix("owl:", "http://www.w3.org/2002/07/owl#")
+  Prefixes.declarePrefix("rdfox:", "http://oxfordsemantic.tech/RDFox#")
+  Prefixes.declarePrefix("rsacomb:", "http://www.cs.ox.ac.uk/isg/RSAComb#")
 
   /** Creates a `rsacomb:<name>` IRI */
   def apply(name: Any): IRI =
