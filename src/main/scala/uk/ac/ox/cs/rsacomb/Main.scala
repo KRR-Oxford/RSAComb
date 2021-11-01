@@ -59,7 +59,6 @@ object RSAComb extends App {
       )
 
     val answers = rsa ask queries
-    Logger print s"Number of answers: ${answers.length}"
 
     /* Write answers to output file */
     os.write(
@@ -70,21 +69,5 @@ object RSAComb extends App {
 
     /* Generate simulation script */
     Logger.generateSimulationScripts(data, queries)
-
-    // Logger.print(s"$answers", Logger.VERBOSE)
-    // Logger print s"Number of answers: ${answers.length} (${answers.lengthWithMultiplicity})"
-    // Retrieve unfiltered answers
-    // val unfiltered = rsa.queryDataStore(
-    //   """
-    //     SELECT (count(?K) as ?COUNT)
-    //     WHERE {
-    //         ?K a rsa:QM .
-    //     }
-    //   """,
-    //   RSA.Prefixes
-    // )
-    // unfiltered.foreach((u) =>
-    //   Logger print s"Number of unfiltered answers: ${u.head._2}"
-    // )
   }
 }
