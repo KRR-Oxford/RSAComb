@@ -1,0 +1,32 @@
+name: POM generation
+
+on:
+  pull_request:
+  push:
+    branches: [ master ]
+    paths: [ 'build.sbt' ]
+
+jobs:
+  pom:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - uses: actions/checkout@v2
+      with:
+        ref: ${{ github.head_ref }}
+
+    - name: Generate POM
+      run: |
+        sbt makePom
+        mv target/scala-*/rsacomb_*.pom pom.xml
+
+    - name: Commit changes
+      uses: stefanzweifel/git-auto-commit-action@v4
+      with:
+        commit_user_name: GitHub POM Action
+        commit_user_email: "gh-pom@github.com"
+        commit_message: "⬆ Update POM dependences"
+        commit_options: '--no-verify --signoff'
+        file_pattern: pom.xml
+
