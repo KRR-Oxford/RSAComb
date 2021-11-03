@@ -18,6 +18,7 @@ package uk.ac.ox.cs.rsacomb
 
 import scala.collection.mutable.Map
 import util.Logger
+import approximation._
 
 case class RSAOption[+T](opt: T) {
   def get[T]: T = opt.asInstanceOf[T]
@@ -116,6 +117,13 @@ object RSAConfig {
       }
       case flag @ ("-a" | "--answers") :: answers :: tail =>
         parse(tail, config += ('answers -> getPath(answers)))
+      case flag @ ("-x" | "--approximation") :: _approx :: tail => {
+        val approx = _approx match {
+          case "lowerbound" => new Lowerbound
+          case "upperbound" => new Upperbound
+        }
+        parse(tail, config += ('approximation -> approx))
+      }
       case flag @ ("-q" | "--queries") :: _query :: tail => {
         val query = getPath(_query)
         if (!os.isFile(query))
@@ -149,6 +157,8 @@ object RSAConfig {
       exit("The following flag is mandatory: '-o' or '--ontology'.")
     if (!config.contains('data))
       config += ('data -> List.empty[os.Path])
+    if (!config.contains('approximation))
+      config += ('approximation -> new Lowerbound)
     config
   }
 }

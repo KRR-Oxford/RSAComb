@@ -29,7 +29,7 @@ import sparql.ConjunctiveQuery
 
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
 import uk.ac.ox.cs.rsacomb.converter.Normalizer
-import uk.ac.ox.cs.rsacomb.approximation.{Upperbound, Lowerbound}
+import uk.ac.ox.cs.rsacomb.approximation.Approximation
 
 /** Main entry point to the program */
 object RSAComb extends App {
@@ -53,7 +53,7 @@ object RSAComb extends App {
   //ontology.axioms foreach println
 
   /* Approximate the ontology to RSA */
-  val toRSA = new Upperbound
+  val toRSA = config('approximation).get[Approximation[RSAOntology]]
   val rsa = ontology approximate toRSA
 
   if (config contains 'queries) {
