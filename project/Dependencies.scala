@@ -5,7 +5,7 @@ object Dependencies {
   lazy val scalatestVersion = "3.2.3"
   lazy val owlapiVersion = "5.1.17"
   lazy val scalagraphVersion = "1.13.2"
-  lazy val ujsonVersion = "1.4.1"
+  lazy val ujsonVersion = "1.4.2"
   lazy val oslibVersion = "0.7.8"
 
   // Libraries

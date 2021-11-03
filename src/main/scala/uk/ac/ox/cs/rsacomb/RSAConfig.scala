@@ -149,8 +149,6 @@ object RSAConfig {
       exit("The following flag is mandatory: '-o' or '--ontology'.")
     if (!config.contains('data))
       config += ('data -> List.empty[os.Path])
-    if (!config.contains('answers))
-      config += ('answers -> Logger.dir / "answers.json")
     config
   }
 }

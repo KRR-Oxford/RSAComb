@@ -19,22 +19,24 @@ package uk.ac.ox.cs.rsacomb.util
 import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.io.PrintStream
-import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
+import uk.ac.ox.cs.rsacomb.sparql.{ConjunctiveQuery, ConjunctiveQueryAnswers}
 
 /** Simple logger */
 object Logger {
 
-  lazy val dir = {
+  /** Main directory for logger output for the current run */
+  val dir = {
     val timestamp = (new SimpleDateFormat("yyyyMMddHHmmss")).format(
       Calendar.getInstance().getTime
     )
-    val dir = os.pwd / s"rsacomb-$timestamp"
-    os.makeDir(dir)
-    dir
+    os.pwd / s"rsacomb-$timestamp"
   }
 
   /** Output stream for the logger. */
   var output: PrintStream = System.out
+
+  /** Path to answers output file */
+  var answers: os.Path = dir / "answers.json"
 
   /** Logger levels (i.e., verbosity of output) */
   sealed abstract class Level(val level: Int, val name: String)
@@ -67,8 +69,29 @@ object Logger {
     */
   def write(content: => os.Source, file: String, lvl: Level = VERBOSE): Unit =
     if (lvl <= level)
-      os.write.append(dir / file, content)
+      os.write.append(dir / file, content, createFolders = true)
 
+  /** Write answers to queries to output file in JSON format.
+    * 
+    * @param ans the set of answers to be written.
+    */
+  def write(ans: Seq[ConjunctiveQueryAnswers]): Unit = {
+    ujson.writeToOutputStream(
+      ujson.Arr(ans.map(_.toJSON)),
+      os.write.outputStream(answers, createFolders = true),
+      indent = 2
+    )
+  }
+
+  /** Timed evaluation of an expression.
+    *
+    * Records and outputs additional information about evaluation time.
+    *
+    * @param expr expression to be evaluated.
+    * @param desc short description of the expression.
+    * @param lvl minimum require logger level for output
+    * @return the result of the evaluation.
+    */
   def timed[A](expr: => A, desc: String = "", lvl: Level = NORMAL): A = {
     val t0 = System.currentTimeMillis()
     print(s"$desc (START)", lvl)
@@ -92,7 +115,6 @@ object Logger {
     if (lvl <= level) {
       /* Create script folder */
       val sim = os.rel / 'sim
-      os.makeDir(dir / sim)
       /* Generate main script */
       os.write.append(
         dir / "simulate.rdfox",
@@ -121,14 +143,16 @@ echo "\\n[Load canonical model program]"
 import "canonical_model.dlog"
 
 exec "$sim/filter_query_$$(1).rdfox"
-"""
+""",
+        createFolders = true
       )
       /* Generate query scripts */
       queries.map(q => {
         val id = q.id
         os.write.append(
           dir / sim / "filter_query_all.rdfox",
-          s"exec $sim/filter_query_$id.rdfox\n"
+          s"exec $sim/filter_query_$id.rdfox\n",
+          createFolders = true
         )
         os.write.append(
           dir / sim / s"filter_query_$id.rdfox",
@@ -136,7 +160,8 @@ exec "$sim/filter_query_$$(1).rdfox"
 echo "\\n[Load filtering program for query $id]"
 tupletable create rsacomb:Filter$id type "named-graph"
 import "filter_query_$id.dlog"
-"""
+""",
+          createFolders = true
         )
       })
     }
