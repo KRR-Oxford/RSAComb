@@ -128,9 +128,9 @@ object RSAConfig {
         val query = getPath(_query)
         val files =
           if (os.isFile(query))
-            Seq(query)
+            List(query)
           else if (os.isDir(query))
-            os.walk(query).filter(os.isFile)
+            os.walk(query).filter(os.isFile).toList
           else
             exit(s"'${_query}' is not a valid path.")
         parse(tail, config += ('queries -> files))
@@ -145,10 +145,10 @@ object RSAConfig {
         val data = getPath(_data)
         val files =
           if (os.isFile(data))
-            Seq(data)
-          else if (os.isDir(data))
-            os.walk(data).filter(os.isFile)
-          else
+            List(data)
+          else if (os.isDir(data)) {
+            os.walk(data).filter(os.isFile).toList
+          }else
             exit(s"'${_data}' is not a valid path.")
         parse(tail, config += ('data -> files))
       }
