@@ -250,7 +250,7 @@ object RDFoxUtil {
     * @note if a query is not recognized as a [[SelectQuery]] by RDFox
     * it is discarded.
     *
-    * @param file file containing a list of conjunctive queries.
+    * @param path file containing a list of conjunctive queries.
     * @param prefixes additional prefixes for the query. It defaults to
     * an empty set.
     *
@@ -284,6 +284,22 @@ object RDFoxUtil {
     Logger print s"Loaded ${queries.length} queries from $path"
     queries
   }
+
+  /** Load SPARQL queries from files.
+    *
+    * @param paths list of files containing a conjunctive queries.
+    * @param prefixes additional prefixes for the query. It defaults to
+    * an empty set.
+    *
+    * @return a list of [[tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery SelectQuery]] queries.
+    *
+    * @see [[RDFoxUtil.loadQueriesFromFile()]] for more details on the file format.
+    */
+  def loadQueriesFromFiles(
+      paths: List[os.Path],
+      prefixes: Prefixes = new Prefixes()
+  ): List[ConjunctiveQuery] =
+    paths.flatMap(loadQueriesFromFile(_, prefixes))
 
   /** Parse a SELECT query from a string in SPARQL format.
     *

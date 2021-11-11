@@ -50,16 +50,14 @@ object RSAComb extends App {
   val data = config('data).get[List[os.Path]]
   val ontology = Ontology(ontopath, data).normalize(new Normalizer)
 
-  //ontology.axioms foreach println
-
   /* Approximate the ontology to RSA */
   val toRSA = config('approximation).get[Approximation[RSAOntology]]
   val rsa = ontology approximate toRSA
 
   if (config contains 'queries) {
     val queries =
-      RDFoxUtil.loadQueriesFromFile(
-        config('queries).get[os.Path]
+      RDFoxUtil.loadQueriesFromFiles(
+        config('queries).get[List[os.Path]]
       )
 
     val answers = rsa ask queries

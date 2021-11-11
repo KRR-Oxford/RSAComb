@@ -126,9 +126,14 @@ object RSAConfig {
       }
       case flag @ ("-q" | "--queries") :: _query :: tail => {
         val query = getPath(_query)
-        if (!os.isFile(query))
-          exit(s"'${_query}' is not a valid filename.")
-        parse(tail, config += ('queries -> query))
+        val files =
+          if (os.isFile(query))
+            Seq(query)
+          else if (os.isDir(query))
+            os.walk(query).filter(os.isFile)
+          else
+            exit(s"'${_query}' is not a valid path.")
+        parse(tail, config += ('queries -> files))
       }
       case flag @ ("-o" | "--ontology") :: _ontology :: tail => {
         val ontology = getPath(_ontology)
