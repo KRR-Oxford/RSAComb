@@ -567,11 +567,13 @@ class RSAOntology(
     /* From ontology */
     val named = individuals.map(RSA.Named(RSAOntology.CanonGraph)(_))
     RDFoxUtil.addFacts(data, RSAOntology.CanonGraph, named)
-    Logger.write(named.mkString("", ".\n", ".\n"), "canonical_model.dlog")
+    if (! named.isEmpty)
+      Logger.write(named.mkString("", ".\n", ".\n"), "canonical_model.dlog")
 
     /* Add canonical model */
     Logger print s"Canonical model facts: ${this.canonicalModel.facts.length}"
-    Logger.write(canonicalModel.facts.mkString("", ".\n", ".\n"), "canonical_model.dlog")
+    if (! canonicalModel.facts.isEmpty)
+      Logger.write(canonicalModel.facts.mkString("", ".\n", ".\n"), "canonical_model.dlog")
     RDFoxUtil.addFacts(data, RSAOntology.CanonGraph, this.canonicalModel.facts)
     Logger print s"Canonical model rules: ${this.canonicalModel.rules.length}"
     Logger.write(canonicalModel.rules.mkString("\n"), "canonical_model.dlog")
