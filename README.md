@@ -14,7 +14,7 @@ Combined approach for Conjunctive Query answering in RSA
 <br/>
 <a href="https://arxiv.org/abs/2107.00369">Read the paper</a>
 &middot;
-<a href="https://arxiv.org/abs/2107.00369">Read the technical report</a>
+<a href="http://ceur-ws.org/Vol-2954/paper-18.pdf">Read the technical report</a>
 &middot;
 <a href="https://github.com/KRR-Oxford/RSAComb/issues">Report bug</a>
 <br/><br/>
