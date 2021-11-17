@@ -17,9 +17,19 @@
 package uk.ac.ox.cs.rsacomb.filtering
 
 import tech.oxfordsemantic.jrdfox.logic.datalog.Rule
-import tech.oxfordsemantic.jrdfox.logic.expression.IRI
+import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Variable}
 import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 import uk.ac.ox.cs.rsacomb.util.Versioned
+
+object RDFoxDSL {
+
+  import scala.collection.JavaConverters._
+
+  implicit class MyVariable(private val str: StringContext) extends AnyVal {
+    def v(args: Any*): Variable = Variable.create(s"${str.s(args: _*)}")
+  }
+
+}
 
 /** Type of filtering strategy.
   *
@@ -29,6 +39,7 @@ sealed trait FilterType
 object FilterType {
   case object NAIVE extends FilterType
   case object REVISED extends FilterType
+  case object REVISEDv2 extends FilterType
 }
 
 /** Filtering program trait */
@@ -50,6 +61,7 @@ object FilteringProgram extends Versioned[FilterType] {
     filter match {
       case NAIVE   => NaiveFilteringProgram(_, _, _)
       case REVISED => RevisedFilteringProgram(_, _, _)
+      case REVISEDv2 => RevisedFilteringProgram2(_, _, _)
     }
 }
 

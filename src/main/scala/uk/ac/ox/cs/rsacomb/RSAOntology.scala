@@ -117,7 +117,7 @@ object RSAOntology {
   def filteringProgram(query: ConjunctiveQuery): FilteringProgram =
     Logger.timed(
       {
-        val filter = FilteringProgram(FilterType.REVISED)
+        val filter = FilteringProgram(FilterType.REVISEDv2)
         filter(CanonGraph, FilterGraph(query), query)
       },
       "Generating filtering program",

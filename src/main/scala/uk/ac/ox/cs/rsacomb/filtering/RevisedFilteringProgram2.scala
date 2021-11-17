@@ -38,7 +38,7 @@ import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Forward, Backward}
 import uk.ac.ox.cs.rsacomb.util.{RSA, RDFoxUtil}
 
 /** Factory for [[uk.ac.ox.cs.rsacomb.FilteringProgram FilteringProgram]] */
-object RevisedFilteringProgram {
+object RevisedFilteringProgram2 {
 
   /** Create a new FilteringProgram instance.
     *
@@ -48,8 +48,8 @@ object RevisedFilteringProgram {
       source: IRI,
       target: IRI,
       query: ConjunctiveQuery
-  ): RevisedFilteringProgram =
-    new RevisedFilteringProgram(source, target, query)
+  ): RevisedFilteringProgram2 =
+    new RevisedFilteringProgram2(source, target, query)
 
 }
 
@@ -60,7 +60,7 @@ object RevisedFilteringProgram {
   *
   * Instances can be created using the companion object.
   */
-class RevisedFilteringProgram(
+class RevisedFilteringProgram2(
     val source: IRI,
     val target: IRI,
     val query: ConjunctiveQuery
@@ -155,24 +155,21 @@ class RevisedFilteringProgram(
             QM(v"K"),
             RSA.Skolem(v"K", variables),
             not(NI(v)),
-            RSA.Skolem(v"S", variables :+ RSA(i) :+ RSA(i))
+            RSA.Skolem(v"S", List(RSA(i), RSA(i)))
           )
       val r3b = Rule.create(
         ID(v"K", v"T"),
         ID(v"K", v"S"),
-        RSA.Skolem(v"S", variables :+ v"U" :+ v"V"),
-        RSA.Skolem(v"T", variables :+ v"V" :+ v"U")
+        RSA.Skolem(v"S", List(v"U", v"V")),
+        RSA.Skolem(v"T", List(v"V", v"U"))
       )
       val r3c = Rule.create(
-        ID(v"K1", v"Q"),
-        QM(v"K1"),
-        ID(v"K2", v"S"),
-        FilterAtom.create(FunctionCall.equal(v"K1", v"K2")),
-        RSA.Skolem(v"S", variables :+ v"U" :+ v"V"),
-        ID(v"K3", v"T"),
-        FilterAtom.create(FunctionCall.equal(v"K1", v"K3")),
-        RSA.Skolem(v"T", variables :+ v"V" :+ v"W"),
-        RSA.Skolem(v"Q", variables :+ v"U" :+ v"W")
+        ID(v"K", v"Q"),
+        ID(v"K", v"S"),
+        RSA.Skolem(v"S", List(v"U", v"V")),
+        ID(v"K", v"T"),
+        RSA.Skolem(v"T", List(v"V", v"W")),
+        RSA.Skolem(v"Q", List(v"U", v"W"))
       )
 
       /** Detects forks in the canonical model.
@@ -188,8 +185,9 @@ class RevisedFilteringProgram(
         if index2 >= 0
       } yield Rule.create(
         FK(v"K"),
+        RSA.Skolem(v"S", List(RSA(index1), RSA(index2))),
         ID(v"K", v"S"),
-        RSA.Skolem(v"S", variables :+ RSA(index1) :+ RSA(index2)),
+        RSA.Skolem(v"K", variables),
         role1 :: Forward,
         role2 :: Forward,
         not(
@@ -205,8 +203,9 @@ class RevisedFilteringProgram(
         if index2 >= 0
       } yield Rule.create(
         FK(v"K"),
+        RSA.Skolem(v"S", List(RSA(index1), RSA(index2))),
         ID(v"K", v"S"),
-        RSA.Skolem(v"S", variables :+ RSA(index1) :+ RSA(index2)),
+        RSA.Skolem(v"K", variables),
         role1 :: Forward,
         role2 :: Backward,
         not(
@@ -222,8 +221,9 @@ class RevisedFilteringProgram(
         if index2 >= 0
       } yield Rule.create(
         FK(v"K"),
+        RSA.Skolem(v"S", List(RSA(index1), RSA(index2))),
         ID(v"K", v"S"),
-        RSA.Skolem(v"S", variables :+ RSA(index1) :+ RSA(index2)),
+        RSA.Skolem(v"K", variables),
         role1 :: Backward,
         role2 :: Backward,
         not(
@@ -248,22 +248,19 @@ class RevisedFilteringProgram(
         if query.bounded contains r2arg2
       } yield Rule.create(
         ID(v"K", v"T"),
-        ID(v"K", v"S"),
         RSA.Skolem(
           v"S",
-          variables :+
-            RSA(query.bounded indexOf r1arg2) :+
-            RSA(query.bounded indexOf r2arg2)
+          List(RSA(query.bounded indexOf r1arg2), RSA(query.bounded indexOf r2arg2))
         ),
-        RSA.Congruent(tts)(r1arg0, r2arg0),
+        ID(v"K", v"S"),
+        RSA.Skolem(v"K", variables),
         role1 :: Forward,
         role2 :: Forward,
+        RSA.Congruent(tts)(r1arg0, r2arg0),
         not(NI(r1arg0)),
         RSA.Skolem(
           v"T",
-          variables :+
-            RSA(query.bounded indexOf r1arg0) :+
-            RSA(query.bounded indexOf r2arg0)
+          List(RSA(query.bounded indexOf r1arg0), RSA(query.bounded indexOf r2arg0))
         )
       )
       val r5b = for {
@@ -279,22 +276,19 @@ class RevisedFilteringProgram(
         if query.bounded contains r2arg2
       } yield Rule.create(
         ID(v"K", v"T"),
-        ID(v"K", v"S"),
         RSA.Skolem(
           v"S",
-          variables :+
-            RSA(query.bounded indexOf r1arg2) :+
-            RSA(query.bounded indexOf r2arg0)
+          List(RSA(query.bounded indexOf r1arg2), RSA(query.bounded indexOf r2arg0))
         ),
-        RSA.Congruent(tts)(r1arg0, r2arg2),
+        ID(v"K", v"S"),
+        RSA.Skolem(v"K", variables),
         role1 :: Forward,
         role2 :: Backward,
+        RSA.Congruent(tts)(r1arg0, r2arg2),
         not(NI(r1arg0)),
         RSA.Skolem(
           v"T",
-          variables :+
-            RSA(query.bounded indexOf r1arg0) :+
-            RSA(query.bounded indexOf r2arg2)
+          List(RSA(query.bounded indexOf r1arg0), RSA(query.bounded indexOf r2arg2))
         )
       )
       val r5c = for {
@@ -310,22 +304,19 @@ class RevisedFilteringProgram(
         if query.bounded contains r2arg2
       } yield Rule.create(
         ID(v"K", v"T"),
-        ID(v"K", v"S"),
         RSA.Skolem(
           v"S",
-          variables :+
-            RSA(query.bounded indexOf r1arg0) :+
-            RSA(query.bounded indexOf r2arg0)
+          List(RSA(query.bounded indexOf r1arg0), RSA(query.bounded indexOf r2arg0))
         ),
-        RSA.Congruent(tts)(r1arg2, r2arg2),
+        ID(v"K", v"S"),
+        RSA.Skolem(v"K", variables),
         role1 :: Backward,
         role2 :: Backward,
+        RSA.Congruent(tts)(r1arg2, r2arg2),
         not(NI(r1arg2)),
         RSA.Skolem(
           v"T",
-          variables :+
-            RSA(query.bounded indexOf r1arg2) :+
-            RSA(query.bounded indexOf r2arg2)
+          List(RSA(query.bounded indexOf r1arg2), RSA(query.bounded indexOf r2arg2))
         )
       )
 
@@ -345,14 +336,14 @@ class RevisedFilteringProgram(
         if index2 >= 0
         suffix <- Seq(Forward, Backward)
       } yield Rule.create(
-        AQ(suffix)(v"K1", v"Q"),
-        ID(v"K1", v"S"),
-        RSA.Skolem(v"S", variables :+ RSA(index0) :+ v"V"),
-        ID(v"K2", v"T"),
-        FilterAtom.create(FunctionCall.equal(v"K1", v"K2")),
-        RSA.Skolem(v"T", variables :+ RSA(index2) :+ v"W"),
+        AQ(suffix)(v"K", v"Q"),
+        ID(v"K", v"S"),
+        RSA.Skolem(v"S", List(RSA(index0), v"V")),
+        ID(v"K", v"T"),
+        RSA.Skolem(v"T", List(RSA(index2), v"W")),
+        RSA.Skolem(v"K", variables),
         role :: suffix,
-        RSA.Skolem(v"Q", variables :+ v"V" :+ v"W")
+        RSA.Skolem(v"Q", List(v"V", v"W"))
       )
       val r7a =
         for (suffix <- List(Forward, Backward))
@@ -363,13 +354,12 @@ class RevisedFilteringProgram(
       val r7b =
         for (suffix <- List(Forward, Backward))
           yield Rule.create(
-            TQ(suffix)(v"K1", v"Q"),
-            AQ(suffix)(v"K1", v"S"),
-            RSA.Skolem(v"S", variables :+ v"U" :+ v"V"),
-            TQ(suffix)(v"K2", v"T"),
-            FilterAtom.create(FunctionCall.equal(v"K1", v"K2")),
-            RSA.Skolem(v"T", variables :+ v"V" :+ v"W"),
-            RSA.Skolem(v"Q", variables :+ v"U" :+ v"W")
+            TQ(suffix)(v"K", v"Q"),
+            AQ(suffix)(v"K", v"S"),
+            RSA.Skolem(v"S", List(v"U", v"V")),
+            TQ(suffix)(v"K", v"T"),
+            RSA.Skolem(v"T", List(v"V", v"W")),
+            RSA.Skolem(v"Q", List(v"U", v"W"))
           )
 
       /** Flag spurious answers.
@@ -390,7 +380,7 @@ class RevisedFilteringProgram(
           yield Rule.create(
             SP(v"K"),
             TQ(suffix)(v"K", v"S"),
-            RSA.Skolem(v"S", variables :+ v"V" :+ v"V")
+            RSA.Skolem(v"S", List(v"V", v"V"))
           )
 
       /** Determine answers to the query
