@@ -130,64 +130,6 @@ object RSAOntology {
       datafiles: List[os.Path]
   ): RSAOntology = new RSAOntology(origin, axioms, datafiles)
 
-  // def apply(
-  //     ontofile: File,
-  //     datafiles: List[File],
-  //     approx: Option[Approximation]
-  // ): RSAOntology = {
-  //   val ontology = manager.loadOntologyFromOntologyDocument(ontofile)
-  //   RSAOntology(ontology, datafiles, approx)
-  // }
-
-  // def apply(
-  //     ontology: OWLOntology,
-  //     datafiles: List[File],
-  //     approx: Option[Approximation]
-  // ): RSAOntology = {
-  //   val normalizer = new Normalizer()
-
-  //   /** TBox axioms */
-  //   var tbox: List[OWLLogicalAxiom] =
-  //     ontology
-  //       .tboxAxioms(Imports.INCLUDED)
-  //       .collect(Collectors.toList())
-  //       .collect { case a: OWLLogicalAxiom => a }
-  //       .flatMap(normalizer.normalize)
-
-  //   /** RBox axioms */
-  //   var rbox: List[OWLLogicalAxiom] =
-  //     ontology
-  //       .rboxAxioms(Imports.INCLUDED)
-  //       .collect(Collectors.toList())
-  //       .collect { case a: OWLLogicalAxiom => a }
-  //       .flatMap(normalizer.normalize)
-
-  //   /** ABox axioms
-  //     *
-  //     * @note this represents only the set of assertions contained in the
-  //     * ontology file. Data files specified in `datafiles` are directly
-  //     * imported in RDFox due to performance issues when trying to import
-  //     * large data files via OWLAPI.
-  //     */
-  //   var abox: List[OWLLogicalAxiom] =
-  //     ontology
-  //       .aboxAxioms(Imports.INCLUDED)
-  //       .collect(Collectors.toList())
-  //       .collect { case a: OWLLogicalAxiom => a }
-  //       .flatMap(normalizer.normalize)
-
-  //   /** Collection of logical axioms in the input ontology */
-  //   var axioms: List[OWLLogicalAxiom] = abox ::: tbox ::: rbox
-
-  //   new RSAOntology(
-  //     approx match {
-  //       case Some(a) => a.approximate(axioms, datafiles)
-  //       case None    => axioms
-  //     },
-  //     datafiles: _*
-  //   )
-  // }
-
 }
 
 /** A wrapper for an RSA ontology
