@@ -12,6 +12,6 @@ authors:
   orcid: "https://orcid.org/0000-0002-2685-7462"
 title: "RSAComb - Combined approach for Conjunctive Query answering in RSA"
 version: 0.1.1
-doi: 10.5281/zenodo.5047811
-date-released: 2021-06-30
+doi: 10.5281/zenodo.5047810
+date-released: 2021-11-18
 url: "https://github.com/KRR-Oxford/RSAComb"

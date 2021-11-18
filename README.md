@@ -30,8 +30,8 @@ Combined approach for Conjunctive Query answering in RSA
 <a href="LICENSE">
     <img src="https://img.shields.io/github/license/KRR-Oxford/RSAComb.svg?style=for-the-badge" alt="License badge">
 </a>
-<a href="https://doi.org/10.5281/zenodo.5047811">
-    <img src="https://img.shields.io/badge/DOI-10.5281/zenodo.5047811-blue?style=for-the-badge" alt="DOI badge">
+<a href="https://doi.org/10.5281/zenodo.5047810">
+    <img src="https://img.shields.io/badge/DOI-10.5281/zenodo.5047810-blue?style=for-the-badge" alt="DOI badge">
 </a>
 </p>
 
