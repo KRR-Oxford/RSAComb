@@ -184,7 +184,7 @@ We also provide a convenient `simulate.rdfox` RDFox script that can be used to l
 
 Let's suppose you run the following command from the root of the project
 ```{.sh}
-java -cp lib/JRDFox.jar:target/scala-2.13/RSAComb-assembly-0.2.0.jar uk.ac.ox.cs.rsacomb.RSAComb -l verbose -o tests/lubm/univ-bench.owl -d tests/lubm/data/lubm1.ttl -q tests/lubm/queries.sparql
+java -cp lib/JRDFox.jar:target/scala-2.13/RSAComb-assembly-1.0.0.jar uk.ac.ox.cs.rsacomb.RSAComb -l verbose -o tests/lubm/univ-bench.owl -d tests/lubm/data/lubm1.ttl -q tests/lubm/queries.sparql
 ```
 
 This will answers all the queries in `tests/lubm/queries.sparql` and generate debug information in a new folder in the current working directory (let's say, `rsacomb-20211005120845/`).
