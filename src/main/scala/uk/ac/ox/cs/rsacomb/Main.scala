@@ -57,7 +57,8 @@ object RSAComb extends App {
   if (config contains 'queries) {
     val queries =
       RDFoxUtil.loadQueriesFromFiles(
-        config('queries).get[List[os.Path]]
+        config('queries).get[List[os.Path]],
+        RSA.Prefixes
       )
 
     val answers = rsa ask queries

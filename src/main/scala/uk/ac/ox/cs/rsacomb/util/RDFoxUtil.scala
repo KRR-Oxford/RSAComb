@@ -317,13 +317,18 @@ object RDFoxUtil {
       query: String,
       prefixes: Prefixes = new Prefixes()
   ): Option[SelectQuery] = {
-    val parser = new SPARQLParser(
-      prefixes,
-      new StringReader(query)
-    )
-    parser.parseSingleQuery() match {
-      case q: SelectQuery => Some(q)
-      case _              => None
+    val parser = new SPARQLParser(prefixes, new StringReader(query))
+    try {
+      parser.parseSingleQuery() match {
+        case q: SelectQuery => Some(q)
+        case _              => None
+      }
+    } catch {
+      /* Just ignore unparsable queries */
+      case error: Throwable => {
+        Logger print s"Unable to parse '$query' due to error '$error'"
+        None
+      }
     }
   }
 
