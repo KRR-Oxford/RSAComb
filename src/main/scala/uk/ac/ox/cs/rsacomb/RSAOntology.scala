@@ -531,6 +531,8 @@ class RSAOntology(
     RDFoxUtil.addData(data, RSAOntology.CanonGraph, datafiles: _*)
 
     /* Top/equality axiomatization */
+    Logger.write(topAxioms.mkString("\n"), "axiomatisation.dlog")
+    Logger.write(equalityAxioms.mkString("\n"), "axiomatisation.dlog")
     RDFoxUtil.updateData(data, 
       s"""
       INSERT { 
@@ -543,7 +545,7 @@ class RSAOntology(
     RDFoxUtil.updateData(data, 
       s"""
       INSERT { 
-        GRAPH ${RSAOntology.CanonGraph} { ?Z a ${RSA.NAMED} }
+        GRAPH ${RSAOntology.CanonGraph} { ?Z a ${IRI.THING} }
       } WHERE {
         GRAPH ${RSAOntology.CanonGraph} { ?X ?Y ?Z }.
         FILTER( ?Y != a )
@@ -551,8 +553,6 @@ class RSAOntology(
       """
     )
     RDFoxUtil.addRules(data, topAxioms ++ equalityAxioms)
-    Logger.write(topAxioms.mkString("\n"), "axiomatisation.dlog")
-    Logger.write(equalityAxioms.mkString("\n"), "axiomatisation.dlog")
 
     /* Introduce `rsacomb:Named` concept */
     /* From data */
@@ -567,9 +567,9 @@ class RSAOntology(
     )
     /* From ontology */
     val named = individuals.map(RSA.Named(RSAOntology.CanonGraph)(_))
-    RDFoxUtil.addFacts(data, RSAOntology.CanonGraph, named)
     if (! named.isEmpty)
       Logger.write(named.mkString("", ".\n", ".\n"), "canonical_model.dlog")
+    RDFoxUtil.addFacts(data, RSAOntology.CanonGraph, named)
 
     /* Add canonical model */
     Logger print s"Canonical model facts: ${this.canonicalModel.facts.length}"
