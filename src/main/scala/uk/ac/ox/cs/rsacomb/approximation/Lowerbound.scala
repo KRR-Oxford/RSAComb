@@ -48,14 +48,10 @@ class Lowerbound(implicit fresh: DataFactory)
   import uk.ac.ox.cs.rsacomb.implicits.RDFox._
 
   /** Main entry point for the approximation algorithm */
-  def approximate(ontology: Ontology): RSAOntology =
-    toRSA(
-      new Ontology(
-        ontology.origin,
-        ontology.axioms filter inALCHOIQ flatMap shift,
-        ontology.datafiles
-      )
-    )
+  def approximate(ontology: Ontology): RSAOntology = {
+    val axioms = ontology.axioms filter inALCHOIQ flatMap shift
+    toRSA(new Ontology(ontology.origin, axioms, ontology.datafiles))
+  }
 
   /** Discards all axioms outside ALCHOIQ */
   private def inALCHOIQ(axiom: OWLLogicalAxiom): Boolean =

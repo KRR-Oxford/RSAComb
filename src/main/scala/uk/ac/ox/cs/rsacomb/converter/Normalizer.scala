@@ -198,7 +198,7 @@ class Normalizer() {
             *   forall R . B c A
             *   ¬ A c ¬∀forall R . B
             *   ¬ A c exists R . ¬ B
-            *   ¬ A c C, C c R . ¬ B
+            *   ¬ A c C, C c exists R . ¬ B
             *   top c A u C, D c ¬ B, C c exists R . D
             *   top c A u C, D n B c bot, C c exists R . D
             */
@@ -219,7 +219,7 @@ class Normalizer() {
                 c,
                 factory.getOWLObjectSomeValuesFrom(role, d)
               )
-            )
+            ).flatMap(normalize(_)(fresh))
           }
           /** Object/Data universal quantification on the lhs */
           case (sub: OWLDataAllValuesFrom, _) => notSupported(a)
@@ -468,7 +468,6 @@ class Normalizer() {
           /** Self-restriction over an object property */
           case (sub: OWLObjectHasSelf, _) => notSupported(a)
           case (_, sup: OWLObjectHasSelf) => notSupported(a)
-
           /** Axiom is already normalized */
           case _ => Seq(a)
         }
