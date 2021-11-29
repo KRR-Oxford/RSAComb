@@ -466,7 +466,8 @@ class RSAOntology(
     val roleR = axiom
       .objectPropertyExpressionsInSignature(0)
       .asInstanceOf[OWLObjectProperty]
-    val classB = classes(1)
+    /* Only one class is returned if A == B */
+    val classB = if (classes.length > 1) classes(1) else classes(0)
     cycle_aux(classA, roleR, classB)
   }
 
