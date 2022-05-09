@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021 KRR Oxford
+ * Copyright 2020-2022 KRR Oxford
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,42 +16,31 @@
 
 package uk.ac.ox.cs.rsacomb
 
-import java.io.{File, PrintWriter}
-import java.nio.file.{Path, Paths, InvalidPathException}
-import java.util.HashMap
-import scala.collection.JavaConverters._
-import tech.oxfordsemantic.jrdfox.client.UpdateType
-import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Term}
-import tech.oxfordsemantic.jrdfox.logic.sparql.statement.SelectQuery
-
+import approximation.{Lowerbound,Upperbound}
+import converter.Normalizer
+import ontology.Ontology
 import util.{Logger, RDFoxUtil, RSA}
-import sparql.ConjunctiveQuery
 
-import uk.ac.ox.cs.rsacomb.ontology.Ontology
-import uk.ac.ox.cs.rsacomb.converter.Normalizer
-import uk.ac.ox.cs.rsacomb.approximation.Approximation
-
-/** Main entry point to the program */
 object RSAComb extends App {
-
-  /* Command-line options */
   val config = RSAConfig.parse(args.toList)
+  RSAConfig describe config
 
-  /* Set logger level */
+  /* Configure logger */
   if (config.contains('logger))
     Logger.level = config('logger).get[Logger.Level]
-
-  /* Set answers output file */
   if (config.contains('answers))
     Logger.answers = config('answers).get[os.Path]
 
   /* Load original ontology and normalize it */
   val ontopath = config('ontology).get[os.Path]
-  val data = config('data).get[List[os.Path]]
-  val ontology = Ontology(ontopath, data).normalize(new Normalizer)
+  val datapath = config('data).get[List[os.Path]]
+  val ontology = Ontology(ontopath, datapath).normalize(new Normalizer)
 
-  /* Approximate the ontology to RSA */
-  val toRSA = config('approximation).get[Approximation[RSAOntology]]
+  /* Approximate the ontology if necessary */
+  val toRSA = config('approximation).get[Symbol] match {
+    case 'lowerbound => new Lowerbound
+    case 'upperbound => new Upperbound
+  }
   val rsa = ontology approximate toRSA
 
   if (config contains 'queries) {
@@ -61,11 +50,11 @@ object RSAComb extends App {
         RSA.Prefixes
       )
 
+    /* Perform query answering */
     val answers = rsa ask queries
 
-    /* Write answers to output file */
+    /* Perform logging */
     Logger write answers
-    /* Generate simulation script */
-    Logger.generateSimulationScripts(data, queries)
+    Logger.generateSimulationScripts(datapath, queries)
   }
 }
