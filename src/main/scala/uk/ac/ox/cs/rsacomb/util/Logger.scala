@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021 KRR Oxford
+ * Copyright 2020-2022 KRR Oxford
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,24 +19,11 @@ package uk.ac.ox.cs.rsacomb.util
 import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.io.PrintStream
+
 import uk.ac.ox.cs.rsacomb.sparql.{ConjunctiveQuery, ConjunctiveQueryAnswers}
 
 /** Simple logger */
 object Logger {
-
-  /** Main directory for logger output for the current run */
-  val dir = {
-    val timestamp = (new SimpleDateFormat("yyyyMMddHHmmss")).format(
-      Calendar.getInstance().getTime
-    )
-    os.pwd / s"rsacomb-$timestamp"
-  }
-
-  /** Output stream for the logger. */
-  var output: PrintStream = System.out
-
-  /** Path to answers output file */
-  var answers: os.Path = dir / "answers.json"
 
   /** Logger levels (i.e., verbosity of output) */
   sealed abstract class Level(val level: Int, val name: String)
@@ -51,6 +38,20 @@ object Logger {
 
   /** Currend logger level */
   var level: Level = DEBUG
+
+  /** Directory for logger output for the current run */
+  val dir = {
+    val timestamp = (new SimpleDateFormat("yyyyMMddHHmmss")).format(
+      Calendar.getInstance().getTime
+    )
+    os.pwd / s"rsacomb-$timestamp"
+  }
+
+  /** Output stream for the logger used by [[Logger.print]] */
+  var output: PrintStream = System.out
+
+  /** Path to answers output file */
+  var answers: os.Path = dir / "answers.json"
 
   /** Print a line padded with logger level and timestamp.
     *
@@ -101,7 +102,7 @@ object Logger {
     result
   }
 
-  /** Generate simulation scripts for current run
+  /** Generate RDFox simulation scripts for current run.
     *
     * @param data data files to be imported.
     * @param queries collection of executed queries.
