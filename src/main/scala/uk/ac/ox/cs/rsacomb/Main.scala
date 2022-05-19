@@ -18,7 +18,7 @@ package uk.ac.ox.cs.rsacomb
 
 import approximation.{Lowerbound,Upperbound}
 import converter.Normalizer
-import ontology.Ontology
+import ontology.{Ontology,RSAOntology}
 import util.{Logger, RDFoxUtil, RSA}
 
 object RSAComb extends App {

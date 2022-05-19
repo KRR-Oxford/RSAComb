@@ -30,7 +30,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.Variable
 
 import scala.collection.JavaConverters._
 
-import uk.ac.ox.cs.rsacomb.RSAOntology
+import uk.ac.ox.cs.rsacomb.ontology.RSAOntology
 import uk.ac.ox.cs.rsacomb.approximation.Lowerbound
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
 import uk.ac.ox.cs.rsacomb.converter.{SkolemStrategy, NoSkolem}

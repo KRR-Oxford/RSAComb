@@ -25,7 +25,7 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
 }
 import tech.oxfordsemantic.jrdfox.logic.expression.{IRI}
 
-import uk.ac.ox.cs.rsacomb.RSAOntology
+import uk.ac.ox.cs.rsacomb.ontology.RSAOntology
 import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Nth}
 import uk.ac.ox.cs.rsacomb.util.{DataFactory, RDFoxUtil}
 

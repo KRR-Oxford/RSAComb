@@ -12,7 +12,7 @@ import scalax.collection.Graph
 import scalax.collection.GraphPredef._, scalax.collection.GraphEdge._
 import scalax.collection.GraphTraversal._
 
-import uk.ac.ox.cs.rsacomb.RSAOntology
+import uk.ac.ox.cs.rsacomb.ontology.RSAOntology
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
 import uk.ac.ox.cs.rsacomb.util.DataFactory
 

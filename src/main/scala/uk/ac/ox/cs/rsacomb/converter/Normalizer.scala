@@ -20,7 +20,7 @@ import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model._
 
 import uk.ac.ox.cs.rsacomb.util.{Logger, DataFactory}
-import uk.ac.ox.cs.rsacomb.RSAOntology
+import uk.ac.ox.cs.rsacomb.ontology.RSAOntology
 
 object Normalizer {
 

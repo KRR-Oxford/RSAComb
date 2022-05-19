@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.ac.ox.cs.rsacomb
+package uk.ac.ox.cs.rsacomb.ontology
 
 /* Java imports */
 import java.{util => ju}
@@ -76,6 +76,7 @@ import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer
 import tech.oxfordsemantic.jrdfox.logic._
 import org.semanticweb.owlapi.model.OWLObjectInverseOf
 
+import uk.ac.ox.cs.rsacomb.CanonicalModel
 import uk.ac.ox.cs.rsacomb.approximation.Approximation
 import uk.ac.ox.cs.rsacomb.converter._
 import uk.ac.ox.cs.rsacomb.filtering.{FilteringProgram, FilterType}
@@ -144,7 +145,7 @@ class RSAOntology(
 ) extends Ontology(origin, axioms, datafiles) {
 
   /** Simplify conversion between OWLAPI and RDFox concepts */
-  import implicits.RDFox._
+  import uk.ac.ox.cs.rsacomb.implicits.RDFox._
   import uk.ac.ox.cs.rsacomb.implicits.RSAAxiom._
 
   /** Simplify conversion between Java and Scala collections */
@@ -152,27 +153,6 @@ class RSAOntology(
 
   /** Set of axioms removed during the approximation to RSA */
   //private var removed: Seq[OWLAxiom] = Seq.empty
-
-  /** Retrieve individuals/literals in the ontology */
-  private val individuals: List[IRI] =
-    ontology
-      .getIndividualsInSignature(Imports.INCLUDED)
-      .asScala
-      .map(_.getIRI)
-      .map(implicits.RDFox.owlapiToRdfoxIri)
-      .toList
-  private val literals: List[Literal] =
-    axioms
-      .collect { case a: OWLDataPropertyAssertionAxiom => a }
-      .map(_.getObject)
-      .map(implicits.RDFox.owlapiToRdfoxLiteral)
-
-  /** Retrieve concepts/roles in the ontology */
-  val concepts: List[OWLClass] =
-    ontology.getClassesInSignature().asScala.toList
-  val objroles: List[OWLObjectPropertyExpression] =
-    axioms.flatMap(_.objectPropertyExpressionsInSignature).distinct
-  val dataroles: List[OWLDataProperty] = origin.getDataPropertiesInSignature
 
   /** Unsafe roles of a given ontology.
     *
@@ -288,123 +268,6 @@ class RSAOntology(
   // val edges3 = Seq('P ~> 'O)
   // val graph = Graph.from(edges = edges1 ++ edges2 ++ edges3)
 
-  /** Top axiomatization rules
-    *
-    * For each concept/role *in the ontology file* introduce a rule to
-    * derive `owl:Thing`.
-    *
-    * @note this might not be enough in cases where data files contain
-    * concept/roles that are not in the ontology file. While this is
-    * non-standard, it is not forbidden either and may cause problems
-    * since not all individuals are considered part of `owl:Thing`.
-    *
-    * @note this is a naïve implementation of top axiomatization and
-    * might change in the future. The ideal solution would be for RDFox
-    * to take care of this, but at the time of writing this is not
-    * compatible with the way we are using the tool.
-    */
-  private val topAxioms: List[Rule] = {
-    val varX = Variable.create("X")
-    val varY = Variable.create("Y")
-    val varZ = Variable.create("Z")
-    val graph = TupleTableName.create(RSAOntology.CanonGraph.getIRI)
-    Rule.create(
-      TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING),
-      TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, varY)
-    ) :: objroles.map(r => {
-      val name = r match {
-        case x: OWLObjectProperty => x.getIRI.getIRIString
-        case x: OWLObjectInverseOf =>
-          x.getInverse.getNamedProperty.getIRI.getIRIString :: Inverse
-      }
-      Rule.create(
-        List(
-          TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING),
-          TupleTableAtom.create(graph, varY, IRI.RDF_TYPE, IRI.THING)
-        ),
-        List(TupleTableAtom.create(graph, varX, name, varY))
-      )
-    }) ::: dataroles.map(r => {
-      val name = r.getIRI.getIRIString
-      Rule.create(
-        List(
-          TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING),
-          TupleTableAtom.create(graph, varY, IRI.RDF_TYPE, IRI.THING)
-        ),
-        List(TupleTableAtom.create(graph, varX, name, varY))
-      )
-    })
-  }
-
-  /** Equality axiomatization rules
-    *
-    * Introduce reflexivity, simmetry and transitivity rules for a naïve
-    * equality axiomatization.
-    *
-    * @note that we are using a custom `congruent` predicate to indicate
-    * equality. This is to avoid interfering with the standard
-    * `owl:sameAs`.
-    *
-    * @note RDFox is able to handle equality in a "smart" way, but this
-    * behaviour is incompatible with other needed features like
-    * negation-as-failure and aggregates.
-    *
-    * @todo naïve substitution rules might not be very efficient. We
-    * should look into other ways of implementing this.
-    */
-  private val equalityAxioms: List[Rule] = {
-    val varX = Variable.create("X")
-    val varY = Variable.create("Y")
-    val varZ = Variable.create("Z")
-    val varW = Variable.create("W")
-    val graph = TupleTableName.create(RSAOntology.CanonGraph.getIRI)
-    // Equality properties
-    val properties = List(
-      // Reflexivity
-      Rule.create(
-        TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varX),
-        TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, IRI.THING)
-      ),
-      // Simmetry
-      Rule.create(
-        TupleTableAtom.create(graph, varY, RSA.CONGRUENT, varX),
-        TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varY)
-      ),
-      // Transitivity
-      Rule.create(
-        TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varZ),
-        TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varY),
-        TupleTableAtom.create(graph, varY, RSA.CONGRUENT, varZ)
-      )
-    )
-    /* Equality substitution rules */
-    val substitutions =
-      Rule.create(
-        TupleTableAtom.create(graph, varY, IRI.RDF_TYPE, varZ),
-        TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varY),
-        TupleTableAtom.create(graph, varX, IRI.RDF_TYPE, varZ)
-      ) :: objroles.flatMap(r => {
-        val name = r match {
-          case x: OWLObjectProperty => x.getIRI.getIRIString
-          case x: OWLObjectInverseOf =>
-            x.getInverse.getNamedProperty.getIRI.getIRIString :: Inverse
-        }
-        List(
-          Rule.create(
-            TupleTableAtom.create(graph, varZ, name, varY),
-            TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varZ),
-            TupleTableAtom.create(graph, varX, name, varY)
-          ),
-          Rule.create(
-            TupleTableAtom.create(graph, varY, name, varZ),
-            TupleTableAtom.create(graph, varX, RSA.CONGRUENT, varZ),
-            TupleTableAtom.create(graph, varY, name, varX)
-          )
-        )
-      })
-    properties ++ substitutions
-  }
-
   /** Canonical model of the ontology */
   lazy val canonicalModel = Logger.timed(
     new CanonicalModel(this, RSAOntology.CanonGraph),
@@ -509,6 +372,15 @@ class RSAOntology(
   def unfold(axiom: OWLSubClassOfAxiom): Set[Term] =
     this.self(axiom) | this.cycle(axiom)
 
+  /** Compute canonical model for the ontology.
+    *
+    * This is a *query independent* process and as such can be performed
+    * separately as a one-time operation.
+    *
+    * Calling this method multiple time will have no effect.
+    */
+  def computeCanonicalModel(): Unit = _ask
+
   /** Returns the answers to a single query
     *
     *  @param queries a sequence of conjunctive queries to answer.
@@ -531,6 +403,8 @@ class RSAOntology(
     RDFoxUtil.addData(data, RSAOntology.CanonGraph, datafiles: _*)
 
     /* Top/equality axiomatization */
+    val topAxioms = this.topAxioms(RSAOntology.CanonGraph)
+    val equalityAxioms = this.equalityAxioms(RSAOntology.CanonGraph)
     Logger.write(topAxioms.mkString("\n"), "axiomatisation.dlog")
     Logger.write(equalityAxioms.mkString("\n"), "axiomatisation.dlog")
     RDFoxUtil.updateData(data, 
@@ -607,8 +481,8 @@ class RSAOntology(
         .get
 
       /* Drop filtering named graph to avoid running out of memory */
-      data.clearRulesAxiomsExplicateFacts()
-      data.deleteTupleTable(filter.target.getIRI)
+      //data.clearRulesAxiomsExplicateFacts()
+      //data.deleteTupleTable(filter.target.getIRI)
 
       RDFoxUtil.closeConnection(server, data)
 

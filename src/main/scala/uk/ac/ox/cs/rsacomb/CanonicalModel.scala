@@ -39,6 +39,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Term, Variable}
 import implicits.JavaCollections._
 
 import uk.ac.ox.cs.rsacomb.converter._
+import uk.ac.ox.cs.rsacomb.ontology.RSAOntology
 import uk.ac.ox.cs.rsacomb.suffix._
 import uk.ac.ox.cs.rsacomb.util.{DataFactory, RSA}
 

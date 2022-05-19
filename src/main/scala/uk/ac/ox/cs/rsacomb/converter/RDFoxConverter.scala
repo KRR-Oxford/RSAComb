@@ -28,7 +28,7 @@ import tech.oxfordsemantic.jrdfox.logic.datalog.{
   TupleTableName
 }
 import tech.oxfordsemantic.jrdfox.logic.expression.{Term, IRI, FunctionCall}
-import uk.ac.ox.cs.rsacomb.RSAOntology
+import uk.ac.ox.cs.rsacomb.ontology.RSAOntology
 import uk.ac.ox.cs.rsacomb.suffix.{Empty, Inverse, RSASuffix}
 import uk.ac.ox.cs.rsacomb.util.{DataFactory, RSA, RDFoxUtil}
 
