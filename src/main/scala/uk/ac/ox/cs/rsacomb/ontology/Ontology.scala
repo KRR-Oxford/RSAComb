@@ -427,7 +427,7 @@ class Ontology (
     RDFoxUtil.addRules(data, rules)
 
     /* Build the dependency graph */
-    val query = s"SELECT ?X ?Y WHERE { graph ${Ontology.RSACheck} { ?X ${RSA("E")} ?Y }"
+    val query = s"SELECT ?X ?Y WHERE { graph ${Ontology.RSACheck} { ?X ${RSA("E")} ?Y } }"
     val answers = RDFoxUtil.submitQuery(data, query, RSA.Prefixes).getOrElse(RDFoxUtil.QueryAnswers())
     var edges: Seq[DiEdge[Resource]] =
       answers.collect { case (_, Seq(n1, n2)) => n1 ~> n2 }
