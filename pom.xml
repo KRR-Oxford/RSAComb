@@ -6,7 +6,7 @@
     <packaging>jar</packaging>
     <description>Re-implementation of the combined approach for CQ answering over RSA ontologies.</description>
     <url>https://github.com/KRR-Oxford/RSAComb</url>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <licenses>
         <license>
             <name>Apache 2</name>
