@@ -3,18 +3,18 @@ package uk.ac.ox.cs.rsacomb.approximation
 import java.io.File
 
 import org.semanticweb.owlapi.apibinding.OWLManager
-import org.semanticweb.owlapi.model.{IRI => _, _}
+import org.semanticweb.owlapi.model.{IRI => OWLIRI, _}
 
-import tech.oxfordsemantic.jrdfox.logic.expression.{Resource, IRI}
+import tech.oxfordsemantic.jrdfox.logic.expression.{Resource, IRI, Literal}
 
 import scala.collection.mutable.{Set, Map}
 import scalax.collection.Graph
 import scalax.collection.GraphPredef._, scalax.collection.GraphEdge._
 import scalax.collection.GraphTraversal._
 
-import uk.ac.ox.cs.rsacomb.RSAOntology
+import uk.ac.ox.cs.rsacomb.ontology.RSAOntology
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
-import uk.ac.ox.cs.rsacomb.util.DataFactory
+import uk.ac.ox.cs.rsacomb.util.{DataFactory, RDFoxUtil, RSA}
 
 object Lowerbound {
 
@@ -86,7 +86,7 @@ class Lowerbound(implicit fresh: DataFactory)
       }
       case a: OWLTransitiveObjectPropertyAxiom => false
       case a: OWLReflexiveObjectPropertyAxiom  => false
-      case a: OWLSubPropertyChainOfAxiom       => false
+      case a: OWLSubPropertyChainOfAxiom       => true /*TODO: should we leave it? */
       case a: OWLAsymmetricObjectPropertyAxiom => false
       case a                                   => true
     }
@@ -172,8 +172,13 @@ class Lowerbound(implicit fresh: DataFactory)
     * @return the approximated RSA ontology
     */
   private def toRSA(ontology: Ontology): RSAOntology = {
-    /* Compute the dependency graph for the ontology */
-    val (graph, nodemap) = ontology.dependencyGraph
+    val factory = Lowerbound.factory
+    val (graph,nodemap) = ontology.dependencyGraph
+    val (server,data) = RDFoxUtil.openConnection(Ontology.DataStore)
+
+    /* G is an oriented forest.
+     * This is a custom DFS visit on the dependency graph.
+     */
 
     /* Define node colors for the graph visit */
     sealed trait NodeColor
@@ -210,16 +215,99 @@ class Lowerbound(implicit fresh: DataFactory)
       }
     }
 
-    val toDelete = color.collect { case (resource: IRI, ToDelete) =>
-      nodemap(resource.getIRI)
-    }.toList
+    val delete: Set[OWLAxiom] =
+      Set.from(color.collect {
+        case (resource: IRI, ToDelete) => nodemap(resource.getIRI)
+      })
+    /* Equality safety: condition 1 */
+    val answers2 = RDFoxUtil.submitQuery(data, s"""
+      SELECT ?a ?s ?b
+      WHERE {
+        graph ${Ontology.RSACheck} { ?w ${RSA.CONGRUENT} ?t } .
+        filter ( ?w != ?t ) .
+        graph ${Ontology.RSACheck} { ?t ?r [ a ${RSA.U} ] } .
+        graph ${Ontology.RBoxReasoning} {
+          ?r rdfs:subPropertyOf [ owl:inverseOf ?s ] .
+          ?x rdf:type owl:Restriction ;
+             owl:onProperty ?s ;
+             owl:maxQualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+             owl:onClass ?b .
+          ?a rdfs:subClassOf ?b .
+        } .
+      }
+    """).get
+    // NOTE: there seems to be a bug that turns any [[Resource]] answer
+    // to a query into a [[Literal]] (while here we would expect them to
+    // be [[IRI]]).
+    answers2.foldLeft(delete)((d, res) => {
+      val a = res._2(0).asInstanceOf[Literal].getLexicalForm
+      val r = res._2(1).asInstanceOf[Literal].getLexicalForm
+      val b = res._2(1).asInstanceOf[Literal].getLexicalForm
+      val axiom = factory.getOWLSubClassOfAxiom(
+        factory.getOWLClass(a),
+        factory.getOWLObjectMaxCardinality(1,
+          factory.getOWLObjectProperty(r),
+          factory.getOWLClass(b)
+        )
+      )
+      d += axiom
+    })
+    /* Equality safety: condition 2 */
+    val answers3 = RDFoxUtil.submitQuery(data, s"""
+      SELECT ?r ?r1 ?s ?s1
+      WHERE {
+        graph ${Ontology.RSACheck} { 
+          ?u ?s ?a ; a ${RSA.U} .
+          ?a ?r ?u ; a ${RSA.NI} .
+        } .
+        graph ${Ontology.RBoxReasoning} {
+          ?r rdfs:subPropertyOf ?r1 .
+          ?r1 ${RSA("subPropertyOfTrans")} ?t .
+          ?t owl:inverseOf ?ti .
+          ?s rdfs:subPropertyOf ?s1 .
+          ?s1 ${RSA("subPropertyOfTrans")} ?ti .
+        }
+      }
+    """).get
+    // NOTE: there seems to be a bug that turns any [[Resource]] answer
+    // to a query into a [[Literal]] (while here we would expect them to
+    // be [[IRI]]).
+    println(s"Answers 3: ${answers3.length}")
+    answers3.foldLeft(delete)((d, res) => {
+      val r1 = res._2(0).asInstanceOf[Literal].getLexicalForm
+      val r2 = res._2(1).asInstanceOf[Literal].getLexicalForm
+      val s1 = res._2(2).asInstanceOf[Literal].getLexicalForm
+      val s2 = res._2(3).asInstanceOf[Literal].getLexicalForm
+      val axiom = if (r1 == r2) {
+        factory.getOWLSubObjectPropertyOfAxiom(
+          factory.getOWLObjectProperty(s1),
+          factory.getOWLObjectProperty(s2),
+        )
+      } else {
+        factory.getOWLSubObjectPropertyOfAxiom(
+          factory.getOWLObjectProperty(r1),
+          factory.getOWLObjectProperty(r2),
+        )
+      }
+      d += axiom
+    })
+
+    println(s"To Delete (${delete.size}):")
+    delete foreach println
+
+    println(s"Before: ${ontology.axioms.length}")
+    println(s"After: ${(ontology.axioms diff delete.toList).length}")
 
     /* Remove axioms from approximated ontology */
     RSAOntology(
       ontology.origin,
-      ontology.axioms diff toDelete,
+      ontology.axioms diff delete.toList,
       ontology.datafiles
     )
+
+
+
+
   }
 
   // val edges1 = Seq('A ~> 'B, 'B ~> 'C, 'C ~> 'D, 'D ~> 'H, 'H ~>
