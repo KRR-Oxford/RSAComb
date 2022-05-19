@@ -35,7 +35,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{
 }
 import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 import uk.ac.ox.cs.rsacomb.suffix.{RSASuffix, Forward, Backward}
-import uk.ac.ox.cs.rsacomb.util.{RSA, RDFoxUtil}
+import uk.ac.ox.cs.rsacomb.util.{RSA, RDFoxUtil, RDFoxDSL}
 
 /** Factory for [[uk.ac.ox.cs.rsacomb.FilteringProgram FilteringProgram]] */
 object RevisedFilteringProgram {

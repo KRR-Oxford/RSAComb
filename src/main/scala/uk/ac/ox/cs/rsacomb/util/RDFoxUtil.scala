@@ -18,6 +18,7 @@ package uk.ac.ox.cs.rsacomb.util
 
 import java.io.{OutputStream, File, StringReader}
 import scala.collection.JavaConverters._
+import org.semanticweb.owlapi.model.OWLLogicalAxiom
 import tech.oxfordsemantic.jrdfox.Prefixes
 import tech.oxfordsemantic.jrdfox.client.{
   ComponentInfo,
@@ -47,6 +48,68 @@ import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 import uk.ac.ox.cs.rsacomb.suffix.Nth
 import uk.ac.ox.cs.rsacomb.util.Logger
 
+object RDFoxDSL {
+
+  import scala.collection.JavaConverters._
+  import tech.oxfordsemantic.jrdfox.logic.datalog._
+  //import tech.oxfordsemantic.jrdfox.logic.expression._
+
+
+  /* String contexts */
+  implicit class MyVariable(private val str: StringContext) extends AnyVal {
+    def v(args: Any*): Variable = Variable.create(s"${str.s(args: _*)}")
+  }
+  implicit class MyIRI(private val str: StringContext) extends AnyVal {
+    def i(args: Any*): IRI = IRI.create(s"${str.s(args: _*)}")
+  }
+
+
+  /** Sequence of [[TupleTableAtom]]s (a.k.a. head of a rule) */
+  case class SeqTupleTableAtoms(atoms: TupleTableAtom*) {
+    /** Atoms conjunction */
+    def +(atom: TupleTableAtom): SeqTupleTableAtoms =
+      SeqTupleTableAtoms(atoms :+ atom: _*)
+    /** Implication (rule constructor) */
+    def :-(body: SeqBodyFormulas): Rule = {
+      Rule.create(atoms.asJava, body.atoms.asJava)
+    }
+  }
+  implicit def seqTupleTableAtoms(atom: TupleTableAtom): SeqTupleTableAtoms =
+    SeqTupleTableAtoms(atom)
+
+  /** Sequence of [[BodyFormula]]e (a.k.a. body) */
+  case class SeqBodyFormulas(atoms: BodyFormula*) {
+    /** Atoms conjunction */
+    def +(atom: BodyFormula): SeqBodyFormulas = SeqBodyFormulas(atoms :+ atom: _*)
+  }
+  implicit def seqBodyFormulas(atom: BodyFormula): SeqBodyFormulas =
+    SeqBodyFormulas(atom)
+  implicit def atoms2bodyFormulas(ttas: SeqTupleTableAtoms): SeqBodyFormulas =
+    SeqBodyFormulas(ttas.atoms: _*)
+
+
+
+
+  trait RDFoxPredicate {
+    def apply(terms: Term*): TupleTableAtom
+  }
+
+  implicit class RDFoxGraph(val tt: IRI) extends RDFoxPredicate {
+    def apply(terms: Term*): TupleTableAtom =
+      TupleTableAtom.create(TupleTableName.create(tt.getIRI), terms:_*)
+  }
+  //class RDFoxTerm() extends RDFoxPredicate {}
+
+  //implicit class RDFoxPrefix(val name: String) {
+  //  def ::(prefix: String): IRI = IRI.create(prefix + name)
+  //}
+
+  //val owlpre = "http://example.com/owl#"
+  //val prova = TupleTableAtom.rdf(v"x", v"y", v"z") & TupleTableAtom.rdf(v"x", v"y", v"z")
+  //val prova2 = i"iri_di_prova"(v"x", v"y", v"z") & owlpre::"subClassOf"(v"x", v"y", v"z")
+
+}
+
 /** A collection of helper methods for RDFox */
 object RDFoxUtil {
 
@@ -62,7 +125,7 @@ object RDFoxUtil {
     * [[tech.oxfordsemantic.jrdfox.logic.sparql.statement.Query]].
     */
   private type QueryAnswers = Seq[(Long, Seq[Resource])]
-  private def QueryAnswers() = List.empty[(Long, Seq[Resource])]
+  def QueryAnswers() = List.empty[(Long, Seq[Resource])]
 
   /** Type alias for <option => value> RDFox options. */
   private type RDFoxOpts = java.util.Map[String, String]
@@ -177,6 +240,33 @@ object RDFoxUtil {
         )
       },
       s"Loading ${facts.length} facts",
+      Logger.DEBUG
+    )
+
+  /** Adds a collection of facts to a data store.
+    *
+    * @param data datastore connection
+    * @param facts collection of facts to be added to the data store
+    */
+  def addAxioms(
+      data: DataStoreConnection,
+      gsource: IRI,
+      gtarget: IRI,
+      axioms: Seq[OWLLogicalAxiom]
+  ): Unit =
+    Logger.timed(
+      if (axioms.length > 0) {
+        data.importData(
+          gsource.getIRI,
+          UpdateType.ADDITION,
+          RSA.Prefixes,
+          axioms
+            .map(_.toString)
+            .mkString("Ontology(\n","\n",")")
+        )
+        data.importAxiomsFromTriples(gsource.getIRI, true, gtarget.getIRI, UpdateType.ADDITION)
+      },
+      s"Loading ${axioms.length} axioms",
       Logger.DEBUG
     )
 
@@ -376,7 +466,7 @@ object RDFoxUtil {
   def submitQuery(
       data: DataStoreConnection,
       query: String,
-      prefixes: Prefixes = new Prefixes(),
+      prefixes: Prefixes = RSA.Prefixes,
       opts: RDFoxOpts = RDFoxOpts()
   ): Option[QueryAnswers] =
     parseSelectQuery(query, prefixes).map(submitSelectQuery(data, _, opts))

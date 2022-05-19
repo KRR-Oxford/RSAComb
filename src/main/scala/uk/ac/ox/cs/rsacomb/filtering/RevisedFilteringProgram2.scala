@@ -66,7 +66,7 @@ class RevisedFilteringProgram2(
     val query: ConjunctiveQuery
 ) extends FilteringProgram {
 
-  import RDFoxDSL._
+  import uk.ac.ox.cs.rsacomb.util.RDFoxDSL._
 
   /** Extends capabilities of
     * [[tech.oxfordsemantic.jrdfox.logic.datalog.TupleTableAtom TupleTableAtom]]

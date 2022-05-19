@@ -21,16 +21,6 @@ import tech.oxfordsemantic.jrdfox.logic.expression.{IRI, Variable}
 import uk.ac.ox.cs.rsacomb.sparql.ConjunctiveQuery
 import uk.ac.ox.cs.rsacomb.util.Versioned
 
-object RDFoxDSL {
-
-  import scala.collection.JavaConverters._
-
-  implicit class MyVariable(private val str: StringContext) extends AnyVal {
-    def v(args: Any*): Variable = Variable.create(s"${str.s(args: _*)}")
-  }
-
-}
-
 /** Type of filtering strategy.
   *
   * Mainly for testing different approaches and techniques.
