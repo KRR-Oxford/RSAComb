@@ -196,12 +196,12 @@ object RSAConfig {
       case 'data => {
         val paths = v.get[List[os.Path]]
         val ellipsis = if (paths.length > 1) " [...]" else "" 
-        Logger print s"Data files: ${paths.head}$ellipsis"
+        Logger print s"Data files: ${paths.headOption.getOrElse("NONE")}$ellipsis"
       }
       case 'queries => {
         val paths = v.get[List[os.Path]]
         val ellipsis = if (paths.length > 1) " [...]" else "" 
-        Logger print s"Query files: ${paths.head}$ellipsis"
+        Logger print s"Query files: ${paths.headOption.getOrElse("NONE")}$ellipsis"
       }
       case 'answers => Logger print s"Path to answers: ${v.get[os.Path]}"
       case 'approximation => Logger print s"Applied approximation: ${v.get[Symbol].name}"
