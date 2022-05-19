@@ -26,7 +26,7 @@ jobs:
       with:
         commit_user_name: GitHub POM Action
         commit_user_email: "gh-pom@github.com"
-        commit_message: "⬆ Update POM dependences"
+        commit_message: "bump(pom): update dependences"
         commit_options: '--no-verify --signoff'
         file_pattern: pom.xml
 
