@@ -20,6 +20,8 @@ import org.semanticweb.owlapi.model.OWLAxiom
 import tech.oxfordsemantic.jrdfox.logic.Datatype
 import tech.oxfordsemantic.jrdfox.logic.expression.{Literal, IRI}
 
+import uk.ac.ox.cs.rsacomb.util.RSA
+
 sealed trait SkolemStrategy {
   def dup(a: OWLAxiom): SkolemStrategy
 }
@@ -91,5 +93,5 @@ case class Standard(axiom: OWLAxiom)(implicit toString: (OWLAxiom) => String)
 case class Constant(axiom: OWLAxiom)(implicit toString: (OWLAxiom) => String)
     extends SkolemStrategy {
   def dup(_axiom: OWLAxiom): Constant = copy(axiom = _axiom)(toString)
-  lazy val iri = IRI.create(s"c_${toString(axiom)}")
+  lazy val iri = RSA(s"c_${toString(axiom)}")
 }
