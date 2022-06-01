@@ -22,7 +22,7 @@ import ontology.{Ontology,RSAOntology}
 import util.{Logger, RDFoxUtil, RSA}
 
 object RSAComb extends App {
-  val config = RSAConfig.parse(args.toList)
+  implicit val config = RSAConfig parse args.toList
   RSAConfig describe config
 
   /* Configure logger */

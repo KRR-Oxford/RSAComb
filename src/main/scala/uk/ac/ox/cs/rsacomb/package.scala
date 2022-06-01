@@ -18,4 +18,5 @@ package uk.ac.ox.cs
 package object rsacomb {
 
   implicit val seed: util.DataFactory = util.DataFactory(0)
+
 }

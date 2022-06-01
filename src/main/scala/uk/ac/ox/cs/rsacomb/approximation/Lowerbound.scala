@@ -1,7 +1,5 @@
 package uk.ac.ox.cs.rsacomb.approximation
 
-import java.io.File
-
 import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model.{IRI => OWLIRI, _}
 
@@ -15,6 +13,7 @@ import scalax.collection.GraphTraversal._
 import uk.ac.ox.cs.rsacomb.ontology.RSAOntology
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
 import uk.ac.ox.cs.rsacomb.util.{DataFactory, RDFoxUtil, RSA}
+import uk.ac.ox.cs.rsacomb.RSAConfig
 
 object Lowerbound {
 
@@ -38,8 +37,9 @@ object Lowerbound {
   *
   * @see [[uk.ac.ox.cs.rsacomb.converter.Normalizer]]
   */
-class Lowerbound(implicit fresh: DataFactory)
-    extends Approximation[RSAOntology] {
+class Lowerbound(
+  implicit fresh: DataFactory, config: RSAConfig.Config
+) extends Approximation[RSAOntology] {
 
   /** Simplify conversion between Java and Scala collections */
   import uk.ac.ox.cs.rsacomb.implicits.JavaCollections._
@@ -84,9 +84,9 @@ class Lowerbound(implicit fresh: DataFactory)
           case _                          => true
         }
       }
-      case a: OWLTransitiveObjectPropertyAxiom => false
+      case a: OWLTransitiveObjectPropertyAxiom => config('transitive).get[Boolean]
       case a: OWLReflexiveObjectPropertyAxiom  => false
-      case a: OWLSubPropertyChainOfAxiom       => true /*TODO: should we leave it? */
+      case a: OWLSubPropertyChainOfAxiom       => config('transitive).get[Boolean]
       case a: OWLAsymmetricObjectPropertyAxiom => false
       case a                                   => true
     }

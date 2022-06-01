@@ -31,7 +31,7 @@ import tech.oxfordsemantic.jrdfox.logic.expression.Variable
 import scala.collection.JavaConverters._
 
 import uk.ac.ox.cs.rsacomb.ontology.RSAOntology
-import uk.ac.ox.cs.rsacomb.approximation.Lowerbound
+import uk.ac.ox.cs.rsacomb.approximation._
 import uk.ac.ox.cs.rsacomb.ontology.Ontology
 import uk.ac.ox.cs.rsacomb.converter.{SkolemStrategy, NoSkolem}
 import uk.ac.ox.cs.rsacomb.suffix.Empty
@@ -39,7 +39,19 @@ import uk.ac.ox.cs.rsacomb.util.{Logger, RDFoxUtil, RSA}
 
 object Ontology1_CanonicalModelSpec {
 
-  Logger.level = Logger.QUIET
+  implicit var config = RSAConfig parse List(
+    "--logger", "quiet",
+    "--approximation", "lowerbound",
+    "--ontology", "examples/example1.ttl",
+  )
+
+  if (config.contains('logger))
+    Logger.level = config('logger).get[Logger.Level]
+
+  val toRSA = config('approximation).get[Symbol] match {
+    case 'lowerbound => new Lowerbound
+    case 'upperbound => new Upperbound
+  }
 
   /* Renderer to display OWL Axioms with DL syntax*/
   val renderer = new DLSyntaxObjectRenderer()
@@ -47,8 +59,8 @@ object Ontology1_CanonicalModelSpec {
   def base(str: String): IRI =
     IRI.create("http://example.com/rsa_example.owl#" + str)
 
-  val ontology_path = os.pwd / "examples" / "example1.ttl"
-  val ontology = Ontology(ontology_path, List()).approximate(new Lowerbound)
+  val ontopath = config('ontology).get[os.Path]
+  val ontology = Ontology(ontopath, List.empty) approximate toRSA
   val program = ontology.canonicalModel
   val converter = program.CanonicalModelConverter
 
@@ -257,8 +269,8 @@ class Ontology1_CanonicalModelSpec
 //   def base(str: String): IRI =
 //     IRI.create("http://example.com/rsa_example.owl#" + str)
 
-//   val ontology_path: File = new File("examples/example2.owl")
-//   val ontology = Ontology(ontology_path, List()).approximate(new Lowerbound)
+//   val ontopath: File = new File("examples/example2.owl")
+//   val ontology = Ontology(ontopath, List()).approximate(new Lowerbound)
 //   val program = ontology.canonicalModel
 //   val converter = program.CanonicalModelConverter
 

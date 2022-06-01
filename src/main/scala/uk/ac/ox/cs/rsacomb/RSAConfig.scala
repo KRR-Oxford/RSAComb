@@ -74,7 +74,7 @@ object RSAConfig {
   """
 
   /** Default config values */
-  private val default: Config = Map(
+  val default: Config = Map(
     'transitive -> false,
     'data -> List.empty[os.Path],
     'approximation -> 'lowerbound
