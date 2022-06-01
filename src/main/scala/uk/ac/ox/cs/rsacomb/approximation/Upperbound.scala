@@ -1,7 +1,5 @@
 package uk.ac.ox.cs.rsacomb.approximation
 
-// import java.io.File
-
 import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model.{IRI => _, _}
 
@@ -52,34 +50,28 @@ class Upperbound(implicit fresh: DataFactory)
     toRSA(
       new Ontology(
         ontology.origin,
-        ontology.axioms flatMap toConjuncts,
+        ontology.axioms map chooseDisjunct,
         ontology.datafiles
       )
     )
 
-  /** Turn disjuncts into conjuncts
+  /** Choose a single disjunct
     *
     * This is a very naïve way of getting rid of disjunction preserving
     * completeness of CQ answering.
-    *
-    * @todo implement a choice function that decides which disjunct to
-    * keep instead of keeping all of them. Note that PAGOdA is currently
-    * doing something similar.
     */
-  private def toConjuncts(axiom: OWLLogicalAxiom): List[OWLLogicalAxiom] =
+  private def chooseDisjunct(axiom: OWLLogicalAxiom): OWLLogicalAxiom =
     axiom match {
       case a: OWLSubClassOfAxiom => {
         val sub = a.getSubClass.getNNF
         val sup = a.getSuperClass.getNNF
         sup match {
           case sup: OWLObjectUnionOf =>
-            sup.asDisjunctSet.map(
-              Upperbound.factory.getOWLSubClassOfAxiom(sub, _)
-            )
-          case _ => List(axiom)
+            Upperbound.factory.getOWLSubClassOfAxiom(sub, sup.asDisjunctSet.head)
+          case _ => axiom
         }
       }
-      case _ => List(axiom)
+      case _ => axiom
     }
 
   /** Approximate a Horn-ALCHOIQ ontology to RSA
