@@ -27,7 +27,7 @@ case class RSAOption[+T](opt: T) {
 object RSAConfig {
   type Config = Map[Symbol, RSAOption[Any]]
 
-  private implicit def toRSAOption[T](opt: T) = RSAOption[T](opt)
+  implicit def toRSAOption[T](opt: T) = RSAOption[T](opt)
 
   /** Help message */
   private val help: String = """
