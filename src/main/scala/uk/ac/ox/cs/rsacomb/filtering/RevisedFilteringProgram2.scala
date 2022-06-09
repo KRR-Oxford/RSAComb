@@ -177,10 +177,10 @@ class RevisedFilteringProgram2(
         * @note corresponds to rules 4x in Table 3.
         */
       val r4a = for {
-        role1 <- queryBody filter (_.isRoleAssertion)
+        (role1,i) <- queryBody.zipWithIndex filter (_._1.isRoleAssertion)
         index1 = query.bounded indexOf (role1.getArguments get 2)
         if index1 >= 0
-        role2 <- queryBody filter (_.isRoleAssertion)
+        (role2,_) <- queryBody.zipWithIndex filter { case (r,j) => j > i && r.isRoleAssertion }
         index2 = query.bounded indexOf (role2.getArguments get 2)
         if index2 >= 0
       } yield Rule.create(
@@ -201,6 +201,7 @@ class RevisedFilteringProgram2(
         role2 <- queryBody filter (_.isRoleAssertion)
         index2 = query.bounded indexOf (role2.getArguments get 0)
         if index2 >= 0
+        if role1.getArguments.get(0) != role2.getArguments.get(2)
       } yield Rule.create(
         FK(v"K"),
         RSA.Skolem(v"S", List(RSA(index1), RSA(index2))),
@@ -213,10 +214,10 @@ class RevisedFilteringProgram2(
         )
       )
       val r4c = for {
-        role1 <- queryBody filter (_.isRoleAssertion)
+        (role1,i) <- queryBody.zipWithIndex filter (_._1.isRoleAssertion)
         index1 = query.bounded indexOf (role1.getArguments get 0)
         if index1 >= 0
-        role2 <- queryBody filter (_.isRoleAssertion)
+        (role2,_) <- queryBody.zipWithIndex filter { case (r,j) => j > i && r.isRoleAssertion }
         index2 = query.bounded indexOf (role2.getArguments get 0)
         if index2 >= 0
       } yield Rule.create(
@@ -236,12 +237,12 @@ class RevisedFilteringProgram2(
         * @note corresponds to rules 5x in Table 3.
         */
       val r5a = for {
-        role1 <- queryBody filter (_.isRoleAssertion)
+        (role1,i) <- queryBody.zipWithIndex filter (_._1.isRoleAssertion)
         r1arg0 = role1.getArguments get 0
         if query.bounded contains r1arg0
         r1arg2 = role1.getArguments get 2
         if query.bounded contains r1arg2
-        role2 <- queryBody filter (_.isRoleAssertion)
+        (role2,_) <- queryBody.zipWithIndex filter { case (r,j) => j > i && r.isRoleAssertion }
         r2arg0 = role2.getArguments get 0
         if query.bounded contains r2arg0
         r2arg2 = role2.getArguments get 2
@@ -292,12 +293,12 @@ class RevisedFilteringProgram2(
         )
       )
       val r5c = for {
-        role1 <- queryBody filter (_.isRoleAssertion)
+        (role1,i) <- queryBody.zipWithIndex filter (_._1.isRoleAssertion)
         r1arg0 = role1.getArguments get 0
         if query.bounded contains r1arg0
         r1arg2 = role1.getArguments get 2
         if query.bounded contains r1arg2
-        role2 <- queryBody filter (_.isRoleAssertion)
+        (role2,_) <- queryBody.zipWithIndex filter { case (r,j) => j > i && r.isRoleAssertion }
         r2arg0 = role2.getArguments get 0
         if query.bounded contains r2arg0
         r2arg2 = role2.getArguments get 2
