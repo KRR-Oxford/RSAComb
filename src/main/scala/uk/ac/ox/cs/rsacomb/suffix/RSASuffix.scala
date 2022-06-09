@@ -40,12 +40,13 @@ class RSASuffix(val suffix: String => String) {
   def ::(iri: IRI): IRI = IRI.create(this suffix iri.getIRI)
   def ::(tta: TupleTableAtom): TupleTableAtom = {
     val ttn: TupleTableName = tta.getTupleTableName
-    tta.getArguments match {
-      case List(subj: Term, IRI.RDF_TYPE, obj: IRI) =>
-        TupleTableAtom.create(ttn, subj, IRI.RDF_TYPE, obj :: this)
-      case List(subj: Term, pred: IRI, obj: Term) =>
-        TupleTableAtom.create(ttn, subj, pred :: this, obj)
-      case _ => tta
+    val args = tta.getArguments
+    (args.get(1), args.get(2)) match {
+      case (IRI.RDF_TYPE, obj: IRI) =>
+        TupleTableAtom.create(ttn, args.get(0), IRI.RDF_TYPE, obj :: this)
+      case (pred: IRI, obj: Term) =>
+        TupleTableAtom.create(ttn, args.get(0), pred :: this, obj)
+      case _ => tta 
     }
   }
 }
