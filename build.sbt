@@ -1,6 +1,6 @@
 import Dependencies._
 
-ThisBuild / scalaVersion := "2.13.4"
+ThisBuild / scalaVersion := "2.13.9"
 ThisBuild / version := "1.1.0"
 ThisBuild / organization := "uk.ac.ox.cs.rsacomb"
 ThisBuild / organizationName := "Department of Computer Science - University of Oxford"
