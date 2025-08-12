@@ -1,4 +1,6 @@
 name: Scala CI
+permissions:
+  contents: read
 
 on:
   push:
