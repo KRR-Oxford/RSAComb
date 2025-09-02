@@ -1,4 +1,6 @@
 name: POM generation
+permissions:
+  contents: write
 
 on:
   pull_request:
